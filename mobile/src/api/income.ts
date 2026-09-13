@@ -1,4 +1,4 @@
-import { apiJson } from "./client";
+import { apiJson, appendFilePart } from "./client";
 import type { IncomeInvoice, TaxSummary } from "./types";
 
 export type CreateIncomeInvoiceInput = {
@@ -26,11 +26,11 @@ export async function createIncomeInvoice(
     form.append("notes", input.notes);
   }
   if (input.fileUri) {
-    form.append("invoice_file", {
+    await appendFilePart(form, "invoice_file", {
       uri: input.fileUri,
       name: input.fileName ?? "invoice",
       type: input.fileType ?? "application/octet-stream"
-    } as unknown as Blob);
+    });
   }
 
   return apiJson("/income-invoices", { method: "POST", body: form });

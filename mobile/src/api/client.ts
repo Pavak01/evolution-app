@@ -1,4 +1,5 @@
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 
 const runtimeApiBaseUrl = (process.env as Record<string, string | undefined>)?.EXPO_PUBLIC_API_BASE_URL;
 export const API_BASE_URL = runtimeApiBaseUrl || "http://localhost:4000";
@@ -7,17 +8,61 @@ const TOKEN_KEY = "evolution_auth_token";
 
 // Stored via expo-secure-store, not AsyncStorage — Qbit's mobile app stores
 // its JWT in plain AsyncStorage despite a TODO claiming otherwise; this is
-// one of the two concrete gaps Evolution deliberately fixes.
+// one of the two concrete gaps Evolution deliberately fixes. expo-secure-store
+// has no web implementation at all (calling it throws, not just no-ops), so
+// this falls back to localStorage on web rather than crashing on load — the
+// app targets iOS/Android, but a hard crash on an unsupported platform is
+// still a bug, not an acceptable gap.
+const isWeb = Platform.OS === "web";
+
+type WebStorage = { getItem(key: string): string | null; setItem(key: string, value: string): void; removeItem(key: string): void };
+function getWebStorage(): WebStorage | undefined {
+  return (globalThis as { localStorage?: WebStorage }).localStorage;
+}
+
 export async function getToken(): Promise<string | null> {
+  if (isWeb) {
+    return getWebStorage()?.getItem(TOKEN_KEY) ?? null;
+  }
   return SecureStore.getItemAsync(TOKEN_KEY);
 }
 
 export async function setToken(token: string): Promise<void> {
+  if (isWeb) {
+    getWebStorage()?.setItem(TOKEN_KEY, token);
+    return;
+  }
   await SecureStore.setItemAsync(TOKEN_KEY, token);
 }
 
 export async function clearToken(): Promise<void> {
+  if (isWeb) {
+    getWebStorage()?.removeItem(TOKEN_KEY);
+    return;
+  }
   await SecureStore.deleteItemAsync(TOKEN_KEY);
+}
+
+// React Native's FormData accepts a {uri,name,type} object for file parts,
+// streamed from the local file by its native networking layer — but a
+// browser's FormData requires an actual Blob. expo-document-picker has a
+// working web shim (its uri is a blob: URL there), so this makes file
+// uploads work on web too rather than silently 400ing, without changing
+// anything about the native (iOS/Android) path.
+export async function appendFilePart(
+  form: FormData,
+  fieldName: string,
+  file: { uri: string; name: string; type: string }
+): Promise<void> {
+  if (isWeb) {
+    const blob = await fetch(file.uri).then((r) => r.blob());
+    // The ambient FormData type in scope (no "DOM" lib) only declares the
+    // 2-arg append signature; the 3-arg (name, blob, filename) form is
+    // standard DOM behavior and works fine at runtime in a browser.
+    (form.append as (name: string, value: Blob, fileName: string) => void)(fieldName, blob, file.name);
+    return;
+  }
+  form.append(fieldName, { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
 }
 
 export class ApiError extends Error {

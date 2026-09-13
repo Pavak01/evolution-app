@@ -1,4 +1,4 @@
-import { apiJson } from "./client";
+import { apiJson, appendFilePart } from "./client";
 import type { Expense, PaymentMethod, ReimbursementStatus, TaxSummary } from "./types";
 
 export type CreateExpenseInput = {
@@ -27,8 +27,7 @@ export async function createExpense(input: CreateExpenseInput): Promise<{ expens
   if (input.notes) {
     form.append("notes", input.notes);
   }
-  // React Native's FormData accepts this {uri,name,type} shape for file parts.
-  form.append("receipt", { uri: input.receiptUri, name: input.receiptName, type: input.receiptType } as unknown as Blob);
+  await appendFilePart(form, "receipt", { uri: input.receiptUri, name: input.receiptName, type: input.receiptType });
 
   return apiJson("/expenses", { method: "POST", body: form });
 }
