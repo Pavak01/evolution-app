@@ -1,4 +1,4 @@
-import { apiJson, appendFilePart } from "./client";
+import { apiJson, postMultipart } from "./client";
 import type { IncomeInvoice, TaxSummary } from "./types";
 
 export type CreateIncomeInvoiceInput = {
@@ -16,24 +16,27 @@ export type CreateIncomeInvoiceInput = {
 export async function createIncomeInvoice(
   input: CreateIncomeInvoiceInput
 ): Promise<{ invoice: IncomeInvoice; summary: TaxSummary }> {
-  const form = new FormData();
-  form.append("period_start", input.period_start);
-  form.append("period_end", input.period_end);
-  form.append("source", input.source);
-  form.append("total_amount", String(input.total_amount));
-  form.append("received_date", input.received_date);
+  const fields: Record<string, string> = {
+    period_start: input.period_start,
+    period_end: input.period_end,
+    source: input.source,
+    total_amount: String(input.total_amount),
+    received_date: input.received_date
+  };
   if (input.notes) {
-    form.append("notes", input.notes);
-  }
-  if (input.fileUri) {
-    await appendFilePart(form, "invoice_file", {
-      uri: input.fileUri,
-      name: input.fileName ?? "invoice",
-      type: input.fileType ?? "application/octet-stream"
-    });
+    fields.notes = input.notes;
   }
 
-  return apiJson("/income-invoices", { method: "POST", body: form });
+  const file = input.fileUri
+    ? {
+        uri: input.fileUri,
+        name: input.fileName ?? "invoice",
+        type: input.fileType ?? "application/octet-stream",
+        fieldName: "invoice_file"
+      }
+    : undefined;
+
+  return postMultipart("/income-invoices", fields, file);
 }
 
 export async function listIncomeInvoices(params?: { tax_year?: string }): Promise<IncomeInvoice[]> {

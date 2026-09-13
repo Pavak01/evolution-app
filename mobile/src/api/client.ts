@@ -1,8 +1,7 @@
-// The /legacy subpath (also used in hooks/useReceiptCapture.ts and
-// screens/export/ExportScreen.tsx) — the new File/Directory class API is
-// stricter about READ permission on the content:// URIs expo-image-picker
-// and expo-document-picker hand back, and rejects them; the legacy
-// function-based API reads the same URIs without issue.
+// Used only for its dedicated native uploadAsync (see postMultipart below) —
+// a mature, native multipart implementation (OkHttp/URLSession), not the
+// brand-new JS-level fetch/FormData polyfill that proved unreliable for
+// local files across several different failure modes on device.
 import * as LegacyFileSystem from "expo-file-system/legacy";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
@@ -47,64 +46,6 @@ export async function clearToken(): Promise<void> {
     return;
   }
   await SecureStore.deleteItemAsync(TOKEN_KEY);
-}
-
-// React Native's classic FormData accepted a {uri,name,type} object for file
-// parts (Qbit, on SDK 52, relies on exactly this). Expo SDK 53+ installs its
-// own global fetch (expo/src/winter/fetch), which patches FormData.entries()
-// and, per its own convertFormData.ts, only accepts a string, a real Blob
-// (`entry instanceof Blob`), or an object with a `.bytes()` method — the old
-// {uri,name,type} shape now throws "Unsupported FormDataPart implementation".
-export async function appendFilePart(
-  form: FormData,
-  fieldName: string,
-  file: { uri: string; name: string; type: string }
-): Promise<void> {
-  if (isWeb) {
-    const blob = await fetch(file.uri).then((r) => r.blob());
-    // The ambient FormData type in scope (no "DOM" lib) only declares the
-    // 2-arg append signature; the 3-arg (name, blob, filename) form is
-    // standard and is what Expo's FormData patch expects.
-    (form.append as (name: string, value: Blob, fileName: string) => void)(fieldName, blob, file.name);
-    return;
-  }
-
-  // Native: Expo's fetch()/Response.blob() round-trips the file through
-  // React Native's native blob store via base64 (it logs its own warning
-  // about this), which was silently corrupting camera photos — the backend's
-  // magic-byte check then correctly rejected the corrupted bytes. The new
-  // expo-file-system File class avoids that corruption but rejects these
-  // URIs with a permission error (see the /legacy import note above), so
-  // this reads as base64 via the legacy API instead and decodes it locally.
-  // The resulting plain object isn't a real Blob, but it satisfies exactly
-  // what convertFormData.ts checks for — a name/type for headers and a
-  // .bytes() method for content — per its own comment: "File or ExpoBlob
-  // don't extend Blob but implement the interface."
-  const base64 = await LegacyFileSystem.readAsStringAsync(file.uri, {
-    encoding: LegacyFileSystem.EncodingType.Base64
-  });
-  const bytes = base64ToUint8Array(base64);
-  const part = { name: file.name, type: file.type, bytes: async () => bytes };
-  form.append(fieldName, part as unknown as Blob);
-}
-
-const BASE64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-function base64ToUint8Array(base64: string): Uint8Array {
-  const bytes: number[] = [];
-  let buffer = 0;
-  let bits = 0;
-  for (let i = 0; i < base64.length; i++) {
-    const value = BASE64_CHARS.indexOf(base64[i]);
-    if (value === -1) continue; // skip padding ('=') and whitespace
-    buffer = (buffer << 6) | value;
-    bits += 6;
-    if (bits >= 8) {
-      bits -= 8;
-      bytes.push((buffer >> bits) & 0xff);
-    }
-  }
-  return new Uint8Array(bytes);
 }
 
 export class ApiError extends Error {
@@ -152,4 +93,66 @@ export async function apiJson<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return payload as T;
+}
+
+type MultipartFile = { uri: string; name: string; type: string; fieldName: string };
+
+// A local file attached here went through three failed approaches in a row
+// on native: RN's classic {uri,name,type} FormData convention (Expo's fetch
+// polyfill rejects it — "Unsupported FormDataPart implementation"),
+// fetch(uri).then(r=>r.blob()) (silently corrupted the bytes via a base64
+// round trip through RN's native blob store), and reading raw bytes via
+// expo-file-system's File.bytes() / legacy readAsStringAsync (both hit
+// permission/IOException errors on different URI schemes). All three routed
+// the file through Expo's JS-level fetch/FormData polyfill one way or
+// another. This bypasses that layer entirely for the file itself: on
+// native, expo-file-system's uploadAsync streams the file straight from
+// disk via native code (OkHttp/URLSession) alongside the other fields as
+// multipart parameters, the same mature path used for years by apps that
+// predate this polyfill. Web has no such native module, so it keeps using
+// the ordinary FormData+fetch path, which already works fine there.
+export async function postMultipart<T>(path: string, fields: Record<string, string>, file?: MultipartFile): Promise<T> {
+  if (file && !isWeb) {
+    const token = await getToken();
+    const result = await LegacyFileSystem.uploadAsync(`${API_BASE_URL}${path}`, file.uri, {
+      httpMethod: "POST",
+      uploadType: LegacyFileSystem.FileSystemUploadType.MULTIPART,
+      fieldName: file.fieldName,
+      mimeType: file.type,
+      parameters: fields,
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+
+    let payload: unknown = {};
+    try {
+      payload = result.body ? JSON.parse(result.body) : {};
+    } catch {
+      // Non-JSON body (e.g. an HTML error page) — payload stays {}, message falls through below.
+    }
+
+    if (result.status === 401) {
+      await clearToken();
+      unauthorizedListener?.();
+    }
+
+    if (result.status < 200 || result.status >= 300) {
+      const message = (payload as { error?: string }).error ?? `Request failed with status ${result.status}`;
+      throw new ApiError(result.status, message);
+    }
+
+    return payload as T;
+  }
+
+  const form = new FormData();
+  for (const [key, value] of Object.entries(fields)) {
+    form.append(key, value);
+  }
+  if (file) {
+    const blob = await fetch(file.uri).then((r) => r.blob());
+    // The ambient FormData type in scope (no "DOM" lib) only declares the
+    // 2-arg append signature; the 3-arg (name, blob, filename) form is
+    // standard and is what Expo's FormData patch expects.
+    (form.append as (name: string, value: Blob, fileName: string) => void)(file.fieldName, blob, file.name);
+  }
+  return apiJson<T>(path, { method: "POST", body: form });
 }

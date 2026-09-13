@@ -1,4 +1,4 @@
-import { apiJson, appendFilePart } from "./client";
+import { apiJson, postMultipart } from "./client";
 import type { Expense, PaymentMethod, ReimbursementStatus, TaxSummary } from "./types";
 
 export type CreateExpenseInput = {
@@ -15,21 +15,26 @@ export type CreateExpenseInput = {
 };
 
 export async function createExpense(input: CreateExpenseInput): Promise<{ expense: Expense; summary: TaxSummary }> {
-  const form = new FormData();
-  form.append("category", input.category);
-  form.append("occurred_at", input.occurred_at);
-  form.append("payment_method", input.payment_method);
-  form.append("total_amount", String(input.total_amount));
-  form.append("reimbursement_status", input.reimbursement_status);
+  const fields: Record<string, string> = {
+    category: input.category,
+    occurred_at: input.occurred_at,
+    payment_method: input.payment_method,
+    total_amount: String(input.total_amount),
+    reimbursement_status: input.reimbursement_status
+  };
   if (input.reimbursed_amount !== undefined) {
-    form.append("reimbursed_amount", String(input.reimbursed_amount));
+    fields.reimbursed_amount = String(input.reimbursed_amount);
   }
   if (input.notes) {
-    form.append("notes", input.notes);
+    fields.notes = input.notes;
   }
-  await appendFilePart(form, "receipt", { uri: input.receiptUri, name: input.receiptName, type: input.receiptType });
 
-  return apiJson("/expenses", { method: "POST", body: form });
+  return postMultipart("/expenses", fields, {
+    uri: input.receiptUri,
+    name: input.receiptName,
+    type: input.receiptType,
+    fieldName: "receipt"
+  });
 }
 
 export async function listExpenses(params?: { tax_year?: string }): Promise<Expense[]> {
