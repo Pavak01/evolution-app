@@ -15,7 +15,14 @@ import type { IncomeStackParamList } from "../../navigation/types";
 type Props = NativeStackScreenProps<IncomeStackParamList, "RecordIncome">;
 
 export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
-  const { pickDocument } = useReceiptCapture();
+  // pickDocument (expo-document-picker, covers PDF) is implemented but its
+  // copy-to-cache output is unreadable by every API tried against it, in
+  // Expo Go, on Android — a sandboxing quirk, not a bug in how it is
+  // called (see the fix history on useReceiptCapture.ts). Deferred until
+  // this can be verified on a real EAS/dev-client build rather than Expo
+  // Go, since that sandbox may not be present there. pickFromFiles
+  // (expo-image-picker) covers images only, but is proven working.
+  const { pickFromFiles } = useReceiptCapture();
 
   const [periodStart, setPeriodStart] = useState(getTodayIso());
   const [periodEnd, setPeriodEnd] = useState(getTodayIso());
@@ -84,7 +91,7 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
         <DateField label="Received date" value={receivedDate} onChange={setReceivedDate} maximumDate={new Date()} />
         <Field label="Notes (optional)" value={notes} onChange={setNotes} placeholder="" />
 
-        <PrimaryButton label={file ? "Change invoice file" : "Attach invoice file (optional)"} onPress={async () => setFile((await pickDocument()) ?? file)} />
+        <PrimaryButton label={file ? "Change invoice photo" : "Attach invoice photo (optional)"} onPress={async () => setFile((await pickFromFiles()) ?? file)} />
         {file && <ReceiptThumbnail uri={file.uri} isPdf={file.mimeType === "application/pdf"} filename={file.name} />}
 
         {status && <StatusBanner kind={status.kind} text={status.text} />}
