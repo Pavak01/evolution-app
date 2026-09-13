@@ -1,4 +1,5 @@
-import * as FileSystem from "expo-file-system";
+// See useReceiptCapture.ts for why this imports the /legacy subpath.
+import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import React, { useState } from "react";
 import { Text, View } from "react-native";

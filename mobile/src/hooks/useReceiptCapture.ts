@@ -1,5 +1,8 @@
 import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system";
+// SDK 57 rewrote expo-file-system around a File/Directory class API; the
+// `/legacy` subpath is Expo's own officially-supported compatibility shim
+// preserving the exact function-based API this file already uses.
+import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import * as Sharing from "expo-sharing";
 import { Alert } from "react-native";
