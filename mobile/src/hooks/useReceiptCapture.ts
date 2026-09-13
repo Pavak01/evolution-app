@@ -39,8 +39,14 @@ export function useReceiptCapture() {
   }
 
   async function pickFromFiles(): Promise<PickedFile | null> {
+    // copyToCacheDirectory: false — the copy step was the actual bug: it
+    // silently failed to produce a readable file (three unrelated native
+    // APIs all hit an IOException reading the "copied" result), most likely
+    // because the internal copy loses the SAF read grant before it runs.
+    // Going straight to the original content:// URI reads it within the
+    // same grant that picking it just established.
     const selected = await DocumentPicker.getDocumentAsync({
-      copyToCacheDirectory: true,
+      copyToCacheDirectory: false,
       multiple: false,
       type: ["image/*", "application/pdf"]
     });
