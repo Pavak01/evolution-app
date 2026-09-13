@@ -97,62 +97,109 @@ export async function apiJson<T>(path: string, init?: RequestInit): Promise<T> {
 
 type MultipartFile = { uri: string; name: string; type: string; fieldName: string };
 
-// A local file attached here went through three failed approaches in a row
-// on native: RN's classic {uri,name,type} FormData convention (Expo's fetch
-// polyfill rejects it — "Unsupported FormDataPart implementation"),
-// fetch(uri).then(r=>r.blob()) (silently corrupted the bytes via a base64
-// round trip through RN's native blob store), and reading raw bytes via
-// expo-file-system's File.bytes() / legacy readAsStringAsync (both hit
-// permission/IOException errors on different URI schemes). All three routed
-// the file through Expo's JS-level fetch/FormData polyfill one way or
-// another. This bypasses that layer entirely for the file itself: on
-// native, expo-file-system's uploadAsync streams the file straight from
-// disk via native code (OkHttp/URLSession) alongside the other fields as
-// multipart parameters, the same mature path used for years by apps that
-// predate this polyfill. Web has no such native module, so it keeps using
-// the ordinary FormData+fetch path, which already works fine there.
-export async function postMultipart<T>(path: string, fields: Record<string, string>, file?: MultipartFile): Promise<T> {
-  if (file && !isWeb) {
-    const token = await getToken();
-    const result = await LegacyFileSystem.uploadAsync(`${API_BASE_URL}${path}`, file.uri, {
-      httpMethod: "POST",
-      uploadType: LegacyFileSystem.FileSystemUploadType.MULTIPART,
-      fieldName: file.fieldName,
-      mimeType: file.type,
-      parameters: fields,
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    });
+// Camera captures (expo-image-picker) return a real file:// URI in the
+// app's own cache — expo-file-system's native uploadAsync (OkHttp/
+// URLSession) streams those straight from disk, bypassing Expo's JS-level
+// fetch/FormData polyfill entirely (see the git history on this function
+// for the three ways that polyfill failed on file:// uploads). But
+// uploadAsync cannot handle a content:// URI at all — it tries to treat
+// the URI's opaque path segment as a literal filesystem path and throws
+// ("Directory for '/document/image:...' doesn't exist"). content:// is
+// exactly what expo-document-picker ("Choose file") hands back once its
+// own copyToCacheDirectory step is skipped (that internal copy turned out
+// to be the real bug: it silently failed to produce a readable file,
+// independent of which API later tried to read it).
+async function uploadFileViaNativeTask<T>(path: string, fields: Record<string, string>, file: MultipartFile): Promise<T> {
+  const token = await getToken();
+  const result = await LegacyFileSystem.uploadAsync(`${API_BASE_URL}${path}`, file.uri, {
+    httpMethod: "POST",
+    uploadType: LegacyFileSystem.FileSystemUploadType.MULTIPART,
+    fieldName: file.fieldName,
+    mimeType: file.type,
+    parameters: fields,
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
 
-    let payload: unknown = {};
-    try {
-      payload = result.body ? JSON.parse(result.body) : {};
-    } catch {
-      // Non-JSON body (e.g. an HTML error page) — payload stays {}, message falls through below.
-    }
-
-    if (result.status === 401) {
-      await clearToken();
-      unauthorizedListener?.();
-    }
-
-    if (result.status < 200 || result.status >= 300) {
-      const message = (payload as { error?: string }).error ?? `Request failed with status ${result.status}`;
-      throw new ApiError(result.status, message);
-    }
-
-    return payload as T;
+  let payload: unknown = {};
+  try {
+    payload = result.body ? JSON.parse(result.body) : {};
+  } catch {
+    // Non-JSON body (e.g. an HTML error page) — payload stays {}, message falls through below.
   }
 
+  if (result.status === 401) {
+    await clearToken();
+    unauthorizedListener?.();
+  }
+
+  if (result.status < 200 || result.status >= 300) {
+    const message = (payload as { error?: string }).error ?? `Request failed with status ${result.status}`;
+    throw new ApiError(result.status, message);
+  }
+
+  return payload as T;
+}
+
+// content:// URIs (from "Choose file" — screenshots, PDFs, anything not
+// captured live through the camera) can't go through uploadAsync. Read the
+// bytes directly instead, within the same SAF grant the picker call just
+// established — reading immediately, rather than through document-picker's
+// own (buggy) internal copy, is what actually made this reliable. Base64
+// is the only transfer format expo-file-system's legacy read API offers,
+// so this decodes it back to real bytes locally; the decoder is verified
+// byte-exact (see the commit that introduced it) against every padding
+// case, since a bug here would just reintroduce corrupted uploads under a
+// different name.
+async function uploadFileViaFormData<T>(path: string, fields: Record<string, string>, file: MultipartFile): Promise<T> {
   const form = new FormData();
   for (const [key, value] of Object.entries(fields)) {
     form.append(key, value);
   }
-  if (file) {
+
+  if (isWeb) {
     const blob = await fetch(file.uri).then((r) => r.blob());
-    // The ambient FormData type in scope (no "DOM" lib) only declares the
-    // 2-arg append signature; the 3-arg (name, blob, filename) form is
-    // standard and is what Expo's FormData patch expects.
     (form.append as (name: string, value: Blob, fileName: string) => void)(file.fieldName, blob, file.name);
+  } else {
+    const base64 = await LegacyFileSystem.readAsStringAsync(file.uri, { encoding: LegacyFileSystem.EncodingType.Base64 });
+    const bytes = base64ToUint8Array(base64);
+    const part = { name: file.name, type: file.type, bytes: async () => bytes };
+    form.append(file.fieldName, part as unknown as Blob);
   }
+
   return apiJson<T>(path, { method: "POST", body: form });
+}
+
+const BASE64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+function base64ToUint8Array(base64: string): Uint8Array {
+  const bytes: number[] = [];
+  let buffer = 0;
+  let bits = 0;
+  for (let i = 0; i < base64.length; i++) {
+    const value = BASE64_CHARS.indexOf(base64[i]);
+    if (value === -1) continue; // skip padding ('=') and whitespace
+    buffer = (buffer << 6) | value;
+    bits += 6;
+    if (bits >= 8) {
+      bits -= 8;
+      bytes.push((buffer >> bits) & 0xff);
+    }
+  }
+  return new Uint8Array(bytes);
+}
+
+export async function postMultipart<T>(path: string, fields: Record<string, string>, file?: MultipartFile): Promise<T> {
+  if (!file) {
+    const form = new FormData();
+    for (const [key, value] of Object.entries(fields)) {
+      form.append(key, value);
+    }
+    return apiJson<T>(path, { method: "POST", body: form });
+  }
+
+  if (!isWeb && file.uri.startsWith("file://")) {
+    return uploadFileViaNativeTask<T>(path, fields, file);
+  }
+
+  return uploadFileViaFormData<T>(path, fields, file);
 }
