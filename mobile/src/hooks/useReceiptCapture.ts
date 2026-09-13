@@ -1,3 +1,4 @@
+import * as DocumentPicker from "expo-document-picker";
 // SDK 57 rewrote expo-file-system around a File/Directory class API; the
 // `/legacy` subpath is Expo's own officially-supported compatibility shim
 // preserving the exact function-based API this file already uses.
@@ -74,6 +75,54 @@ export function useReceiptCapture() {
     };
   }
 
+  // PDF invoices can't go through expo-image-picker (images only), so this
+  // has to use expo-document-picker after all — the picker whose content://
+  // results nothing in this app could read (see pickFromFiles above). One
+  // hypothesis was never actually tested, though: that copyToCacheDirectory
+  // resolves *before* its internal copy has finished writing to disk, and
+  // every earlier attempt read a still-incomplete file rather than a
+  // genuinely broken one. This waits for the copy to actually land — a real
+  // size on disk, not just a promise resolving — before treating it as usable.
+  async function waitForFileReady(uri: string, timeoutMs = 4000, pollMs = 100): Promise<boolean> {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      try {
+        const info = await FileSystem.getInfoAsync(uri);
+        if (info.exists && !info.isDirectory && info.size > 0) {
+          return true;
+        }
+      } catch {
+        // Not ready yet — fall through and retry.
+      }
+      await new Promise<void>((resolve) => setTimeout(() => resolve(), pollMs));
+    }
+    return false;
+  }
+
+  async function pickDocument(): Promise<PickedFile | null> {
+    const selected = await DocumentPicker.getDocumentAsync({
+      copyToCacheDirectory: true,
+      multiple: false,
+      type: ["image/*", "application/pdf"]
+    });
+
+    if (selected.canceled || selected.assets.length === 0) {
+      return null;
+    }
+
+    const asset = selected.assets[0];
+    const ready = await waitForFileReady(asset.uri);
+    if (!ready) {
+      Alert.alert(
+        "Could not access file",
+        "The selected file could not be read. Please try picking it again, or use a photo instead."
+      );
+      return null;
+    }
+
+    return { uri: asset.uri, name: asset.name ?? "invoice", mimeType: asset.mimeType ?? "application/octet-stream" };
+  }
+
   async function openDownload(url: string, filename: string): Promise<void> {
     const cacheDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
     if (!cacheDir) {
@@ -106,5 +155,5 @@ export function useReceiptCapture() {
     }
   }
 
-  return { captureFromCamera, pickFromFiles, openDownload };
+  return { captureFromCamera, pickFromFiles, pickDocument, openDownload };
 }
