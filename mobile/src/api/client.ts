@@ -1,3 +1,4 @@
+import { File } from "expo-file-system";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
@@ -48,21 +49,33 @@ export async function clearToken(): Promise<void> {
 // own global fetch (expo/src/winter/fetch), which patches FormData.entries()
 // and, per its own convertFormData.ts, only accepts a string, a real Blob
 // (`entry instanceof Blob`), or an object with a `.bytes()` method — the old
-// {uri,name,type} shape now throws "Unsupported FormDataPart implementation"
-// on both native and web. Converting the picked file to a real Blob via
-// fetch works on both platforms since Expo's fetch is now the same
-// implementation everywhere, and the 3-arg append form lets its patched
-// normalizeArgs() attach the filename.
+// {uri,name,type} shape now throws "Unsupported FormDataPart implementation".
 export async function appendFilePart(
   form: FormData,
   fieldName: string,
   file: { uri: string; name: string; type: string }
 ): Promise<void> {
-  const blob = await fetch(file.uri).then((r) => r.blob());
-  // The ambient FormData type in scope (no "DOM" lib) only declares the
-  // 2-arg append signature; the 3-arg (name, blob, filename) form is
-  // standard and is what Expo's own FormData patch expects.
-  (form.append as (name: string, value: Blob, fileName: string) => void)(fieldName, blob, file.name);
+  if (isWeb) {
+    const blob = await fetch(file.uri).then((r) => r.blob());
+    // The ambient FormData type in scope (no "DOM" lib) only declares the
+    // 2-arg append signature; the 3-arg (name, blob, filename) form is
+    // standard and is what Expo's FormData patch expects.
+    (form.append as (name: string, value: Blob, fileName: string) => void)(fieldName, blob, file.name);
+    return;
+  }
+
+  // Native: Expo's fetch()/Response.blob() round-trips the file through
+  // React Native's native blob store via base64 (it logs its own warning
+  // about this), which was silently corrupting camera photos — the backend's
+  // magic-byte check then correctly rejected the corrupted bytes. Reading
+  // bytes directly via expo-file-system's File avoids that path entirely.
+  // The resulting plain object isn't a real Blob, but it satisfies exactly
+  // what convertFormData.ts checks for — a name/type for headers and a
+  // .bytes() method for content — per its own comment: "File or ExpoBlob
+  // don't extend Blob but implement the interface."
+  const bytes = await new File(file.uri).bytes();
+  const part = { name: file.name, type: file.type, bytes: async () => bytes };
+  form.append(fieldName, part as unknown as Blob);
 }
 
 export class ApiError extends Error {
