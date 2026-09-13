@@ -1,4 +1,9 @@
-import { File } from "expo-file-system";
+// The /legacy subpath (also used in hooks/useReceiptCapture.ts and
+// screens/export/ExportScreen.tsx) — the new File/Directory class API is
+// stricter about READ permission on the content:// URIs expo-image-picker
+// and expo-document-picker hand back, and rejects them; the legacy
+// function-based API reads the same URIs without issue.
+import * as LegacyFileSystem from "expo-file-system/legacy";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
@@ -67,15 +72,39 @@ export async function appendFilePart(
   // Native: Expo's fetch()/Response.blob() round-trips the file through
   // React Native's native blob store via base64 (it logs its own warning
   // about this), which was silently corrupting camera photos — the backend's
-  // magic-byte check then correctly rejected the corrupted bytes. Reading
-  // bytes directly via expo-file-system's File avoids that path entirely.
+  // magic-byte check then correctly rejected the corrupted bytes. The new
+  // expo-file-system File class avoids that corruption but rejects these
+  // URIs with a permission error (see the /legacy import note above), so
+  // this reads as base64 via the legacy API instead and decodes it locally.
   // The resulting plain object isn't a real Blob, but it satisfies exactly
   // what convertFormData.ts checks for — a name/type for headers and a
   // .bytes() method for content — per its own comment: "File or ExpoBlob
   // don't extend Blob but implement the interface."
-  const bytes = await new File(file.uri).bytes();
+  const base64 = await LegacyFileSystem.readAsStringAsync(file.uri, {
+    encoding: LegacyFileSystem.EncodingType.Base64
+  });
+  const bytes = base64ToUint8Array(base64);
   const part = { name: file.name, type: file.type, bytes: async () => bytes };
   form.append(fieldName, part as unknown as Blob);
+}
+
+const BASE64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+function base64ToUint8Array(base64: string): Uint8Array {
+  const bytes: number[] = [];
+  let buffer = 0;
+  let bits = 0;
+  for (let i = 0; i < base64.length; i++) {
+    const value = BASE64_CHARS.indexOf(base64[i]);
+    if (value === -1) continue; // skip padding ('=') and whitespace
+    buffer = (buffer << 6) | value;
+    bits += 6;
+    if (bits >= 8) {
+      bits -= 8;
+      bytes.push((buffer >> bits) & 0xff);
+    }
+  }
+  return new Uint8Array(bytes);
 }
 
 export class ApiError extends Error {
