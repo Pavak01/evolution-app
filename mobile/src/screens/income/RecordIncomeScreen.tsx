@@ -65,7 +65,8 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
       setNotes("");
       setFile(null);
     } catch (error) {
-      setStatus({ kind: "error", text: error instanceof ApiError ? error.message : "Could not record this income." });
+      console.error("Income submit failed:", error);
+      setStatus({ kind: "error", text: error instanceof ApiError ? error.message : `Could not record this income: ${String(error)}` });
     } finally {
       setIsSubmitting(false);
     }
