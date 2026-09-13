@@ -78,7 +78,8 @@ export function CaptureExpenseScreen(): React.JSX.Element {
       setStatus({ kind: "info", text: "Expense logged." });
       resetForm();
     } catch (error) {
-      setStatus({ kind: "error", text: error instanceof ApiError ? error.message : "Could not save the expense." });
+      console.error("Expense submit failed:", error);
+      setStatus({ kind: "error", text: error instanceof ApiError ? error.message : `Could not save the expense: ${String(error)}` });
     } finally {
       setIsSubmitting(false);
     }

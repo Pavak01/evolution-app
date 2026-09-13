@@ -43,26 +43,26 @@ export async function clearToken(): Promise<void> {
   await SecureStore.deleteItemAsync(TOKEN_KEY);
 }
 
-// React Native's FormData accepts a {uri,name,type} object for file parts,
-// streamed from the local file by its native networking layer — but a
-// browser's FormData requires an actual Blob. expo-document-picker has a
-// working web shim (its uri is a blob: URL there), so this makes file
-// uploads work on web too rather than silently 400ing, without changing
-// anything about the native (iOS/Android) path.
+// React Native's classic FormData accepted a {uri,name,type} object for file
+// parts (Qbit, on SDK 52, relies on exactly this). Expo SDK 53+ installs its
+// own global fetch (expo/src/winter/fetch), which patches FormData.entries()
+// and, per its own convertFormData.ts, only accepts a string, a real Blob
+// (`entry instanceof Blob`), or an object with a `.bytes()` method — the old
+// {uri,name,type} shape now throws "Unsupported FormDataPart implementation"
+// on both native and web. Converting the picked file to a real Blob via
+// fetch works on both platforms since Expo's fetch is now the same
+// implementation everywhere, and the 3-arg append form lets its patched
+// normalizeArgs() attach the filename.
 export async function appendFilePart(
   form: FormData,
   fieldName: string,
   file: { uri: string; name: string; type: string }
 ): Promise<void> {
-  if (isWeb) {
-    const blob = await fetch(file.uri).then((r) => r.blob());
-    // The ambient FormData type in scope (no "DOM" lib) only declares the
-    // 2-arg append signature; the 3-arg (name, blob, filename) form is
-    // standard DOM behavior and works fine at runtime in a browser.
-    (form.append as (name: string, value: Blob, fileName: string) => void)(fieldName, blob, file.name);
-    return;
-  }
-  form.append(fieldName, { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
+  const blob = await fetch(file.uri).then((r) => r.blob());
+  // The ambient FormData type in scope (no "DOM" lib) only declares the
+  // 2-arg append signature; the 3-arg (name, blob, filename) form is
+  // standard and is what Expo's own FormData patch expects.
+  (form.append as (name: string, value: Blob, fileName: string) => void)(fieldName, blob, file.name);
 }
 
 export class ApiError extends Error {
