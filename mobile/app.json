@@ -21,7 +21,7 @@
         "expo-image-picker",
         {
           "cameraPermission": "Allow Evolution to access your camera so you can photograph receipts.",
-          "photosPermission": false,
+          "photosPermission": "Allow Evolution to access your photos so you can attach an existing image as a receipt.",
           "microphonePermission": false
         }
       ],

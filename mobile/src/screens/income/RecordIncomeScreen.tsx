@@ -83,7 +83,7 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
         <DateField label="Received date" value={receivedDate} onChange={setReceivedDate} maximumDate={new Date()} />
         <Field label="Notes (optional)" value={notes} onChange={setNotes} placeholder="" />
 
-        <PrimaryButton label={file ? "Change invoice file" : "Attach invoice file (optional)"} onPress={async () => setFile((await pickFromFiles()) ?? file)} />
+        <PrimaryButton label={file ? "Change invoice photo" : "Attach invoice photo (optional)"} onPress={async () => setFile((await pickFromFiles()) ?? file)} />
         {file && <ReceiptThumbnail uri={file.uri} isPdf={file.mimeType === "application/pdf"} filename={file.name} />}
 
         {status && <StatusBanner kind={status.kind} text={status.text} />}

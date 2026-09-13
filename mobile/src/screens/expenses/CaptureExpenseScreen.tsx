@@ -95,7 +95,7 @@ export function CaptureExpenseScreen(): React.JSX.Element {
             <PrimaryButton label="Take photo" onPress={async () => setReceipt((await captureFromCamera()) ?? receipt)} />
           </View>
           <View style={{ flex: 1 }}>
-            <PrimaryButton label="Choose file" onPress={async () => setReceipt((await pickFromFiles()) ?? receipt)} />
+            <PrimaryButton label="Choose photo" onPress={async () => setReceipt((await pickFromFiles()) ?? receipt)} />
           </View>
         </View>
         {receipt && (

@@ -1,4 +1,3 @@
-import * as DocumentPicker from "expo-document-picker";
 // SDK 57 rewrote expo-file-system around a File/Directory class API; the
 // `/legacy` subpath is Expo's own officially-supported compatibility shim
 // preserving the exact function-based API this file already uses.
@@ -38,25 +37,41 @@ export function useReceiptCapture() {
     };
   }
 
+  // Picking an existing file went through expo-document-picker originally,
+  // but every content:// URI it hands back turned out to be unreadable by
+  // every API this app tried against it — copyToCacheDirectory's internal
+  // copy silently failed, uploadAsync rejects content:// outright ("tried
+  // to treat the URI's opaque path segment as a literal directory"), and
+  // expo-file-system's readAsStringAsync explicitly refuses the scheme
+  // ("Unsupported scheme for location 'content://...'") — a hard
+  // restriction in the library itself, not a bug in how it was called.
+  // expo-image-picker's library picker is the same module that already
+  // makes camera capture work reliably: it returns a real file:// URI,
+  // not content://, so it reuses the one path proven to work end to end.
+  // Trade-off: this only covers images (screenshots, photo receipts) —
+  // PDF selection needs a working content:// reader, which nothing
+  // available here provides; that remains open.
   async function pickFromFiles(): Promise<PickedFile | null> {
-    // copyToCacheDirectory: false — the copy step was the actual bug: it
-    // silently failed to produce a readable file (three unrelated native
-    // APIs all hit an IOException reading the "copied" result), most likely
-    // because the internal copy loses the SAF read grant before it runs.
-    // Going straight to the original content:// URI reads it within the
-    // same grant that picking it just established.
-    const selected = await DocumentPicker.getDocumentAsync({
-      copyToCacheDirectory: false,
-      multiple: false,
-      type: ["image/*", "application/pdf"]
-    });
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        "Photo access needed",
+        "Evolution needs photo library access to attach an existing image as a receipt. You can allow this in your device settings."
+      );
+      return null;
+    }
 
+    const selected = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.7 });
     if (selected.canceled || selected.assets.length === 0) {
       return null;
     }
 
     const asset = selected.assets[0];
-    return { uri: asset.uri, name: asset.name ?? "receipt", mimeType: asset.mimeType ?? "application/octet-stream" };
+    return {
+      uri: asset.uri,
+      name: asset.fileName ?? `receipt-${Date.now()}.jpg`,
+      mimeType: asset.mimeType ?? "image/jpeg"
+    };
   }
 
   async function openDownload(url: string, filename: string): Promise<void> {

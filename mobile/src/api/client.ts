@@ -105,10 +105,12 @@ type MultipartFile = { uri: string; name: string; type: string; fieldName: strin
 // uploadAsync cannot handle a content:// URI at all — it tries to treat
 // the URI's opaque path segment as a literal filesystem path and throws
 // ("Directory for '/document/image:...' doesn't exist"). content:// is
-// exactly what expo-document-picker ("Choose file") hands back once its
-// own copyToCacheDirectory step is skipped (that internal copy turned out
-// to be the real bug: it silently failed to produce a readable file,
-// independent of which API later tried to read it).
+// what expo-document-picker hands back for an arbitrary picked file;
+// useReceiptCapture.ts moved off that picker entirely (to
+// expo-image-picker's library picker, which returns file:// like camera
+// capture does) once it became clear no available API could reliably
+// read a content:// URI here — see that file for the full story. This
+// branch stays for any future caller that legitimately has one.
 async function uploadFileViaNativeTask<T>(path: string, fields: Record<string, string>, file: MultipartFile): Promise<T> {
   const token = await getToken();
   const result = await LegacyFileSystem.uploadAsync(`${API_BASE_URL}${path}`, file.uri, {
@@ -140,16 +142,13 @@ async function uploadFileViaNativeTask<T>(path: string, fields: Record<string, s
   return payload as T;
 }
 
-// content:// URIs (from "Choose file" — screenshots, PDFs, anything not
-// captured live through the camera) can't go through uploadAsync. Read the
-// bytes directly instead, within the same SAF grant the picker call just
-// established — reading immediately, rather than through document-picker's
-// own (buggy) internal copy, is what actually made this reliable. Base64
-// is the only transfer format expo-file-system's legacy read API offers,
-// so this decodes it back to real bytes locally; the decoder is verified
-// byte-exact (see the commit that introduced it) against every padding
-// case, since a bug here would just reintroduce corrupted uploads under a
-// different name.
+// A content:// source can't go through uploadAsync (see above). Nothing
+// available in this app reliably reads content:// bytes on Android either
+// (expo-file-system's readAsStringAsync explicitly rejects the scheme),
+// so this path is currently only exercised on web. Kept as base64-decode
+// rather than deleted since it is the one approach that was proven correct
+// (byte-exact against every padding case) for whichever caller eventually
+// has a working content:// reader again.
 async function uploadFileViaFormData<T>(path: string, fields: Record<string, string>, file: MultipartFile): Promise<T> {
   const form = new FormData();
   for (const [key, value] of Object.entries(fields)) {
