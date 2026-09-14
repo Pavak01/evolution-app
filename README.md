@@ -1,5 +1,7 @@
 # Evolution (MVP)
 
+For end users: see the [User Guide](USER-GUIDE.md) and [FAQ](FAQ.md). Compliance docs: [Privacy Policy](PRIVACY-POLICY.md), [Account Deletion](ACCOUNT-DELETION.html).
+
 A receipt-first expense and tax app for self-employed drivers. Sibling app to
 Qbit (the weekly tax app), sharing its purpose but inverting the workflow:
 expenses are captured immediately at point of sale (photo + quick fields),
