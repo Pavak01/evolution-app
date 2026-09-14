@@ -104,12 +104,11 @@ export function DateField({
           mode="date"
           display={Platform.OS === "ios" ? "inline" : "default"}
           maximumDate={maximumDate}
-          onChange={(event, selectedDate) => {
+          onValueChange={(_event, selectedDate) => {
             setShowPicker(false);
-            if (event.type === "set" && selectedDate) {
-              onChange(formatIsoDate(selectedDate));
-            }
+            onChange(formatIsoDate(selectedDate));
           }}
+          onDismiss={() => setShowPicker(false)}
         />
       )}
     </View>
