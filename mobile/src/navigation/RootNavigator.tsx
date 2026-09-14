@@ -13,6 +13,7 @@ import { ExportScreen } from "../screens/export/ExportScreen";
 import { IncomeHistoryScreen } from "../screens/income/IncomeHistoryScreen";
 import { RecordIncomeScreen } from "../screens/income/RecordIncomeScreen";
 import { SummaryScreen } from "../screens/summary/SummaryScreen";
+import { VerifyTwoFactorScreen } from "../screens/auth/VerifyTwoFactorScreen";
 import { colors } from "../theme/tokens";
 import type { AuthStackParamList, ExpensesStackParamList, IncomeStackParamList, MainTabParamList } from "./types";
 
@@ -82,6 +83,7 @@ export function RootNavigator(): React.JSX.Element {
         <AuthStack.Navigator screenOptions={{ headerShown: false }}>
           <AuthStack.Screen name="Login" component={LoginScreen} />
           <AuthStack.Screen name="Register" component={RegisterScreen} />
+          <AuthStack.Screen name="VerifyTwoFactor" component={VerifyTwoFactorScreen} options={{ headerShown: true, title: "Verify" }} />
         </AuthStack.Navigator>
       )}
     </NavigationContainer>

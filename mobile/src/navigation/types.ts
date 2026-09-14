@@ -1,6 +1,7 @@
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
+  VerifyTwoFactor: { challengeToken: string };
 };
 
 export type ExpensesStackParamList = {

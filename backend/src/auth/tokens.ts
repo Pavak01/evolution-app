@@ -26,6 +26,17 @@ export function signToken(userId: string, tokenVersion: number): string {
   return jwt.sign({ sub: userId, ver: tokenVersion }, getJwtSecret(), { expiresIn: "7d" });
 }
 
+const twoFactorChallengeTtlMinutes = 10;
+
+// Evolution's own short-lived artifact — minted and verified here with
+// Evolution's JWT_SECRET, unlike the TOTP secret itself (which must match
+// Qbit's encryption exactly since it decrypts data Qbit created).
+export function signTwoFactorChallengeToken(userId: string): string {
+  return jwt.sign({ sub: userId, purpose: "two-factor-login" }, getJwtSecret(), {
+    expiresIn: `${twoFactorChallengeTtlMinutes}m`
+  });
+}
+
 export function signReceiptDownloadToken(userId: string, receiptId: string): string {
   return jwt.sign({ sub: userId, rid: receiptId, purpose: "receipt-download" }, getJwtSecret(), {
     expiresIn: receiptDownloadTtlSeconds

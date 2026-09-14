@@ -21,7 +21,10 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
     setError(null);
     setIsSubmitting(true);
     try {
-      await login(email.trim().toLowerCase(), password);
+      const result = await login(email.trim().toLowerCase(), password);
+      if (result.status === "two_factor_required") {
+        navigation.navigate("VerifyTwoFactor", { challengeToken: result.challengeToken });
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not sign in. Check your connection.");
     } finally {
