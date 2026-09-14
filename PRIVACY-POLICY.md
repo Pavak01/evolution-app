@@ -29,8 +29,6 @@ May be retained for a limited period:
 - Backup snapshots: retained until backup rotation expires (typically up to 30 days)
 - Data required by applicable law: retained only as legally required
 
-Your account sign-in itself (email, password) is shared with Qbit, Evolution's sibling app from the same developer — see "Shared account with Qbit" below for what that means for deletion.
-
 ## 1. Who this applies to
 
 This policy applies to users of Evolution, including the mobile app and its backend API.
@@ -74,7 +72,7 @@ We use data to:
 ## 4. Where and how data is stored
 
 ### A. Database storage
-Your account, expenses, income records, and receipt/invoice metadata are stored in PostgreSQL, hosted alongside Qbit's database (see "Shared account with Qbit" below).
+Your account, expenses, income records, and receipt/invoice metadata are stored in PostgreSQL.
 
 ### B. Receipt and invoice file storage
 Receipt and invoice files are stored in S3-compatible object storage. The app stores a file path reference and uses authenticated, time-limited signed download links to access them — never a permanently public URL.
@@ -93,18 +91,12 @@ We may share data with infrastructure providers that run core app infrastructure
 
 We may disclose data if required by law or valid legal process.
 
-## 6. Shared account with Qbit
-
-Evolution is built by the same developer as Qbit (the weekly tax app), and is intended to replace it. To avoid requiring you to create a second account, **your sign-in (email and password) is shared between Evolution and Qbit** — logging in with the same credentials works in both apps.
-
-Your expense and income records, however, are **not** shared: each app stores its own records in separate database tables. Deleting your account removes both apps' records for you, processed independently by each app's own backend.
-
-## 7. Data retention
+## 6. Data retention
 
 - Data remains stored until you request deletion, or as needed to operate the service.
 - Backup copies may persist for operational recovery windows (typically up to 30 days).
 
-## 8. Security measures
+## 7. Security measures
 
 We apply technical controls including:
 - Password hashing (bcrypt)
@@ -114,11 +106,11 @@ We apply technical controls including:
 - Signed, time-limited file download tokens
 - Receipt/invoice content validation via magic-byte inspection (rejects files whose actual content does not match their declared type)
 - Basic endpoint rate limiting
-- Database backups and point-in-time recovery, provided by the shared hosting infrastructure
+- Database backups and point-in-time recovery, provided by the hosting infrastructure
 
 No method of transmission or storage is 100% secure, but we work to reduce risk using reasonable safeguards.
 
-## 9. Your choices and rights
+## 8. Your choices and rights
 
 You can:
 - View your submitted expense, income, and summary data in-app
@@ -127,25 +119,25 @@ You can:
 
 Depending on your jurisdiction, you may have additional rights (for example, access, correction, deletion, portability, objection, or restriction). Contact us to request these.
 
-## 10. Children
+## 9. Children
 
 This service is not intended for children under 13 (or the age required by local law).
 
-## 11. International transfers
+## 10. International transfers
 
 Your information may be processed in countries other than your own, depending on hosting and infrastructure providers.
 
-## 12. Changes to this policy
+## 11. Changes to this policy
 
 We may update this policy from time to time. Material changes will be communicated through app updates or repository documentation updates.
 
-## 13. Contact
+## 12. Contact
 
 For privacy questions or requests, contact `support@aplccommodities.com` and include:
 - Account email
 - Request type (access, correction, deletion, etc.)
 
-## 14. Account deletion link
+## 13. Account deletion link
 
 Public account deletion request page:
 - [ACCOUNT-DELETION.html](ACCOUNT-DELETION.html)
