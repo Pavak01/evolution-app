@@ -20,4 +20,5 @@ export type MainTabParamList = {
   Summary: undefined;
   History: undefined;
   Export: undefined;
+  Settings: undefined;
 };

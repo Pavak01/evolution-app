@@ -2,6 +2,7 @@ import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import type { NextFunction, Request, Response } from "express";
+import { processEvolutionAccountDeletions } from "./accountDeletion.js";
 import { allowedOrigins, isProduction, port } from "./config.js";
 import { finalErrorHandler } from "./middleware/errorHandler.js";
 import { authRouter } from "./routes/auth.routes.js";
@@ -52,4 +53,10 @@ app.use(finalErrorHandler);
 
 app.listen(port, () => {
   console.log(`Evolution backend running on port ${port}`);
+
+  // Qbit's equivalent job only ever runs once, at startup — relying on the
+  // service happening to restart within the 30-day grace period to notice
+  // a pending deletion at all. Running on an interval too closes that gap.
+  void processEvolutionAccountDeletions();
+  setInterval(() => void processEvolutionAccountDeletions(), 24 * 60 * 60 * 1000);
 });

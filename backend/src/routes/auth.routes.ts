@@ -7,7 +7,7 @@ import { db } from "../db.js";
 import { sendError } from "../middleware/errorHandler.js";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { authRateLimit } from "../middleware/rateLimit.js";
-import { authSchema, twoFactorVerifySchema } from "../validation/auth.schema.js";
+import { accountDeletionRequestSchema, authSchema, publicAccountDeletionRequestSchema, twoFactorVerifySchema } from "../validation/auth.schema.js";
 
 export const authRouter = Router();
 
@@ -138,6 +138,79 @@ authRouter.post("/auth/verify-2fa", authRateLimit, async (req: Request, res: Res
     return res.json({ token, user: { id: user.id, email: user.email } });
   } catch (error) {
     return sendError(res, 500, "Failed to verify two-factor code", error);
+  }
+});
+
+// Marks the account for deletion — matches Qbit's exact semantics on the
+// shared `deletion_status`/`deletion_requested_at` columns (Qbit's own
+// background job already purges Qbit's tables for any user in this state;
+// Evolution's own job below purges evolution.* tables independently,
+// neither needs to know about the other's schema). Refuses a second
+// request if one is already pending or completed, matching Qbit.
+async function markAccountForDeletion(userId: string): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  const result = await db.query<{ deletion_status: string | null }>("SELECT deletion_status FROM users WHERE id = $1", [userId]);
+  if (result.rows.length === 0) {
+    return { ok: false, status: 404, error: "User not found." };
+  }
+  if (result.rows[0].deletion_status && result.rows[0].deletion_status !== "active") {
+    return { ok: false, status: 400, error: "Account deletion already requested." };
+  }
+
+  await db.query("UPDATE users SET deletion_requested_at = NOW(), deletion_status = 'pending' WHERE id = $1", [userId]);
+  return { ok: true };
+}
+
+authRouter.post("/auth/account-deletion-request", requireAuth, authRateLimit, async (req: Request, res: Response) => {
+  const authReq = req as AuthenticatedRequest;
+  const parsed = accountDeletionRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid payload", details: parsed.error.flatten() });
+  }
+
+  try {
+    const result = await markAccountForDeletion(authReq.userId);
+    if (!result.ok) {
+      return res.status(result.status).json({ error: result.error });
+    }
+    return res.json({ success: true, message: "Account deletion request received. Your account and data will be deleted within 30 days." });
+  } catch (error) {
+    return sendError(res, 500, "Failed to process deletion request", error);
+  }
+});
+
+// Unauthenticated on purpose — Google Play requires a way to request
+// account deletion without having the app installed or a live session.
+// Unlike Qbit's equivalent public page (email + self-asserted name only,
+// no password), this requires the actual account password so a deletion
+// request can't be filed against someone else's account by a third party
+// who just knows their email address.
+authRouter.post("/public/account-deletion-request", authRateLimit, async (req: Request, res: Response) => {
+  const parsed = publicAccountDeletionRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid payload", details: parsed.error.flatten() });
+  }
+
+  try {
+    const result = await db.query<{ id: string; password_hash: string }>(
+      "SELECT id, password_hash FROM users WHERE email = $1 LIMIT 1",
+      [parsed.data.email]
+    );
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: "Invalid email or password." });
+    }
+
+    const ok = await bcrypt.compare(parsed.data.password, result.rows[0].password_hash);
+    if (!ok) {
+      return res.status(401).json({ error: "Invalid email or password." });
+    }
+
+    const deletion = await markAccountForDeletion(result.rows[0].id);
+    if (!deletion.ok) {
+      return res.status(deletion.status).json({ error: deletion.error });
+    }
+    return res.json({ success: true, message: "Account deletion request received. Your account and data will be deleted within 30 days." });
+  } catch (error) {
+    return sendError(res, 500, "Failed to process deletion request", error);
   }
 });
 

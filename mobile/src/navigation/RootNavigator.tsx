@@ -13,6 +13,7 @@ import { ExportScreen } from "../screens/export/ExportScreen";
 import { IncomeHistoryScreen } from "../screens/income/IncomeHistoryScreen";
 import { RecordIncomeScreen } from "../screens/income/RecordIncomeScreen";
 import { SummaryScreen } from "../screens/summary/SummaryScreen";
+import { SettingsScreen } from "../screens/settings/SettingsScreen";
 import { VerifyTwoFactorScreen } from "../screens/auth/VerifyTwoFactorScreen";
 import { colors } from "../theme/tokens";
 import type { AuthStackParamList, ExpensesStackParamList, IncomeStackParamList, MainTabParamList } from "./types";
@@ -60,6 +61,7 @@ function MainTabs(): React.JSX.Element {
       <Tab.Screen name="Summary" component={SummaryScreen} />
       <Tab.Screen name="History" component={HistoryStackScreen} options={{ headerShown: false }} />
       <Tab.Screen name="Export" component={ExportScreen} />
+      <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   );
 }
