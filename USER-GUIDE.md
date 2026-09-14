@@ -1,6 +1,6 @@
 # Evolution — User Guide
 
-Evolution is a receipt-first expense and tax app for self-employed drivers. It replaces Qbit (the weekly tax app) with a simpler idea: log an expense the moment it happens, at the point of sale, with a photo — and record income separately, whenever an invoice or payment actually arrives.
+Evolution is a receipt-first expense and tax app for self-employed drivers, built around a simple idea: log an expense the moment it happens, at the point of sale, with a photo — and record income separately, whenever an invoice or payment actually arrives.
 
 This guide walks through every screen. For quick answers, see the [FAQ](FAQ.md).
 
@@ -13,15 +13,12 @@ This guide walks through every screen. For quick answers, see the [FAQ](FAQ.md).
 - [History](#history)
 - [Export](#export)
 - [Settings](#settings)
-- [Your data and Qbit](#your-data-and-qbit)
 
 ## Signing in
 
-If you already have a Qbit account, sign in with the same email and password — no need to register again. Evolution and Qbit share one login, but keep separate sessions: signing into Evolution doesn't automatically sign you into Qbit, or vice versa.
+Sign in with your email and password, or tap **Create an account** if you're new.
 
-If your account has two-factor authentication (2FA) turned on, after entering your password you'll be asked for the 6-digit code from your authenticator app. Evolution checks this the same way Qbit does — it's the same 2FA setup, not a separate one. (2FA can currently only be *turned on* from within Qbit; Evolution can verify a code but doesn't yet have its own setup screen for enabling it — that's coming in a future update.)
-
-New to the app? Tap **Create an account** on the sign-in screen.
+If your account has two-factor authentication (2FA) turned on, after entering your password you'll be asked for the 6-digit code from your authenticator app. (2FA can be verified at sign-in, but there isn't yet an in-app screen for turning it on — that's coming in a future update.)
 
 ## Log a receipt (Capture)
 
@@ -80,8 +77,4 @@ Generate a file of everything logged for a given tax year.
 
 - See which account you're signed in as.
 - **Log out**.
-- **Delete account** — permanently deletes your account and all your data (expenses, receipts, income records, tax summaries) in both Evolution and Qbit. Type `DELETE` to confirm. This can't be undone, and processing completes within 30 days. See [Account deletion](ACCOUNT-DELETION.html) for the version of this you can use without the app installed, and the [Privacy Policy](PRIVACY-POLICY.md) for exactly what is and isn't removed.
-
-## Your data and Qbit
-
-Evolution is built to replace Qbit, by the same developer, sharing the same sign-in — but it does **not** share your expense and income records with Qbit. Each app keeps its own separate records. If you've been using Qbit, your historical weekly entries stay in Qbit; Evolution starts you fresh going forward with the new workflow. Deleting your account removes your data from both.
+- **Delete account** — permanently deletes your account and all your data: expenses, receipts, income records, and tax summaries. Type `DELETE` to confirm. This can't be undone, and processing completes within 30 days. See [Account deletion](ACCOUNT-DELETION.html) for the version of this you can use without the app installed, and the [Privacy Policy](PRIVACY-POLICY.md) for exactly what is removed.

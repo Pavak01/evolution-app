@@ -4,20 +4,14 @@ See the [User Guide](USER-GUIDE.md) for a full screen-by-screen walkthrough.
 
 ## Account and sign-in
 
-**Do I need to create a new account if I already use Qbit?**
-No. Evolution and Qbit share the same sign-in (email and password), so your existing Qbit credentials work immediately in Evolution.
-
-**If I'm signed into Qbit, am I automatically signed into Evolution too?**
-No. Each app keeps its own session, so you'll sign in once, separately, the first time you open Evolution — even if you're already signed into Qbit.
-
 **I have 2FA enabled — how does that work in Evolution?**
-Evolution checks the same 2FA authenticator code Qbit already set up for your account. After your password, you'll be asked for the 6-digit code from your authenticator app. There's no separate 2FA to configure in Evolution itself yet — enabling or disabling 2FA is currently only available from within Qbit. A dedicated setup screen inside Evolution is planned for a future update.
+After your password, you'll be asked for the 6-digit code from your authenticator app. There's no in-app screen for turning 2FA on or off yet — that's planned for a future update, and can currently only be verified at sign-in, not configured.
 
 **I lost access to my authenticator app / my 2FA code won't work — what now?**
 Contact support (see [Privacy Policy](PRIVACY-POLICY.md) for the contact email) — account recovery for 2FA has to be handled manually, since it involves verifying your identity outside the app.
 
 **How do I delete my account?**
-In-app: Settings → Delete account (type `DELETE` to confirm). Without the app installed: use the [public account deletion page](ACCOUNT-DELETION.html), which asks for your email and password to confirm it's really you. Either way, deletion covers both Evolution and Qbit, and completes within 30 days. Full details in the [Privacy Policy](PRIVACY-POLICY.md).
+In-app: Settings → Delete account (type `DELETE` to confirm). Without the app installed: use the [public account deletion page](ACCOUNT-DELETION.html), which asks for your email and password to confirm it's really you. Either way, processing completes within 30 days. Full details in the [Privacy Policy](PRIVACY-POLICY.md).
 
 ## Logging expenses
 
@@ -41,8 +35,8 @@ There's no edit button by design. Open the expense in History and **void** it wi
 
 ## Recording income
 
-**Why is income recorded separately from expenses, unlike Qbit's weekly entry?**
-Because the two things happen at genuinely different times. An expense happens the instant you pay for something; income often arrives later and covers a period (an invoice paid weeks after the work), so bundling the two into one entry created friction and made it easy to miss expenses. Evolution treats them as two independent streams.
+**Why is income recorded separately from expenses?**
+Because the two things happen at genuinely different times. An expense happens the instant you pay for something; income often arrives later and covers a period (an invoice paid weeks after the work), so bundling the two into one entry would create friction and make it easy to miss expenses. Evolution treats them as two independent streams.
 
 **Two different clients invoiced me for overlapping dates — will that double-count?**
 No. Overlapping income periods are legitimate (two clients paying you for the same week is normal) and Evolution merges the overlap when calculating your "weeks logged" figure for National Insurance, so you won't be double-counted.
@@ -63,14 +57,11 @@ Automated warnings the app generates when something about your figures looks wor
 
 ## Data, storage, and security
 
-**Where is my data stored, and is it shared with Qbit?**
-Your sign-in (email/password) is shared with Qbit — that's it. Your expenses, income records, receipts, and tax summaries are stored separately from Qbit's data, in Evolution's own tables, even though both apps' data lives in the same underlying database infrastructure. See the [Privacy Policy](PRIVACY-POLICY.md) for the full breakdown.
+**Where is my data stored?**
+Your expenses, income records, receipts, and tax summaries are stored in Evolution's own database tables. See the [Privacy Policy](PRIVACY-POLICY.md) for the full breakdown.
 
 **Are my receipt photos publicly accessible if someone gets the link?**
 No. Receipts are never served from a permanent public URL — every download goes through your authenticated session plus a separate short-lived signed link that expires quickly.
-
-**What happens to my old Qbit weekly entries?**
-They stay in Qbit, untouched. Evolution doesn't import or migrate them — it's a fresh start for your ongoing records, going forward, using the new workflow.
 
 **I don't have a stable internet connection at the point of sale — can I log an expense offline?**
 Not yet — offline queueing is a planned improvement, not yet part of the app. For now, an internet connection is needed to save an entry.
