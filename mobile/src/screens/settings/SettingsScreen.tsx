@@ -50,6 +50,7 @@ export function SettingsScreen(): React.JSX.Element {
         <View style={{ gap: spacing.sm }}>
           <PrimaryButton label="User guide" onPress={() => Linking.openURL(`${DOCS_BASE_URL}/USER-GUIDE.html`)} />
           <PrimaryButton label="FAQ" onPress={() => Linking.openURL(`${DOCS_BASE_URL}/FAQ.html`)} />
+          <PrimaryButton label="Privacy policy" onPress={() => Linking.openURL(`${DOCS_BASE_URL}/PRIVACY-POLICY.html`)} />
         </View>
       </Card>
 
