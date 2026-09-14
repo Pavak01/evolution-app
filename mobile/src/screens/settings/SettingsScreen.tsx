@@ -9,6 +9,13 @@ import { colors, spacing, typography } from "../../theme/tokens";
 
 const DOCS_BASE_URL = "https://pavak01.github.io/evolution-app";
 
+// GitHub Pages serves these with a 10-minute cache-control, and phone
+// browsers cache on top of that — a query param that changes on every tap
+// forces a fresh fetch instead of showing a stale page from an earlier visit.
+function openDoc(path: string): void {
+  Linking.openURL(`${DOCS_BASE_URL}/${path}?v=${Date.now()}`);
+}
+
 export function SettingsScreen(): React.JSX.Element {
   const { user, logout } = useAuth();
 
@@ -48,9 +55,9 @@ export function SettingsScreen(): React.JSX.Element {
           Help
         </Text>
         <View style={{ gap: spacing.sm }}>
-          <PrimaryButton label="User guide" onPress={() => Linking.openURL(`${DOCS_BASE_URL}/USER-GUIDE.html`)} />
-          <PrimaryButton label="FAQ" onPress={() => Linking.openURL(`${DOCS_BASE_URL}/FAQ.html`)} />
-          <PrimaryButton label="Privacy policy" onPress={() => Linking.openURL(`${DOCS_BASE_URL}/PRIVACY-POLICY.html`)} />
+          <PrimaryButton label="User guide" onPress={() => openDoc("USER-GUIDE.html")} />
+          <PrimaryButton label="FAQ" onPress={() => openDoc("FAQ.html")} />
+          <PrimaryButton label="Privacy policy" onPress={() => openDoc("PRIVACY-POLICY.html")} />
         </View>
       </Card>
 
@@ -60,7 +67,7 @@ export function SettingsScreen(): React.JSX.Element {
         </Text>
         <Text style={{ color: colors.textSecondary, marginBottom: spacing.md }}>
           This permanently deletes your account and all your data — expenses, receipts, income records, and tax
-          summaries — in both Evolution and Qbit. This cannot be undone. Processing target: within 30 days.
+          summaries. This cannot be undone. Processing target: within 30 days.
         </Text>
         <Field label="Reason (optional)" value={message} onChange={setMessage} placeholder="" />
         <Field label='Type "DELETE" to confirm' value={confirmText} onChange={setConfirmText} placeholder="DELETE" />
