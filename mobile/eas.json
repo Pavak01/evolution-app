@@ -7,7 +7,8 @@
     "preview": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "credentialsSource": "local"
       },
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://evolution-backend-production.up.railway.app"
@@ -15,6 +16,9 @@
     },
     "production": {
       "autoIncrement": true,
+      "android": {
+        "credentialsSource": "local"
+      },
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://evolution-backend-production.up.railway.app"
       }
