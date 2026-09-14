@@ -6,6 +6,7 @@ import { getExpense, voidExpense } from "../../api/expenses";
 import { ApiError } from "../../api/client";
 import type { Expense } from "../../api/types";
 import { Card, DangerAction, Field, PrimaryButton, StatusBanner, SummaryRow } from "../../components/Controls";
+import { ImageViewerModal } from "../../components/ImageViewerModal";
 import { Screen } from "../../components/Screen";
 import { useReceiptCapture } from "../../hooks/useReceiptCapture";
 import { colors, spacing, typography } from "../../theme/tokens";
@@ -15,13 +16,17 @@ type Props = NativeStackScreenProps<ExpensesStackParamList, "ExpenseDetail">;
 
 export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Element {
   const { expenseId } = route.params;
-  const { openDownload } = useReceiptCapture();
+  const { downloadToLocalUri, shareLocalUri } = useReceiptCapture();
 
   const [expense, setExpense] = useState<Expense | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [voidReason, setVoidReason] = useState("");
   const [isVoiding, setIsVoiding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [viewerLoading, setViewerLoading] = useState(false);
+  const [viewerUri, setViewerUri] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -39,6 +44,16 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
       void load();
     }, [load])
   );
+
+  async function handleViewReceipt(): Promise<void> {
+    if (!expense) return;
+    setViewerVisible(true);
+    setViewerLoading(true);
+    setViewerUri(null);
+    const localUri = await downloadToLocalUri(expense.receipt_download_url, `${expense.category}-receipt`);
+    setViewerUri(localUri);
+    setViewerLoading(false);
+  }
 
   async function handleVoid(): Promise<void> {
     if (!voidReason.trim()) {
@@ -87,7 +102,14 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
         )}
       </Card>
 
-      <PrimaryButton label="View receipt" onPress={() => openDownload(expense.receipt_download_url, `${expense.category}-receipt`)} />
+      <PrimaryButton label="View receipt" onPress={handleViewReceipt} />
+      <ImageViewerModal
+        visible={viewerVisible}
+        uri={viewerUri}
+        isLoading={viewerLoading}
+        onClose={() => setViewerVisible(false)}
+        onShare={viewerUri ? () => shareLocalUri(viewerUri) : undefined}
+      />
 
       {!expense.voided_at && (
         <Card>

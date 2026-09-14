@@ -123,11 +123,13 @@ export function useReceiptCapture() {
     return { uri: asset.uri, name: asset.name ?? "invoice", mimeType: asset.mimeType ?? "application/octet-stream" };
   }
 
-  async function openDownload(url: string, filename: string): Promise<void> {
+  // Downloads to a local file and returns its uri, without doing anything
+  // with it — the caller decides whether to view it in-app or share it.
+  async function downloadToLocalUri(url: string, filename: string): Promise<string | null> {
     const cacheDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
     if (!cacheDir) {
       Alert.alert("File error", "No writable directory is available on this device.");
-      return;
+      return null;
     }
 
     const token = await getToken();
@@ -142,18 +144,23 @@ export function useReceiptCapture() {
       const result = await task.downloadAsync();
       if (!result?.uri) {
         Alert.alert("Download failed", "Could not save the file.");
-        return;
+        return null;
       }
 
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(result.uri, { dialogTitle: "Open or share file" });
-      } else {
-        Alert.alert("Downloaded", `File saved at ${result.uri}`);
-      }
+      return result.uri;
     } catch (error) {
       Alert.alert("Download error", String(error));
+      return null;
     }
   }
 
-  return { captureFromCamera, pickFromFiles, pickDocument, openDownload };
+  async function shareLocalUri(uri: string): Promise<void> {
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(uri, { dialogTitle: "Share file" });
+    } else {
+      Alert.alert("Sharing unavailable", `File saved at ${uri}`);
+    }
+  }
+
+  return { captureFromCamera, pickFromFiles, pickDocument, downloadToLocalUri, shareLocalUri };
 }
