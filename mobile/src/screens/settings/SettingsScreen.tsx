@@ -1,11 +1,13 @@
 import React, { useState } from "react";
-import { Text, View } from "react-native";
+import { Linking, Text, View } from "react-native";
 import { requestAccountDeletion } from "../../api/account";
 import { ApiError } from "../../api/client";
 import { Card, DangerAction, Field, PrimaryButton, StatusBanner } from "../../components/Controls";
 import { Screen } from "../../components/Screen";
 import { useAuth } from "../../auth/AuthContext";
 import { colors, spacing, typography } from "../../theme/tokens";
+
+const DOCS_BASE_URL = "https://pavak01.github.io/evolution-app";
 
 export function SettingsScreen(): React.JSX.Element {
   const { user, logout } = useAuth();
@@ -39,6 +41,16 @@ export function SettingsScreen(): React.JSX.Element {
           {user?.email}
         </Text>
         <PrimaryButton label="Log out" onPress={logout} />
+      </Card>
+
+      <Card>
+        <Text style={{ fontSize: typography.body, fontWeight: "700", color: colors.textMain, marginBottom: spacing.sm }}>
+          Help
+        </Text>
+        <View style={{ gap: spacing.sm }}>
+          <PrimaryButton label="User guide" onPress={() => Linking.openURL(`${DOCS_BASE_URL}/USER-GUIDE.html`)} />
+          <PrimaryButton label="FAQ" onPress={() => Linking.openURL(`${DOCS_BASE_URL}/FAQ.html`)} />
+        </View>
       </Card>
 
       <Card>
