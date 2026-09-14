@@ -33,6 +33,9 @@ Fully reimbursed means someone paid you back the entire amount — it's not a de
 **I made a mistake on an expense — how do I fix it?**
 There's no edit button by design. Open the expense in History and **void** it with a reason, then log a fresh correct entry. This keeps a clean audit trail — nothing is silently changed after the fact, which matters if your records are ever checked by HMRC.
 
+**What is "Auto-fill from receipt"?**
+A paid upgrade, currently in preview, that reads a receipt photo and fills in the category, amount, and date automatically — you still review and can edit everything before saving. It's not purchasable yet; manual entry is always free and always works, and stays that way as the fallback even once auto-fill ships properly.
+
 ## Recording income
 
 **Why is income recorded separately from expenses?**

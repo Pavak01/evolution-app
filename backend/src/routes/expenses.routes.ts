@@ -2,10 +2,12 @@ import { Router, type Request, type Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 import { getReceiptDownloadUrl } from "../auth/tokens.js";
 import { db } from "../db.js";
+import { isOcrUpgradeActive } from "../entitlements.js";
 import { sendError } from "../middleware/errorHandler.js";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { uploadRateLimit } from "../middleware/rateLimit.js";
 import { upload } from "../middleware/upload.js";
+import { extractReceiptFields } from "../receiptExtraction.js";
 import { deleteReceiptObject, receiptContentMatchesDeclaredType, uploadReceiptObject } from "../receiptStorage.js";
 import { getTaxYearFromDate } from "../rulesEngine.js";
 import { recomputeTaxSummary } from "../taxSummary.js";
@@ -140,6 +142,40 @@ expensesRouter.post(
       return sendError(res, 500, "Failed to save expense", error);
     } finally {
       client.release();
+    }
+  }
+);
+
+// Paid-upgrade feature: reads the receipt and returns best-guess field
+// values for the client to prefill — never persists anything, and never
+// errors out on a bad/unclear photo (see receiptExtraction.ts). The user
+// still reviews/edits and submits through POST /expenses as normal.
+expensesRouter.post(
+  "/expenses/extract-receipt",
+  requireAuth,
+  uploadRateLimit,
+  upload.single("receipt"),
+  async (req: Request, res: Response) => {
+    const authReq = req as AuthenticatedRequest;
+
+    if (!req.file) {
+      return res.status(400).json({ error: "receipt file is required" });
+    }
+
+    try {
+      const entitled = await isOcrUpgradeActive(authReq.userId);
+      if (!entitled) {
+        return res.status(403).json({ error: "OCR auto-fill is a paid upgrade and isn't enabled on this account." });
+      }
+
+      if (!receiptContentMatchesDeclaredType(req.file.buffer, req.file.mimetype)) {
+        return res.status(400).json({ error: "File content does not match its declared type" });
+      }
+
+      const result = await extractReceiptFields(req.file.buffer, req.file.mimetype);
+      return res.json(result);
+    } catch (error) {
+      return sendError(res, 500, "Failed to extract receipt fields", error);
     }
   }
 );

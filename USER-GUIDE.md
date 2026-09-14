@@ -38,6 +38,8 @@ After saving, you'll see your running total for the current tax year (net profit
 
 **A note on file types**: photo capture and photo-library selection both work reliably. Picking a PDF or a "Files" document currently does not work inside Expo Go (the testing app) due to a sandboxing limitation on Android — this is fixed once the app ships as a standalone build. In the meantime, a photo of a PDF receipt (or a screenshot of it) works fine.
 
+**Auto-fill from receipt**: a paid upgrade, currently in preview, that reads a picked receipt photo and fills in the category, amount, and date for you — still fully editable before you save. Not yet purchasable; accounts with early access see an **Auto-fill from receipt** button once a photo is added, everyone else sees a "coming soon" note in its place.
+
 ## Record income
 
 Unlike expenses, income is entered periodically — whenever a payment or invoice comes in, not at the moment you provide the service.

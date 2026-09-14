@@ -1,6 +1,6 @@
 import { apiJson, clearToken, setToken } from "./client";
 
-export type AuthUser = { id: string; email: string };
+export type AuthUser = { id: string; email: string; entitlements: { ocr_upgrade_active: boolean } };
 
 export async function register(email: string, password: string): Promise<AuthUser> {
   const result = await apiJson<{ token: string; user: AuthUser }>("/auth/register", {

@@ -17,6 +17,10 @@ CREATE TABLE IF NOT EXISTS public.users (
 );
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS deletion_status TEXT DEFAULT 'active';
+-- Read/written by accountDeletion.ts and auth.routes.ts; already exists on
+-- Qbit's real production users table (Qbit created it first), but was
+-- missing here, so a fresh/local database would break on account deletion.
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS deletion_requested_at TIMESTAMP;
 
 -- Everything below is Evolution-owned and lives in its own schema — kept
 -- separate from `public` specifically so it can never collide with Qbit's
@@ -140,6 +144,19 @@ CREATE TABLE IF NOT EXISTS evolution.tax_summaries (
   estimated_ni NUMERIC(12,2) NOT NULL,
   updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
   UNIQUE (user_id, tax_year)
+);
+
+-- Evolution-only concern, no Qbit analog — a paid-upgrade entitlement
+-- (currently just OCR auto-fill on receipt capture), gated manually until
+-- a real subscription purchase flow exists. `ocr_upgrade_expires_at` is
+-- NULL for a manual grant (never expires) and set to the renewal boundary
+-- once a real subscription source populates it.
+CREATE TABLE IF NOT EXISTS evolution.entitlements (
+  user_id UUID PRIMARY KEY REFERENCES public.users(id),
+  ocr_upgrade_active BOOLEAN NOT NULL DEFAULT FALSE,
+  ocr_upgrade_source TEXT,
+  ocr_upgrade_expires_at TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_expenses_user_tax_year ON evolution.expenses(user_id, tax_year) WHERE voided_at IS NULL;

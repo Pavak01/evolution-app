@@ -4,12 +4,21 @@ import jwt from "jsonwebtoken";
 import { getJwtSecret, signToken, signTwoFactorChallengeToken } from "../auth/tokens.js";
 import { decryptTwoFactorSecret, verifyTotpCode } from "../auth/twoFactor.js";
 import { db } from "../db.js";
+import { isOcrUpgradeActive } from "../entitlements.js";
 import { sendError } from "../middleware/errorHandler.js";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { authRateLimit } from "../middleware/rateLimit.js";
 import { accountDeletionRequestSchema, authSchema, publicAccountDeletionRequestSchema, twoFactorVerifySchema } from "../validation/auth.schema.js";
 
 export const authRouter = Router();
+
+// Included in every response that carries a `user` object (register, login,
+// verify-2fa, /auth/me) — not just /auth/me — so the mobile app has current
+// entitlement state immediately after signing in, not only after an app
+// restart that re-hits /auth/me.
+async function buildUserPayload(id: string, email: string): Promise<{ id: string; email: string; entitlements: { ocr_upgrade_active: boolean } }> {
+  return { id, email, entitlements: { ocr_upgrade_active: await isOcrUpgradeActive(id) } };
+}
 
 authRouter.post("/auth/register", authRateLimit, async (req: Request, res: Response) => {
   const parsed = authSchema.safeParse(req.body);
@@ -35,7 +44,7 @@ authRouter.post("/auth/register", authRateLimit, async (req: Request, res: Respo
 
     const user = inserted.rows[0];
     const token = signToken(user.id, user.token_version);
-    return res.status(201).json({ token, user: { id: user.id, email: user.email } });
+    return res.status(201).json({ token, user: await buildUserPayload(user.id, user.email) });
   } catch (error) {
     return sendError(res, 500, "Failed to register", error);
   }
@@ -91,7 +100,7 @@ authRouter.post("/auth/login", authRateLimit, async (req: Request, res: Response
     }
 
     const token = signToken(user.id, user.token_version);
-    return res.json({ token, user: { id: user.id, email: user.email } });
+    return res.json({ token, user: await buildUserPayload(user.id, user.email) });
   } catch (error) {
     return sendError(res, 500, "Failed to login", error);
   }
@@ -135,7 +144,7 @@ authRouter.post("/auth/verify-2fa", authRateLimit, async (req: Request, res: Res
     }
 
     const token = signToken(user.id, user.token_version);
-    return res.json({ token, user: { id: user.id, email: user.email } });
+    return res.json({ token, user: await buildUserPayload(user.id, user.email) });
   } catch (error) {
     return sendError(res, 500, "Failed to verify two-factor code", error);
   }
@@ -227,7 +236,8 @@ authRouter.get("/auth/me", requireAuth, async (req: Request, res: Response) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    return res.json({ user: result.rows[0] });
+    const row = result.rows[0];
+    return res.json({ user: { ...(await buildUserPayload(row.id, row.email)), created_at: row.created_at } });
   } catch (error) {
     return sendError(res, 500, "Failed to load user", error);
   }

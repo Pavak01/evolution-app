@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { Text, View } from "react-native";
+import { useAuth } from "../../auth/AuthContext";
 import { createExpense } from "../../api/expenses";
 import { ApiError } from "../../api/client";
+import { extractReceiptFields } from "../../api/receiptExtraction";
 import type { PaymentMethod, ReimbursementStatus, TaxSummary } from "../../api/types";
 import { Card, DateField, Field, PrimaryButton, SmallAction, SnapshotTile, StatusBanner } from "../../components/Controls";
 import { ReceiptThumbnail } from "../../components/ReceiptThumbnail";
@@ -13,7 +15,9 @@ import { getTodayIso } from "../../utils/taxYear";
 const CATEGORY_SUGGESTIONS = ["fuel", "travel", "parking_tolls", "vehicle_maintenance", "phone", "home_office", "ppe", "accountancy", "food", "other"];
 
 export function CaptureExpenseScreen(): React.JSX.Element {
+  const { user } = useAuth();
   const { captureFromCamera, pickFromFiles } = useReceiptCapture();
+  const hasOcrUpgrade = user?.entitlements.ocr_upgrade_active ?? false;
 
   const [category, setCategory] = useState("");
   const [occurredAt, setOccurredAt] = useState(getTodayIso());
@@ -25,6 +29,7 @@ export function CaptureExpenseScreen(): React.JSX.Element {
   const [receipt, setReceipt] = useState<PickedFile | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isExtracting, setIsExtracting] = useState(false);
   const [status, setStatus] = useState<{ kind: "info" | "error"; text: string } | null>(null);
   const [lastSummary, setLastSummary] = useState<TaxSummary | null>(null);
 
@@ -50,6 +55,30 @@ export function CaptureExpenseScreen(): React.JSX.Element {
       }
     }
     return null;
+  }
+
+  async function handleAutoFill(): Promise<void> {
+    if (!receipt) return;
+
+    setStatus(null);
+    setIsExtracting(true);
+    try {
+      const result = await extractReceiptFields(receipt.uri, receipt.name, receipt.mimeType);
+      if (!result.extraction_succeeded) {
+        setStatus({ kind: "error", text: "Couldn't read this receipt clearly — enter the details manually." });
+        return;
+      }
+
+      if (result.category) setCategory(result.category);
+      if (result.total_amount !== null) setTotalAmount(String(result.total_amount));
+      if (result.occurred_at) setOccurredAt(result.occurred_at);
+      if (result.merchant && !notes.trim()) setNotes(result.merchant);
+      setStatus({ kind: "info", text: "Auto-filled from the receipt — review before saving." });
+    } catch (error) {
+      setStatus({ kind: "error", text: error instanceof ApiError ? error.message : "Auto-fill failed — enter the details manually." });
+    } finally {
+      setIsExtracting(false);
+    }
   }
 
   async function handleSubmit(): Promise<void> {
@@ -99,7 +128,17 @@ export function CaptureExpenseScreen(): React.JSX.Element {
           </View>
         </View>
         {receipt && (
-          <ReceiptThumbnail uri={receipt.uri} isPdf={receipt.mimeType === "application/pdf"} filename={receipt.name} />
+          <>
+            <ReceiptThumbnail uri={receipt.uri} isPdf={receipt.mimeType === "application/pdf"} filename={receipt.name} />
+            <View style={{ height: spacing.sm }} />
+            {hasOcrUpgrade ? (
+              <PrimaryButton label="Auto-fill from receipt ✨" onPress={handleAutoFill} isLoading={isExtracting} />
+            ) : (
+              <Text style={{ color: colors.textMuted, fontSize: typography.small, textAlign: "center" }}>
+                ✨ Auto-fill from receipt — paid upgrade, coming soon
+              </Text>
+            )}
+          </>
         )}
       </Card>
 
