@@ -7,10 +7,16 @@
     "userInterfaceStyle": "light",
     "icon": "./assets/icon.png",
     "android": {
+      "package": "com.aplc.weeklytaxapp",
+      "versionCode": 101,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#f5ede1"
       }
+    },
+    "ios": {
+      "bundleIdentifier": "com.aplc.weeklytaxapp",
+      "buildNumber": "1"
     },
     "web": {
       "favicon": "./assets/favicon.png"
