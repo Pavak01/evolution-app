@@ -10,7 +10,7 @@ import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCaptur
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTodayIso } from "../../utils/taxYear";
 
-const CATEGORY_SUGGESTIONS = ["fuel", "parking_tolls", "vehicle_maintenance", "phone", "home_office", "ppe", "accountancy", "food", "other"];
+const CATEGORY_SUGGESTIONS = ["fuel", "travel", "parking_tolls", "vehicle_maintenance", "phone", "home_office", "ppe", "accountancy", "food", "other"];
 
 export function CaptureExpenseScreen(): React.JSX.Element {
   const { captureFromCamera, pickFromFiles } = useReceiptCapture();
