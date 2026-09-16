@@ -6,8 +6,13 @@ import * as LegacyFileSystem from "expo-file-system/legacy";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
-const runtimeApiBaseUrl = (process.env as Record<string, string | undefined>)?.EXPO_PUBLIC_API_BASE_URL;
-export const API_BASE_URL = runtimeApiBaseUrl || "http://localhost:4000";
+// Must be the plain `process.env.EXPO_PUBLIC_*` form for Expo's babel plugin
+// to statically inline it into production/EAS builds — a type-cast or
+// optional-chained access here silently defeats that inlining, so the
+// build falls back to localhost at runtime with no error (only caught by
+// actually inspecting a built bundle; it works fine in dev, where Metro's
+// dev server provides a live process.env instead of relying on inlining).
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:4000";
 
 const TOKEN_KEY = "evolution_auth_token";
 
