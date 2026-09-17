@@ -69,11 +69,19 @@ export function IncomeHistoryScreen(): React.JSX.Element {
 
   const load = useCallback(async () => {
     setError(null);
+    // Independent try/catch per source: listPending() is purely local and
+    // must still populate while offline, when listIncomeInvoices()'s
+    // network call is exactly the thing failing — bundling them in one
+    // Promise.all meant a network failure silently hid the pending items too.
+    try {
+      const allPending = await listPending();
+      setPending(allPending.filter((item) => item.kind === "income"));
+    } catch {
+      // pending list is local-only; a failure here isn't user-facing
+    }
     try {
       const taxYear = getTaxYearFromDate(new Date());
-      const [items, allPending] = await Promise.all([listIncomeInvoices({ tax_year: taxYear }), listPending()]);
-      setInvoices(items);
-      setPending(allPending.filter((item) => item.kind === "income"));
+      setInvoices(await listIncomeInvoices({ tax_year: taxYear }));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not load income.");
     } finally {
