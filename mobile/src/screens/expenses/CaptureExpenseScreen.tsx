@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Text, View } from "react-native";
+import React, { useRef, useState } from "react";
+import { Text, View, type ScrollView } from "react-native";
 import { useAuth } from "../../auth/AuthContext";
 import { createExpense } from "../../api/expenses";
 import { ApiError } from "../../api/client";
@@ -34,6 +34,16 @@ export function CaptureExpenseScreen(): React.JSX.Element {
   const [status, setStatus] = useState<{ kind: "info" | "error"; text: string } | null>(null);
   const [lastSummary, setLastSummary] = useState<TaxSummary | null>(null);
 
+  const scrollRef = useRef<ScrollView>(null);
+  // The status banner lives at the top of the screen precisely so feedback
+  // like "saved offline, will sync" is never missed — but a long form means
+  // the user is often scrolled well past it, so also snap back to top
+  // whenever a new message appears rather than relying on position alone.
+  function showStatus(next: { kind: "info" | "error"; text: string }): void {
+    setStatus(next);
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }
+
   function resetForm(): void {
     setCategory("");
     setTotalAmount("");
@@ -66,7 +76,7 @@ export function CaptureExpenseScreen(): React.JSX.Element {
     try {
       const result = await extractReceiptFields(receipt.uri, receipt.name, receipt.mimeType);
       if (!result.extraction_succeeded) {
-        setStatus({ kind: "error", text: "Couldn't read this receipt clearly — enter the details manually." });
+        showStatus({ kind: "error", text: "Couldn't read this receipt clearly — enter the details manually." });
         return;
       }
 
@@ -74,9 +84,9 @@ export function CaptureExpenseScreen(): React.JSX.Element {
       if (result.total_amount !== null) setTotalAmount(String(result.total_amount));
       if (result.occurred_at) setOccurredAt(result.occurred_at);
       if (result.merchant && !notes.trim()) setNotes(result.merchant);
-      setStatus({ kind: "info", text: "Auto-filled from the receipt — review before saving." });
+      showStatus({ kind: "info", text: "Auto-filled from the receipt — review before saving." });
     } catch (error) {
-      setStatus({ kind: "error", text: error instanceof ApiError ? error.message : "Auto-fill failed — enter the details manually." });
+      showStatus({ kind: "error", text: error instanceof ApiError ? error.message : "Auto-fill failed — enter the details manually." });
     } finally {
       setIsExtracting(false);
     }
@@ -85,7 +95,7 @@ export function CaptureExpenseScreen(): React.JSX.Element {
   async function handleSubmit(): Promise<void> {
     const validationError = validate();
     if (validationError) {
-      setStatus({ kind: "error", text: validationError });
+      showStatus({ kind: "error", text: validationError });
       return;
     }
 
@@ -108,18 +118,18 @@ export function CaptureExpenseScreen(): React.JSX.Element {
         receiptType: receipt!.mimeType
       });
       setLastSummary(summary);
-      setStatus({ kind: "info", text: "Expense logged." });
+      showStatus({ kind: "info", text: "Expense logged." });
       resetForm();
     } catch (error) {
       if (error instanceof ApiError) {
         console.error("Expense submit failed:", error);
-        setStatus({ kind: "error", text: error.message });
+        showStatus({ kind: "error", text: error.message });
       } else {
         // Not a real server response — treat as a connectivity failure and
         // queue it. This is meant to feel like success: the point-of-sale
         // moment shouldn't require the user to think about their signal.
         await enqueueExpense(fields, receipt!.uri, receipt!.name, receipt!.mimeType);
-        setStatus({ kind: "info", text: "No connection — saved on your device. It'll upload automatically once you're back online." });
+        showStatus({ kind: "info", text: "No connection — saved on your device. It'll upload automatically once you're back online." });
         resetForm();
         void syncQueue();
       }
@@ -129,8 +139,9 @@ export function CaptureExpenseScreen(): React.JSX.Element {
   }
 
   return (
-    <Screen>
+    <Screen ref={scrollRef}>
       <Text style={{ fontSize: typography.h1, fontWeight: "700", color: colors.textMain }}>Log a receipt</Text>
+      {status && <StatusBanner kind={status.kind} text={status.text} />}
 
       <Card>
         <View style={{ flexDirection: "row", gap: spacing.sm, marginBottom: spacing.md }}>
@@ -189,7 +200,6 @@ export function CaptureExpenseScreen(): React.JSX.Element {
 
         <Field label="Notes (optional)" value={notes} onChange={setNotes} placeholder="" />
 
-        {status && <StatusBanner kind={status.kind} text={status.text} />}
         <View style={{ height: spacing.sm }} />
         <PrimaryButton label="Save expense" onPress={handleSubmit} isLoading={isSubmitting} />
       </Card>

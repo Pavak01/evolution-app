@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import React, { useState } from "react";
-import { Text, View } from "react-native";
+import React, { useRef, useState } from "react";
+import { Text, View, type ScrollView } from "react-native";
 import { createIncomeInvoice } from "../../api/income";
 import { ApiError } from "../../api/client";
 import type { TaxSummary } from "../../api/types";
@@ -37,6 +37,12 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
   const [status, setStatus] = useState<{ kind: "info" | "error"; text: string } | null>(null);
   const [lastSummary, setLastSummary] = useState<TaxSummary | null>(null);
 
+  const scrollRef = useRef<ScrollView>(null);
+  function showStatus(next: { kind: "info" | "error"; text: string }): void {
+    setStatus(next);
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }
+
   function validate(): string | null {
     if (!source.trim()) return "Enter who paid you.";
     const amount = Number(totalAmount);
@@ -48,7 +54,7 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
   async function handleSubmit(): Promise<void> {
     const validationError = validate();
     if (validationError) {
-      setStatus({ kind: "error", text: validationError });
+      showStatus({ kind: "error", text: validationError });
       return;
     }
 
@@ -70,7 +76,7 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
         fileType: file?.mimeType
       });
       setLastSummary(summary);
-      setStatus({ kind: "info", text: "Income recorded." });
+      showStatus({ kind: "info", text: "Income recorded." });
       setSource("");
       setTotalAmount("");
       setNotes("");
@@ -78,10 +84,10 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
     } catch (error) {
       if (error instanceof ApiError) {
         console.error("Income submit failed:", error);
-        setStatus({ kind: "error", text: error.message });
+        showStatus({ kind: "error", text: error.message });
       } else {
         await enqueueIncome(fields, file?.uri, file?.name, file?.mimeType);
-        setStatus({ kind: "info", text: "No connection — saved on your device. It'll upload automatically once you're back online." });
+        showStatus({ kind: "info", text: "No connection — saved on your device. It'll upload automatically once you're back online." });
         setSource("");
         setTotalAmount("");
         setNotes("");
@@ -94,8 +100,9 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
   }
 
   return (
-    <Screen>
+    <Screen ref={scrollRef}>
       <Text style={{ fontSize: typography.h1, fontWeight: "700", color: colors.textMain }}>Record income</Text>
+      {status && <StatusBanner kind={status.kind} text={status.text} />}
 
       <Card>
         <Field label="Who paid you" value={source} onChange={setSource} placeholder="Client or company name" />
@@ -108,7 +115,6 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
         <PrimaryButton label={file ? "Change invoice photo" : "Attach invoice photo (optional)"} onPress={async () => setFile((await pickFromFiles()) ?? file)} />
         {file && <ReceiptThumbnail uri={file.uri} isPdf={file.mimeType === "application/pdf"} filename={file.name} />}
 
-        {status && <StatusBanner kind={status.kind} text={status.text} />}
         <View style={{ height: spacing.sm }} />
         <PrimaryButton label="Save income" onPress={handleSubmit} isLoading={isSubmitting} />
       </Card>
