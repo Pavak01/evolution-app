@@ -5,6 +5,8 @@ import { listIncomeInvoices, voidIncomeInvoice } from "../../api/income";
 import { ApiError } from "../../api/client";
 import type { IncomeInvoice } from "../../api/types";
 import { DangerAction, Field, SmallAction, StatusBanner } from "../../components/Controls";
+import { PendingUploads } from "../../components/PendingUploads";
+import { listPending, removePending, syncQueue, type PendingItem } from "../../offlineQueue";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { getTaxYearFromDate } from "../../utils/taxYear";
 
@@ -60,6 +62,8 @@ function InvoiceRow({ invoice, onVoided }: { invoice: IncomeInvoice; onVoided: (
 
 export function IncomeHistoryScreen(): React.JSX.Element {
   const [invoices, setInvoices] = useState<IncomeInvoice[]>([]);
+  const [pending, setPending] = useState<PendingItem[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,13 +71,25 @@ export function IncomeHistoryScreen(): React.JSX.Element {
     setError(null);
     try {
       const taxYear = getTaxYearFromDate(new Date());
-      setInvoices(await listIncomeInvoices({ tax_year: taxYear }));
+      const [items, allPending] = await Promise.all([listIncomeInvoices({ tax_year: taxYear }), listPending()]);
+      setInvoices(items);
+      setPending(allPending.filter((item) => item.kind === "income"));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not load income.");
     } finally {
       setIsLoading(false);
     }
   }, []);
+
+  const handleRetry = useCallback(async () => {
+    setIsSyncing(true);
+    try {
+      await syncQueue(load);
+      await load();
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [load]);
 
   useFocusEffect(
     useCallback(() => {
@@ -96,6 +112,14 @@ export function IncomeHistoryScreen(): React.JSX.Element {
           <StatusBanner kind="error" text={error} />
         </View>
       )}
+      <PendingUploads
+        items={pending}
+        isSyncing={isSyncing}
+        onRetry={handleRetry}
+        onDelete={(localId) => {
+          void removePending(localId).then(load);
+        }}
+      />
       <FlatList
         data={invoices}
         keyExtractor={(item) => item.id}

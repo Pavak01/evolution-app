@@ -1,6 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { AppState } from "react-native";
 import { fetchMe, login as apiLogin, register as apiRegister, verifyTwoFactor as apiVerifyTwoFactor, type AuthUser, type LoginResult } from "../api/auth";
 import { clearToken, getToken, setUnauthorizedListener } from "../api/client";
+import { syncQueue } from "../offlineQueue";
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -21,6 +23,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     setUnauthorizedListener(() => setUser(null));
     return () => setUnauthorizedListener(null);
   }, []);
+
+  // Retries any offline-queued expenses/income whenever the app comes to
+  // the foreground while signed in — the queue survives a forced logout
+  // from unauthorizedListener above (only ever removed on success), so
+  // this naturally picks queued items back up once the user signs in again.
+  useEffect(() => {
+    if (!user) return;
+    void syncQueue();
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        void syncQueue();
+      }
+    });
+    return () => subscription.remove();
+  }, [user]);
 
   useEffect(() => {
     (async () => {

@@ -9,6 +9,7 @@ import { Card, DateField, Field, PrimaryButton, SmallAction, SnapshotTile, Statu
 import { ReceiptThumbnail } from "../../components/ReceiptThumbnail";
 import { Screen } from "../../components/Screen";
 import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCapture";
+import { enqueueExpense, syncQueue } from "../../offlineQueue";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTodayIso } from "../../utils/taxYear";
 
@@ -90,15 +91,18 @@ export function CaptureExpenseScreen(): React.JSX.Element {
 
     setStatus(null);
     setIsSubmitting(true);
+    const fields = {
+      category: category.trim(),
+      occurred_at: occurredAt,
+      payment_method: paymentMethod,
+      total_amount: Number(totalAmount),
+      reimbursement_status: reimbursementStatus,
+      reimbursed_amount: reimbursementStatus === "partial" ? Number(reimbursedAmount) : undefined,
+      notes: notes.trim() || undefined
+    };
     try {
       const { summary } = await createExpense({
-        category: category.trim(),
-        occurred_at: occurredAt,
-        payment_method: paymentMethod,
-        total_amount: Number(totalAmount),
-        reimbursement_status: reimbursementStatus,
-        reimbursed_amount: reimbursementStatus === "partial" ? Number(reimbursedAmount) : undefined,
-        notes: notes.trim() || undefined,
+        ...fields,
         receiptUri: receipt!.uri,
         receiptName: receipt!.name,
         receiptType: receipt!.mimeType
@@ -107,8 +111,18 @@ export function CaptureExpenseScreen(): React.JSX.Element {
       setStatus({ kind: "info", text: "Expense logged." });
       resetForm();
     } catch (error) {
-      console.error("Expense submit failed:", error);
-      setStatus({ kind: "error", text: error instanceof ApiError ? error.message : `Could not save the expense: ${String(error)}` });
+      if (error instanceof ApiError) {
+        console.error("Expense submit failed:", error);
+        setStatus({ kind: "error", text: error.message });
+      } else {
+        // Not a real server response — treat as a connectivity failure and
+        // queue it. This is meant to feel like success: the point-of-sale
+        // moment shouldn't require the user to think about their signal.
+        await enqueueExpense(fields, receipt!.uri, receipt!.name, receipt!.mimeType);
+        setStatus({ kind: "info", text: "No connection — saved on your device. It'll upload automatically once you're back online." });
+        resetForm();
+        void syncQueue();
+      }
     } finally {
       setIsSubmitting(false);
     }

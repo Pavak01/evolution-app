@@ -8,6 +8,7 @@ import { Card, DateField, Field, PrimaryButton, SmallAction, SnapshotTile, Statu
 import { ReceiptThumbnail } from "../../components/ReceiptThumbnail";
 import { Screen } from "../../components/Screen";
 import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCapture";
+import { enqueueIncome, syncQueue } from "../../offlineQueue";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTodayIso } from "../../utils/taxYear";
 import type { IncomeStackParamList } from "../../navigation/types";
@@ -53,14 +54,17 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
 
     setStatus(null);
     setIsSubmitting(true);
+    const fields = {
+      period_start: periodStart,
+      period_end: periodEnd,
+      source: source.trim(),
+      total_amount: Number(totalAmount),
+      received_date: receivedDate,
+      notes: notes.trim() || undefined
+    };
     try {
       const { summary } = await createIncomeInvoice({
-        period_start: periodStart,
-        period_end: periodEnd,
-        source: source.trim(),
-        total_amount: Number(totalAmount),
-        received_date: receivedDate,
-        notes: notes.trim() || undefined,
+        ...fields,
         fileUri: file?.uri,
         fileName: file?.name,
         fileType: file?.mimeType
@@ -72,8 +76,18 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
       setNotes("");
       setFile(null);
     } catch (error) {
-      console.error("Income submit failed:", error);
-      setStatus({ kind: "error", text: error instanceof ApiError ? error.message : `Could not record this income: ${String(error)}` });
+      if (error instanceof ApiError) {
+        console.error("Income submit failed:", error);
+        setStatus({ kind: "error", text: error.message });
+      } else {
+        await enqueueIncome(fields, file?.uri, file?.name, file?.mimeType);
+        setStatus({ kind: "info", text: "No connection — saved on your device. It'll upload automatically once you're back online." });
+        setSource("");
+        setTotalAmount("");
+        setNotes("");
+        setFile(null);
+        void syncQueue();
+      }
     } finally {
       setIsSubmitting(false);
     }

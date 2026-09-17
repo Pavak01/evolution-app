@@ -5,7 +5,9 @@ import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Tex
 import { listExpenses } from "../../api/expenses";
 import { ApiError } from "../../api/client";
 import type { Expense } from "../../api/types";
+import { PendingUploads } from "../../components/PendingUploads";
 import { StatusBanner } from "../../components/Controls";
+import { listPending, removePending, syncQueue, type PendingItem } from "../../offlineQueue";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { getTaxYearFromDate } from "../../utils/taxYear";
 import type { ExpensesStackParamList } from "../../navigation/types";
@@ -14,6 +16,8 @@ type Props = NativeStackScreenProps<ExpensesStackParamList, "ExpenseHistory">;
 
 export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [pending, setPending] = useState<PendingItem[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,13 +25,25 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
     setError(null);
     try {
       const taxYear = getTaxYearFromDate(new Date());
-      setExpenses(await listExpenses({ tax_year: taxYear }));
+      const [items, allPending] = await Promise.all([listExpenses({ tax_year: taxYear }), listPending()]);
+      setExpenses(items);
+      setPending(allPending.filter((item) => item.kind === "expense"));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not load expenses.");
     } finally {
       setIsLoading(false);
     }
   }, []);
+
+  const handleRetry = useCallback(async () => {
+    setIsSyncing(true);
+    try {
+      await syncQueue(load);
+      await load();
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [load]);
 
   useFocusEffect(
     useCallback(() => {
@@ -50,6 +66,14 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
           <StatusBanner kind="error" text={error} />
         </View>
       )}
+      <PendingUploads
+        items={pending}
+        isSyncing={isSyncing}
+        onRetry={handleRetry}
+        onDelete={(localId) => {
+          void removePending(localId).then(load);
+        }}
+      />
       <FlatList
         data={expenses}
         keyExtractor={(item) => item.id}
