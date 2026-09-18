@@ -97,6 +97,7 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
             <View style={styles.rowEnd}>
               <Text style={styles.amount}>£{item.total_amount.toFixed(2)}</Text>
               {item.voided_at && <Text style={styles.voided}>voided</Text>}
+              {!item.voided_at && !item.receipt_download_url && <Text style={styles.voided}>missing receipt</Text>}
               {!item.voided_at && item.reimbursement_status !== "none" && (
                 <Text style={styles.badge}>{item.reimbursement_status}</Text>
               )}

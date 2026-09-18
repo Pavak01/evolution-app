@@ -9,9 +9,11 @@ type PendingExpense = {
   kind: "expense";
   queuedAt: string;
   input: Omit<CreateExpenseInput, "receiptUri" | "receiptName" | "receiptType">;
-  localFilePath: string;
-  fileName: string;
-  fileType: string;
+  // Null for a travel expense queued without a receipt — same "capture now,
+  // attach proof later" pattern as the online path (see expenses.routes.ts).
+  localFilePath: string | null;
+  fileName: string | null;
+  fileType: string | null;
 };
 
 type PendingIncome = {
@@ -73,14 +75,22 @@ async function deletePersistedFile(path: string | null): Promise<void> {
 
 export async function enqueueExpense(
   input: Omit<CreateExpenseInput, "receiptUri" | "receiptName" | "receiptType">,
-  receiptUri: string,
-  receiptName: string,
-  receiptType: string
+  receiptUri: string | undefined,
+  receiptName: string | undefined,
+  receiptType: string | undefined
 ): Promise<void> {
   const localId = generateLocalId();
-  const localFilePath = await persistFile(receiptUri, localId, receiptName);
+  const localFilePath = receiptUri ? await persistFile(receiptUri, localId, receiptName ?? "receipt") : null;
   const items = await readQueue();
-  items.push({ localId, kind: "expense", queuedAt: new Date().toISOString(), input, localFilePath, fileName: receiptName, fileType: receiptType });
+  items.push({
+    localId,
+    kind: "expense",
+    queuedAt: new Date().toISOString(),
+    input,
+    localFilePath,
+    fileName: receiptUri ? receiptName ?? "receipt" : null,
+    fileType: receiptUri ? receiptType ?? "application/octet-stream" : null
+  });
   await writeQueue(items);
 }
 
@@ -129,7 +139,12 @@ export async function syncQueue(onItemSynced?: () => void): Promise<void> {
     for (const item of items) {
       try {
         if (item.kind === "expense") {
-          await createExpense({ ...item.input, receiptUri: item.localFilePath, receiptName: item.fileName, receiptType: item.fileType });
+          await createExpense({
+            ...item.input,
+            receiptUri: item.localFilePath ?? undefined,
+            receiptName: item.fileName ?? undefined,
+            receiptType: item.fileType ?? undefined
+          });
         } else {
           await createIncomeInvoice({
             ...item.input,

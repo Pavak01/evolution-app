@@ -9,6 +9,11 @@ export type ExpensesStackParamList = {
   ExpenseDetail: { expenseId: string };
 };
 
+export type CaptureStackParamList = {
+  Capture: undefined;
+  ImportReceipts: undefined;
+};
+
 export type IncomeStackParamList = {
   RecordIncome: undefined;
   IncomeHistory: undefined;

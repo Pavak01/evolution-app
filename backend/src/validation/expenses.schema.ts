@@ -10,6 +10,7 @@ export const expenseWriteSchema = z
     total_amount: z.coerce.number().positive(),
     reimbursement_status: z.enum(["none", "partial", "full"]).default("none"),
     reimbursed_amount: z.coerce.number().min(0).optional(),
+    business_use_percent: z.coerce.number().min(1).max(100).default(100),
     notes: z.string().trim().max(1000).optional()
   })
   .superRefine((data, ctx) => {
@@ -46,6 +47,8 @@ export const expenseWriteSchema = z
 
 export type ExpenseWriteInput = z.infer<typeof expenseWriteSchema>;
 
+const round2 = (value: number): number => Math.round(value * 100) / 100;
+
 // The server, never the client, is the source of truth for these derived
 // amounts — mirrors the expenses_net_deductible_matches CHECK constraint.
 export function deriveExpenseAmounts(data: ExpenseWriteInput): {
@@ -59,7 +62,8 @@ export function deriveExpenseAmounts(data: ExpenseWriteInput): {
         ? (data.reimbursed_amount as number)
         : 0;
 
-  const netDeductibleAmount = data.reimbursement_status === "full" ? 0 : data.total_amount - reimbursedAmount;
+  const preApportioned = data.reimbursement_status === "full" ? 0 : data.total_amount - reimbursedAmount;
+  const netDeductibleAmount = round2((preApportioned * data.business_use_percent) / 100);
 
   return { reimbursed_amount: reimbursedAmount, net_deductible_amount: netDeductibleAmount };
 }

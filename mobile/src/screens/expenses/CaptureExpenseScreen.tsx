@@ -1,3 +1,4 @@
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React, { useRef, useState } from "react";
 import { Text, View, type ScrollView } from "react-native";
 import { useAuth } from "../../auth/AuthContext";
@@ -10,12 +11,15 @@ import { ReceiptThumbnail } from "../../components/ReceiptThumbnail";
 import { Screen } from "../../components/Screen";
 import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCapture";
 import { enqueueExpense, syncQueue } from "../../offlineQueue";
+import type { CaptureStackParamList } from "../../navigation/types";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTodayIso } from "../../utils/taxYear";
 
 const CATEGORY_SUGGESTIONS = ["fuel", "travel", "parking_tolls", "vehicle_maintenance", "phone", "home_office", "ppe", "accountancy", "food", "other"];
 
-export function CaptureExpenseScreen(): React.JSX.Element {
+type Props = NativeStackScreenProps<CaptureStackParamList, "Capture">;
+
+export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
   const { user } = useAuth();
   const { captureFromCamera, pickFromFiles } = useReceiptCapture();
   const hasOcrUpgrade = user?.entitlements.ocr_upgrade_active ?? false;
@@ -26,8 +30,15 @@ export function CaptureExpenseScreen(): React.JSX.Element {
   const [totalAmount, setTotalAmount] = useState("");
   const [reimbursementStatus, setReimbursementStatus] = useState<ReimbursementStatus>("none");
   const [reimbursedAmount, setReimbursedAmount] = useState("");
+  const [businessUsePercent, setBusinessUsePercent] = useState("100");
+  const [isAdjustingBusinessUse, setIsAdjustingBusinessUse] = useState(false);
   const [notes, setNotes] = useState("");
   const [receipt, setReceipt] = useState<PickedFile | null>(null);
+
+  // travel is the one category where a receipt genuinely may not exist yet
+  // at capture time (see api/expenses.ts / offlineQueue.ts) — it can still
+  // be attached later from ExpenseDetailScreen.
+  const isTravel = category.trim().toLowerCase() === "travel";
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
@@ -49,6 +60,8 @@ export function CaptureExpenseScreen(): React.JSX.Element {
     setTotalAmount("");
     setReimbursementStatus("none");
     setReimbursedAmount("");
+    setBusinessUsePercent("100");
+    setIsAdjustingBusinessUse(false);
     setNotes("");
     setReceipt(null);
     // occurredAt deliberately left as-is: back-to-back captures on the same day are the common case.
@@ -56,7 +69,7 @@ export function CaptureExpenseScreen(): React.JSX.Element {
 
   function validate(): string | null {
     if (!category.trim()) return "Enter a category.";
-    if (!receipt) return "Add a receipt photo or file.";
+    if (!receipt && !isTravel) return "Add a receipt photo or file.";
     const amount = Number(totalAmount);
     if (!Number.isFinite(amount) || amount <= 0) return "Enter a valid amount.";
     if (reimbursementStatus === "partial") {
@@ -64,6 +77,10 @@ export function CaptureExpenseScreen(): React.JSX.Element {
       if (!Number.isFinite(reimbursed) || reimbursed <= 0 || reimbursed >= amount) {
         return "Enter a partial reimbursement amount less than the total.";
       }
+    }
+    const businessUse = Number(businessUsePercent);
+    if (!Number.isFinite(businessUse) || businessUse <= 0 || businessUse > 100) {
+      return "Business use % must be between 1 and 100.";
     }
     return null;
   }
@@ -108,14 +125,15 @@ export function CaptureExpenseScreen(): React.JSX.Element {
       total_amount: Number(totalAmount),
       reimbursement_status: reimbursementStatus,
       reimbursed_amount: reimbursementStatus === "partial" ? Number(reimbursedAmount) : undefined,
+      business_use_percent: Number(businessUsePercent),
       notes: notes.trim() || undefined
     };
     try {
       const { summary } = await createExpense({
         ...fields,
-        receiptUri: receipt!.uri,
-        receiptName: receipt!.name,
-        receiptType: receipt!.mimeType
+        receiptUri: receipt?.uri,
+        receiptName: receipt?.name,
+        receiptType: receipt?.mimeType
       });
       setLastSummary(summary);
       showStatus({ kind: "info", text: "Expense logged." });
@@ -128,7 +146,7 @@ export function CaptureExpenseScreen(): React.JSX.Element {
         // Not a real server response — treat as a connectivity failure and
         // queue it. This is meant to feel like success: the point-of-sale
         // moment shouldn't require the user to think about their signal.
-        await enqueueExpense(fields, receipt!.uri, receipt!.name, receipt!.mimeType);
+        await enqueueExpense(fields, receipt?.uri, receipt?.name, receipt?.mimeType);
         showStatus({ kind: "info", text: "No connection — saved on your device. It'll upload automatically once you're back online." });
         resetForm();
         void syncQueue();
@@ -142,6 +160,11 @@ export function CaptureExpenseScreen(): React.JSX.Element {
     <Screen ref={scrollRef}>
       <Text style={{ fontSize: typography.h1, fontWeight: "700", color: colors.textMain }}>Log a receipt</Text>
       {status && <StatusBanner kind={status.kind} text={status.text} />}
+      {hasOcrUpgrade && (
+        <Text style={{ color: colors.accent, textAlign: "center" }} onPress={() => navigation.navigate("ImportReceipts")}>
+          Import past receipts
+        </Text>
+      )}
 
       <Card>
         <View style={{ flexDirection: "row", gap: spacing.sm, marginBottom: spacing.md }}>
@@ -152,7 +175,7 @@ export function CaptureExpenseScreen(): React.JSX.Element {
             <PrimaryButton label="Choose photo" onPress={async () => setReceipt((await pickFromFiles()) ?? receipt)} />
           </View>
         </View>
-        {receipt && (
+        {receipt ? (
           <>
             <ReceiptThumbnail uri={receipt.uri} isPdf={receipt.mimeType === "application/pdf"} filename={receipt.name} />
             <View style={{ height: spacing.sm }} />
@@ -164,6 +187,13 @@ export function CaptureExpenseScreen(): React.JSX.Element {
               </Text>
             )}
           </>
+        ) : (
+          isTravel && (
+            <Text style={{ color: colors.textMuted, fontSize: typography.small }}>
+              No receipt yet? That's fine for travel — save now and attach proof (a bank statement, app payment
+              confirmation, or emailed receipt) once you have it. It won't count as deductible until you do.
+            </Text>
+          )
         )}
       </Card>
 
@@ -196,6 +226,20 @@ export function CaptureExpenseScreen(): React.JSX.Element {
         </View>
         {reimbursementStatus === "partial" && (
           <Field label="Reimbursed amount (£)" value={reimbursedAmount} onChange={setReimbursedAmount} keyboardType="decimal-pad" placeholder="0.00" />
+        )}
+
+        {isAdjustingBusinessUse ? (
+          <Field
+            label="Business use %"
+            value={businessUsePercent}
+            onChange={setBusinessUsePercent}
+            keyboardType="decimal-pad"
+            placeholder="100"
+          />
+        ) : (
+          <Text style={{ color: colors.textMuted, marginBottom: spacing.md }} onPress={() => setIsAdjustingBusinessUse(true)}>
+            Business use: {businessUsePercent}% · Change
+          </Text>
         )}
 
         <Field label="Notes (optional)" value={notes} onChange={setNotes} placeholder="" />

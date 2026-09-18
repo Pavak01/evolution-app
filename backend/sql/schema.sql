@@ -49,15 +49,31 @@ CREATE TABLE IF NOT EXISTS evolution.expenses (
     (reimbursement_status = 'partial' AND reimbursed_amount > 0 AND reimbursed_amount < total_amount) OR
     (reimbursement_status = 'full'    AND reimbursed_amount = total_amount)
   ),
-  CONSTRAINT expenses_net_deductible_matches CHECK (
-    net_deductible_amount = CASE WHEN reimbursement_status = 'full' THEN 0 ELSE total_amount - reimbursed_amount END
-  ),
   CONSTRAINT expenses_void_consistency CHECK (
     (voided_at IS NULL AND void_reason IS NULL) OR (voided_at IS NOT NULL AND void_reason IS NOT NULL)
   )
 );
 
--- v1: exactly one receipt per expense, captured together at point of sale.
+-- How much of an expense is genuinely business use (vs mixed personal/
+-- business — a phone bill, home office costs) — the user's own apportionment,
+-- not a category guess. Existing rows default to 100%, correctly unchanged
+-- until someone actively lowers it.
+ALTER TABLE evolution.expenses ADD COLUMN IF NOT EXISTS business_use_percent NUMERIC(5,2) NOT NULL DEFAULT 100
+  CHECK (business_use_percent > 0 AND business_use_percent <= 100);
+
+-- CHECK constraints can't be altered in place — replace this one to fold
+-- business_use_percent into the existing formula.
+ALTER TABLE evolution.expenses DROP CONSTRAINT IF EXISTS expenses_net_deductible_matches;
+ALTER TABLE evolution.expenses ADD CONSTRAINT expenses_net_deductible_matches CHECK (
+  net_deductible_amount = ROUND(
+    (CASE WHEN reimbursement_status = 'full' THEN 0 ELSE total_amount - reimbursed_amount END) * business_use_percent / 100,
+    2
+  )
+);
+
+-- Not every expense has a receipt at capture time (see the `travel`
+-- capture-now/attach-proof-later flow) — expense_id stays NOT NULL on any
+-- row that *does* exist, but a row existing at all is now optional.
 CREATE TABLE IF NOT EXISTS evolution.receipts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   expense_id UUID NOT NULL UNIQUE REFERENCES evolution.expenses(id),

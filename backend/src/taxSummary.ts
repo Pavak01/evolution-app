@@ -8,6 +8,7 @@ export type TaxSummaryResult = {
   tax_year: string;
   total_income: number;
   total_expenses: number;
+  pending_deductible_amount: number;
   net_profit: number;
   weeks_logged: number;
   estimate: TaxEstimate;
@@ -18,19 +19,28 @@ export type TaxSummaryResult = {
 export async function recomputeTaxSummary(userId: string, taxYear: string): Promise<TaxSummaryResult> {
   const { start: taxYearStart, end: taxYearEnd } = getTaxYearBounds(taxYear);
 
+  // net_deductible_amount only counts toward the claimable total for
+  // expenses that actually have a receipt attached — "without proof, there
+  // can be no claim". A travel expense saved without one yet (see
+  // POST /expenses) still shows up here as pending_deductible_amount so the
+  // user can see what attaching proof would unlock, but it doesn't reduce
+  // total_expenses/net_profit/the tax estimate until they complete it.
   const expenseTotals = await db.query<{
     total_amount: string;
     reimbursed_amount: string;
     net_deductible_amount: string;
+    pending_deductible_amount: string;
     has_food: boolean;
   }>(
     `SELECT
-       COALESCE(SUM(total_amount), 0)::text AS total_amount,
-       COALESCE(SUM(reimbursed_amount), 0)::text AS reimbursed_amount,
-       COALESCE(SUM(net_deductible_amount), 0)::text AS net_deductible_amount,
-       BOOL_OR(LOWER(category) = 'food') AS has_food
-     FROM expenses
-     WHERE user_id = $1 AND tax_year = $2 AND voided_at IS NULL`,
+       COALESCE(SUM(e.total_amount), 0)::text AS total_amount,
+       COALESCE(SUM(e.reimbursed_amount), 0)::text AS reimbursed_amount,
+       COALESCE(SUM(CASE WHEN r.id IS NOT NULL THEN e.net_deductible_amount ELSE 0 END), 0)::text AS net_deductible_amount,
+       COALESCE(SUM(CASE WHEN r.id IS NULL THEN e.net_deductible_amount ELSE 0 END), 0)::text AS pending_deductible_amount,
+       BOOL_OR(LOWER(e.category) = 'food') AS has_food
+     FROM expenses e
+     LEFT JOIN receipts r ON r.expense_id = e.id
+     WHERE e.user_id = $1 AND e.tax_year = $2 AND e.voided_at IS NULL`,
     [userId, taxYear]
   );
 
@@ -54,6 +64,7 @@ export async function recomputeTaxSummary(userId: string, taxYear: string): Prom
   const totalExpenseAmount = Number(expenseTotals.rows[0].total_amount);
   const totalReimbursedAmount = Number(expenseTotals.rows[0].reimbursed_amount);
   const totalExpenses = Number(expenseTotals.rows[0].net_deductible_amount);
+  const pendingDeductibleAmount = Number(expenseTotals.rows[0].pending_deductible_amount);
   const hasFoodExpense = expenseTotals.rows[0].has_food;
   const totalIncome = Number(incomeTotal.rows[0].total_amount);
   const netProfit = totalIncome - totalExpenses;
@@ -67,6 +78,7 @@ export async function recomputeTaxSummary(userId: string, taxYear: string): Prom
     totalExpenseAmount,
     totalReimbursedAmount,
     hasFoodExpense,
+    pendingDeductibleAmount,
     excessReimbursement: 0
   });
 
@@ -93,6 +105,7 @@ export async function recomputeTaxSummary(userId: string, taxYear: string): Prom
     tax_year: taxYear,
     total_income: totalIncome,
     total_expenses: totalExpenses,
+    pending_deductible_amount: pendingDeductibleAmount,
     net_profit: netProfit,
     weeks_logged: weeksLogged,
     estimate,

@@ -25,6 +25,7 @@ type ExpenseRow = {
   reimbursement_status: string;
   reimbursed_amount: string;
   net_deductible_amount: string;
+  business_use_percent: string;
   notes: string | null;
   voided_at: string | null;
   void_reason: string | null;
@@ -42,6 +43,7 @@ function serializeExpense(row: ExpenseRow) {
     reimbursement_status: row.reimbursement_status,
     reimbursed_amount: Number(row.reimbursed_amount),
     net_deductible_amount: Number(row.net_deductible_amount),
+    business_use_percent: Number(row.business_use_percent),
     notes: row.notes,
     voided_at: row.voided_at,
     void_reason: row.void_reason,
@@ -49,10 +51,15 @@ function serializeExpense(row: ExpenseRow) {
   };
 }
 
-// Single multipart request: the receipt photo plus its fields are captured
-// together at point of sale, matching the real-world action this app is
-// built around. receipts.expense_id is NOT NULL, so the upload must succeed
-// before the expense row exists — see the transaction/compensation flow below.
+// Single multipart request: the receipt photo plus its fields are normally
+// captured together at point of sale, matching the real-world action this
+// app is built around. `travel` is the one exception — its receipt is
+// nearly always retrievable only after the fact (a bank statement, an app
+// payment history, an emailed confirmation), never a photographable receipt
+// in the moment, so it can be saved with no file and completed later via
+// POST /expenses/:id/receipt below. Every other category still requires
+// one, since a photographable receipt genuinely is available at capture
+// time for those.
 expensesRouter.post(
   "/expenses",
   requireAuth,
@@ -65,25 +72,29 @@ expensesRouter.post(
       return res.status(400).json({ error: "Invalid payload", details: parsed.error.flatten() });
     }
 
-    if (!req.file) {
+    const data = parsed.data;
+    const isTravel = data.category.trim().toLowerCase() === "travel";
+
+    if (!req.file && !isTravel) {
       return res.status(400).json({ error: "receipt file is required" });
     }
 
-    if (!receiptContentMatchesDeclaredType(req.file.buffer, req.file.mimetype)) {
+    if (req.file && !receiptContentMatchesDeclaredType(req.file.buffer, req.file.mimetype)) {
       return res.status(400).json({ error: "File content does not match its declared type" });
     }
 
-    const data = parsed.data;
     const { reimbursed_amount, net_deductible_amount } = deriveExpenseAmounts(data);
     const taxYear = getTaxYearFromDate(data.occurred_at);
 
-    const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const storageKey = `receipts/${authReq.userId}/${uuidv4()}-${safeName}`;
+    const safeName = req.file ? req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_") : null;
+    const storageKey = req.file ? `receipts/${authReq.userId}/${uuidv4()}-${safeName}` : null;
 
-    try {
-      await uploadReceiptObject(storageKey, req.file.buffer, req.file.mimetype);
-    } catch (error) {
-      return sendError(res, 500, "Failed to store receipt", error);
+    if (req.file && storageKey) {
+      try {
+        await uploadReceiptObject(storageKey, req.file.buffer, req.file.mimetype);
+      } catch (error) {
+        return sendError(res, 500, "Failed to store receipt", error);
+      }
     }
 
     const client = await db.connect();
@@ -93,12 +104,12 @@ expensesRouter.post(
       const expenseInsert = await client.query<ExpenseRow>(
         `INSERT INTO expenses (
            user_id, category, occurred_at, tax_year, payment_method, total_amount,
-           reimbursement_status, reimbursed_amount, net_deductible_amount, notes, created_at
+           reimbursement_status, reimbursed_amount, net_deductible_amount, business_use_percent, notes, created_at
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
          RETURNING id, category, occurred_at::text, tax_year, payment_method, total_amount::text,
                    reimbursement_status, reimbursed_amount::text, net_deductible_amount::text,
-                   notes, voided_at::text, void_reason, created_at::text`,
+                   business_use_percent::text, notes, voided_at::text, void_reason, created_at::text`,
         [
           authReq.userId,
           data.category,
@@ -109,17 +120,23 @@ expensesRouter.post(
           data.reimbursement_status,
           reimbursed_amount,
           net_deductible_amount,
+          data.business_use_percent,
           data.notes ?? null
         ]
       );
 
       const expense = expenseInsert.rows[0];
+      let receiptId: string | null = null;
 
-      await client.query(
-        `INSERT INTO receipts (expense_id, user_id, original_filename, storage_path, mime_type, file_size_bytes, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
-        [expense.id, authReq.userId, req.file.originalname, storageKey, req.file.mimetype, req.file.size]
-      );
+      if (req.file && storageKey) {
+        const receiptInsert = await client.query<{ id: string }>(
+          `INSERT INTO receipts (expense_id, user_id, original_filename, storage_path, mime_type, file_size_bytes, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, NOW())
+           RETURNING id`,
+          [expense.id, authReq.userId, req.file.originalname, storageKey, req.file.mimetype, req.file.size]
+        );
+        receiptId = receiptInsert.rows[0].id;
+      }
 
       await client.query("COMMIT");
 
@@ -128,7 +145,7 @@ expensesRouter.post(
       return res.status(201).json({
         expense: {
           ...serializeExpense(expense),
-          receipt_download_url: getReceiptDownloadUrl(req, authReq.userId, expense.id)
+          receipt_download_url: receiptId ? getReceiptDownloadUrl(req, authReq.userId, receiptId) : null
         },
         summary
       });
@@ -138,10 +155,92 @@ expensesRouter.post(
       // receipts row without a matching expense (or vice versa) would break
       // this model's core invariant, so the DB transaction is the source of
       // truth and the upload is compensated after the fact on failure.
-      await deleteReceiptObject(storageKey).catch(() => {});
+      if (storageKey) {
+        await deleteReceiptObject(storageKey).catch(() => {});
+      }
       return sendError(res, 500, "Failed to save expense", error);
     } finally {
       client.release();
+    }
+  }
+);
+
+// Completes a travel expense saved without a receipt at capture time — see
+// the comment on POST /expenses above. Requires the expense to not already
+// have one (the receipts.expense_id UNIQUE constraint enforces this at the
+// DB level too, so a race here fails safely rather than corrupting data).
+expensesRouter.post(
+  "/expenses/:id/receipt",
+  requireAuth,
+  uploadRateLimit,
+  upload.single("receipt"),
+  async (req: Request, res: Response) => {
+    const authReq = req as AuthenticatedRequest;
+
+    if (!req.file) {
+      return res.status(400).json({ error: "receipt file is required" });
+    }
+
+    if (!receiptContentMatchesDeclaredType(req.file.buffer, req.file.mimetype)) {
+      return res.status(400).json({ error: "File content does not match its declared type" });
+    }
+
+    try {
+      const expenseResult = await db.query<{ id: string; tax_year: string }>(
+        "SELECT id, tax_year FROM expenses WHERE id = $1 AND user_id = $2 AND voided_at IS NULL LIMIT 1",
+        [req.params.id, authReq.userId]
+      );
+      if (expenseResult.rows.length === 0) {
+        return res.status(404).json({ error: "Expense not found" });
+      }
+
+      const existing = await db.query<{ id: string }>("SELECT id FROM receipts WHERE expense_id = $1 LIMIT 1", [req.params.id]);
+      if (existing.rows.length > 0) {
+        return res.status(409).json({ error: "This expense already has a receipt attached" });
+      }
+
+      const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const storageKey = `receipts/${authReq.userId}/${uuidv4()}-${safeName}`;
+
+      try {
+        await uploadReceiptObject(storageKey, req.file.buffer, req.file.mimetype);
+      } catch (error) {
+        return sendError(res, 500, "Failed to store receipt", error);
+      }
+
+      let receiptId: string;
+      try {
+        const receiptInsert = await db.query<{ id: string }>(
+          `INSERT INTO receipts (expense_id, user_id, original_filename, storage_path, mime_type, file_size_bytes, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, NOW())
+           RETURNING id`,
+          [req.params.id, authReq.userId, req.file.originalname, storageKey, req.file.mimetype, req.file.size]
+        );
+        receiptId = receiptInsert.rows[0].id;
+      } catch (error) {
+        await deleteReceiptObject(storageKey).catch(() => {});
+        return sendError(res, 500, "Failed to save receipt", error);
+      }
+
+      const expenseRow = await db.query<ExpenseRow>(
+        `SELECT id, category, occurred_at::text, tax_year, payment_method, total_amount::text,
+                reimbursement_status, reimbursed_amount::text, net_deductible_amount::text,
+                business_use_percent::text, notes, voided_at::text, void_reason, created_at::text
+         FROM expenses WHERE id = $1`,
+        [req.params.id]
+      );
+
+      const summary = await recomputeTaxSummary(authReq.userId, expenseResult.rows[0].tax_year);
+
+      return res.status(201).json({
+        expense: {
+          ...serializeExpense(expenseRow.rows[0]),
+          receipt_download_url: getReceiptDownloadUrl(req, authReq.userId, receiptId)
+        },
+        summary
+      });
+    } catch (error) {
+      return sendError(res, 500, "Failed to attach receipt", error);
     }
   }
 );
@@ -216,12 +315,13 @@ expensesRouter.get("/expenses", requireAuth, async (req: Request, res: Response)
   }
 
   try {
-    const rows = await db.query<ExpenseRow & { receipt_id: string }>(
+    const rows = await db.query<ExpenseRow & { receipt_id: string | null }>(
       `SELECT e.id, e.category, e.occurred_at::text, e.tax_year, e.payment_method, e.total_amount::text,
               e.reimbursement_status, e.reimbursed_amount::text, e.net_deductible_amount::text,
-              e.notes, e.voided_at::text, e.void_reason, e.created_at::text, r.id AS receipt_id
+              e.business_use_percent::text, e.notes, e.voided_at::text, e.void_reason, e.created_at::text,
+              r.id AS receipt_id
        FROM expenses e
-       JOIN receipts r ON r.expense_id = e.id
+       LEFT JOIN receipts r ON r.expense_id = e.id
        WHERE ${conditions.join(" AND ")}
        ORDER BY e.occurred_at DESC, e.created_at DESC`,
       params
@@ -230,7 +330,7 @@ expensesRouter.get("/expenses", requireAuth, async (req: Request, res: Response)
     return res.json({
       expenses: rows.rows.map((row) => ({
         ...serializeExpense(row),
-        receipt_download_url: getReceiptDownloadUrl(req, authReq.userId, row.receipt_id)
+        receipt_download_url: row.receipt_id ? getReceiptDownloadUrl(req, authReq.userId, row.receipt_id) : null
       }))
     });
   } catch (error) {
@@ -242,12 +342,13 @@ expensesRouter.get("/expenses/:id", requireAuth, async (req: Request, res: Respo
   const authReq = req as AuthenticatedRequest;
 
   try {
-    const result = await db.query<ExpenseRow & { receipt_id: string }>(
+    const result = await db.query<ExpenseRow & { receipt_id: string | null }>(
       `SELECT e.id, e.category, e.occurred_at::text, e.tax_year, e.payment_method, e.total_amount::text,
               e.reimbursement_status, e.reimbursed_amount::text, e.net_deductible_amount::text,
-              e.notes, e.voided_at::text, e.void_reason, e.created_at::text, r.id AS receipt_id
+              e.business_use_percent::text, e.notes, e.voided_at::text, e.void_reason, e.created_at::text,
+              r.id AS receipt_id
        FROM expenses e
-       JOIN receipts r ON r.expense_id = e.id
+       LEFT JOIN receipts r ON r.expense_id = e.id
        WHERE e.id = $1 AND e.user_id = $2
        LIMIT 1`,
       [req.params.id, authReq.userId]
@@ -261,7 +362,7 @@ expensesRouter.get("/expenses/:id", requireAuth, async (req: Request, res: Respo
     return res.json({
       expense: {
         ...serializeExpense(row),
-        receipt_download_url: getReceiptDownloadUrl(req, authReq.userId, row.receipt_id)
+        receipt_download_url: row.receipt_id ? getReceiptDownloadUrl(req, authReq.userId, row.receipt_id) : null
       }
     });
   } catch (error) {

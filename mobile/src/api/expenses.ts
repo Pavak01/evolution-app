@@ -8,10 +8,13 @@ export type CreateExpenseInput = {
   total_amount: number;
   reimbursement_status: ReimbursementStatus;
   reimbursed_amount?: number;
+  business_use_percent?: number;
   notes?: string;
-  receiptUri: string;
-  receiptName: string;
-  receiptType: string;
+  // Optional only for `travel` — the backend rejects a missing receipt for
+  // every other category. See CaptureExpenseScreen.tsx's validate().
+  receiptUri?: string;
+  receiptName?: string;
+  receiptType?: string;
 };
 
 export async function createExpense(input: CreateExpenseInput): Promise<{ expense: Expense; summary: TaxSummary }> {
@@ -25,16 +28,28 @@ export async function createExpense(input: CreateExpenseInput): Promise<{ expens
   if (input.reimbursed_amount !== undefined) {
     fields.reimbursed_amount = String(input.reimbursed_amount);
   }
+  if (input.business_use_percent !== undefined) {
+    fields.business_use_percent = String(input.business_use_percent);
+  }
   if (input.notes) {
     fields.notes = input.notes;
   }
 
-  return postMultipart("/expenses", fields, {
-    uri: input.receiptUri,
-    name: input.receiptName,
-    type: input.receiptType,
-    fieldName: "receipt"
-  });
+  const file = input.receiptUri
+    ? { uri: input.receiptUri, name: input.receiptName ?? "receipt", type: input.receiptType ?? "application/octet-stream", fieldName: "receipt" }
+    : undefined;
+
+  return postMultipart("/expenses", fields, file);
+}
+
+// Completes a travel expense that was saved without a receipt at capture time.
+export async function attachReceipt(
+  expenseId: string,
+  uri: string,
+  name: string,
+  type: string
+): Promise<{ expense: Expense; summary: TaxSummary }> {
+  return postMultipart(`/expenses/${expenseId}/receipt`, {}, { uri, name, type, fieldName: "receipt" });
 }
 
 export async function listExpenses(params?: { tax_year?: string }): Promise<Expense[]> {

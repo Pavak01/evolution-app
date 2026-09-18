@@ -75,6 +75,34 @@ export function useReceiptCapture() {
     };
   }
 
+  // Same proven file:// path as pickFromFiles above, just allowing more
+  // than one selection — used for bulk-importing legacy receipts.
+  async function pickMultipleFromFiles(): Promise<PickedFile[]> {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        "Photo access needed",
+        "Evolution needs photo library access to import receipt photos. You can allow this in your device settings."
+      );
+      return [];
+    }
+
+    const selected = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.7,
+      allowsMultipleSelection: true
+    });
+    if (selected.canceled || selected.assets.length === 0) {
+      return [];
+    }
+
+    return selected.assets.map((asset) => ({
+      uri: asset.uri,
+      name: asset.fileName ?? `receipt-${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`,
+      mimeType: asset.mimeType ?? "image/jpeg"
+    }));
+  }
+
   // PDF invoices can't go through expo-image-picker (images only), so this
   // has to use expo-document-picker after all — the picker whose content://
   // results nothing in this app could read (see pickFromFiles above). One
@@ -162,5 +190,5 @@ export function useReceiptCapture() {
     }
   }
 
-  return { captureFromCamera, pickFromFiles, pickDocument, downloadToLocalUri, shareLocalUri };
+  return { captureFromCamera, pickFromFiles, pickMultipleFromFiles, pickDocument, downloadToLocalUri, shareLocalUri };
 }

@@ -9,6 +9,7 @@ import { RegisterScreen } from "../screens/auth/RegisterScreen";
 import { CaptureExpenseScreen } from "../screens/expenses/CaptureExpenseScreen";
 import { ExpenseDetailScreen } from "../screens/expenses/ExpenseDetailScreen";
 import { ExpenseHistoryScreen } from "../screens/expenses/ExpenseHistoryScreen";
+import { ImportReceiptsScreen } from "../screens/expenses/ImportReceiptsScreen";
 import { ExportScreen } from "../screens/export/ExportScreen";
 import { IncomeHistoryScreen } from "../screens/income/IncomeHistoryScreen";
 import { RecordIncomeScreen } from "../screens/income/RecordIncomeScreen";
@@ -16,14 +17,24 @@ import { SummaryScreen } from "../screens/summary/SummaryScreen";
 import { SettingsScreen } from "../screens/settings/SettingsScreen";
 import { VerifyTwoFactorScreen } from "../screens/auth/VerifyTwoFactorScreen";
 import { colors } from "../theme/tokens";
-import type { AuthStackParamList, ExpensesStackParamList, IncomeStackParamList, MainTabParamList } from "./types";
+import type { AuthStackParamList, CaptureStackParamList, ExpensesStackParamList, IncomeStackParamList, MainTabParamList } from "./types";
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
+const CaptureStack = createNativeStackNavigator<CaptureStackParamList>();
 const ExpensesStack = createNativeStackNavigator<ExpensesStackParamList>();
 const IncomeStack = createNativeStackNavigator<IncomeStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const headerOptions = { headerStyle: { backgroundColor: colors.navBg }, headerTintColor: colors.navText };
+
+function CaptureStackScreen(): React.JSX.Element {
+  return (
+    <CaptureStack.Navigator screenOptions={headerOptions}>
+      <CaptureStack.Screen name="Capture" component={CaptureExpenseScreen} options={{ title: "Log a receipt" }} />
+      <CaptureStack.Screen name="ImportReceipts" component={ImportReceiptsScreen} options={{ title: "Import past receipts" }} />
+    </CaptureStack.Navigator>
+  );
+}
 
 function HistoryStackScreen(): React.JSX.Element {
   return (
@@ -56,7 +67,7 @@ function MainTabs(): React.JSX.Element {
         tabBarInactiveTintColor: colors.textMuted
       }}
     >
-      <Tab.Screen name="Capture" component={CaptureExpenseScreen} />
+      <Tab.Screen name="Capture" component={CaptureStackScreen} options={{ headerShown: false }} />
       <Tab.Screen name="Income" component={IncomeStackScreen} options={{ headerShown: false }} />
       <Tab.Screen name="Summary" component={SummaryScreen} />
       <Tab.Screen name="History" component={HistoryStackScreen} options={{ headerShown: false }} />

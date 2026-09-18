@@ -11,11 +11,14 @@ export type Expense = {
   reimbursement_status: ReimbursementStatus;
   reimbursed_amount: number;
   net_deductible_amount: number;
+  business_use_percent: number;
   notes: string | null;
   voided_at: string | null;
   void_reason: string | null;
   created_at: string;
-  receipt_download_url: string;
+  // Null for a travel expense saved without a receipt yet — see
+  // "capture now, attach proof later" in CaptureExpenseScreen/ExpenseDetailScreen.
+  receipt_download_url: string | null;
 };
 
 export type IncomeInvoice = {
@@ -52,6 +55,7 @@ export type TaxSummary = {
   tax_year: string;
   total_income: number;
   total_expenses: number;
+  pending_deductible_amount: number;
   net_profit: number;
   weeks_logged: number;
   estimate: TaxEstimate;

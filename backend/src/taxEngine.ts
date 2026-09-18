@@ -21,6 +21,7 @@ type ComplianceMonitoringInput = {
   totalExpenseAmount: number;
   totalReimbursedAmount: number;
   hasFoodExpense: boolean;
+  pendingDeductibleAmount: number;
   // Always 0 in Evolution: reimbursement can never exceed total_amount here
   // (enforced by the expenses_reimbursement_consistency CHECK constraint),
   // so an over-payment is recorded as income (an income_invoices row), not
@@ -80,6 +81,14 @@ export function generateComplianceWarnings(input: ComplianceMonitoringInput): Co
     warnings.push({
       code: "MEAL_EXPENSE_REVIEW",
       message: "Meal claims often require strict business-purpose evidence. Keep supporting notes and receipts.",
+      severity: "medium"
+    });
+  }
+
+  if (input.pendingDeductibleAmount > 0) {
+    warnings.push({
+      code: "AWAITING_RECEIPT",
+      message: `£${input.pendingDeductibleAmount.toFixed(2)} in travel expenses is missing a receipt and isn't counted as deductible yet — attach proof to claim it.`,
       severity: "medium"
     });
   }
