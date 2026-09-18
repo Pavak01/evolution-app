@@ -36,9 +36,17 @@ This is the home screen — the action you'll use most, right after you pay for 
 
 After saving, you'll see your running total for the current tax year (net profit and how much to set aside for tax), and the form resets — ready for the next receipt. The date field is left as-is between saves, since logging several receipts from the same day back-to-back is the common case.
 
-**A note on file types**: photo capture and photo-library selection both work reliably. Picking a PDF or a "Files" document currently does not work inside Expo Go (the testing app) due to a sandboxing limitation on Android — this is fixed once the app ships as a standalone build. In the meantime, a photo of a PDF receipt (or a screenshot of it) works fine.
+**No signal? Still works.** If you save an expense with no internet connection, it's kept on your device and looks like it saved normally — it uploads automatically the next time you're back online, whether that's a minute later or after the app's been closed and reopened. You can see anything still waiting to upload as a **Pending uploads** section at the top of History, with a manual **Retry now** if you don't want to wait.
+
+**Business use %**: every expense defaults to 100% business use. If something was only partly for work (a phone bill, home office costs), tap **Change** next to "Business use" and lower the percentage — only that portion counts toward your deductible total.
+
+**Travel is the one category that doesn't need a receipt right away.** A bus, train, or taxi fare rarely has anything to photograph in the moment — so for `travel`, you can save the expense with no photo at all. It shows up in History flagged **"missing receipt"** and doesn't count toward your deductible total or tax estimate yet — open it from History once you've got proof (a bank statement screenshot, an app payment confirmation, an emailed receipt) and tap **Attach receipt** to complete it. Every other category still needs a receipt at the point you log it.
+
+**A note on other file types**: photo capture and photo-library selection both work reliably. Picking a PDF or a "Files" document doesn't currently work — a photo or screenshot of the PDF works as a substitute.
 
 **Auto-fill from receipt**: a paid upgrade, currently in preview, that reads a picked receipt photo and fills in the category, amount, and date for you — still fully editable before you save. Not yet purchasable; accounts with early access see an **Auto-fill from receipt** button once a photo is added, everyone else sees a "coming soon" note in its place.
+
+**Import past receipts**: for accounts with early access to auto-fill, a link above the capture form opens a bulk-import flow for receipts you already had before you started using Evolution — pick several photos at once, each gets auto-read, then you review and correct before importing them all.
 
 ## Record income
 
@@ -63,7 +71,7 @@ Switch between the current and previous tax year using the buttons at the top. I
 
 ## History
 
-Browse everything you've logged for the current tax year, newest first. Tap any entry to see the full detail: amounts, payment method, reimbursement status, and the receipt itself (**View receipt** opens it in an in-app viewer, with an option to share it).
+Browse everything you've logged for the current tax year, newest first. Tap any entry to see the full detail: amounts, payment method, reimbursement status, and the receipt itself (**View receipt** opens it in an in-app viewer, with an option to share it). An entry showing **"missing receipt"** is a travel expense saved without one yet — open it and tap **Attach receipt** once you have proof.
 
 **Voiding an entry**: there's no edit-in-place. If you made a mistake, open the entry and **void** it with a reason (for example, "duplicate entry" or "wrong amount"). Voided entries stay visible for your records but no longer count toward your totals — this keeps an accurate audit trail rather than silently overwriting history, which matters for tax compliance.
 
@@ -79,4 +87,5 @@ Generate a file of everything logged for a given tax year.
 
 - See which account you're signed in as.
 - **Log out**.
+- **Help** — links to this User Guide, the FAQ, and the Privacy Policy, opened in your browser.
 - **Delete account** — permanently deletes your account and all your data: expenses, receipts, income records, and tax summaries. Type `DELETE` to confirm. This can't be undone, and processing completes within 30 days. See [Account deletion](ACCOUNT-DELETION.html) for the version of this you can use without the app installed, and the [Privacy Policy](PRIVACY-POLICY.md) for exactly what is removed.

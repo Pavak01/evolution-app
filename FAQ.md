@@ -16,13 +16,16 @@ In-app: Settings → Delete account (type `DELETE` to confirm). Without the app 
 ## Logging expenses
 
 **Why do I have to attach a receipt to log an expense?**
-Evolution is built around capturing the receipt at the moment of the transaction, since that's the point you're least likely to lose or forget it. A receipt (photo or file) is a required field on every expense for that reason.
+Evolution is built around capturing the receipt at the moment of the transaction, since that's the point you're least likely to lose or forget it — and without proof, an expense isn't a valid claim. A receipt (photo or file) is required on every expense, with one exception: see the next question.
+
+**Do I really need a receipt for every travel fare, right when I pay it?**
+No — `travel` is the one category where you can save the expense with no receipt at all. A bus tap, a train ticket, or an Uber fare rarely has anything to photograph in the moment, but the proof usually does exist afterward (a bank statement, an app payment confirmation, an emailed receipt). Save the amount and date now; the entry shows up in History flagged "missing receipt" and doesn't count toward your deductible total until you open it and attach that proof once you have it. Every other category still needs a receipt at capture time, since one is genuinely available then.
 
 **What if I don't have a physical receipt — like a fuel app payment or a subscription?**
 A screenshot of the payment confirmation, app receipt, or email counts as a receipt — take a photo of your screen, or use "Choose photo" to pick a saved screenshot from your photo library.
 
 **Can I attach a PDF receipt?**
-Not currently inside Expo Go, the app used for testing before Evolution's first full release — this is a sandboxing limitation specific to that testing environment on Android, not a limitation of the app itself, and is resolved once Evolution ships as a standalone build. Until then, a photo or screenshot of the PDF works as a substitute.
+Not currently — a photo or screenshot of the PDF works as a substitute.
 
 **What categories are available?**
 Quick-pick suggestions are: fuel, travel, parking & tolls, vehicle maintenance, phone, home office, PPE, accountancy, food, and other. You can also type any category name of your own — the suggestions are shortcuts, not a fixed list.
@@ -30,11 +33,17 @@ Quick-pick suggestions are: fuel, travel, parking & tolls, vehicle maintenance, 
 **What's the difference between "Partially" and "Fully" reimbursed?**
 Fully reimbursed means someone paid you back the entire amount — it's not a deductible cost to you, so it won't reduce your taxable profit. Partially reimbursed means only part of it was paid back; the unreimbursed remainder is what counts as your deductible expense. If nothing was reimbursed, the full amount counts.
 
+**What's "Business use %" for?**
+Some expenses are only partly for work — a phone bill, home office costs. It defaults to 100%; lower it and only that portion counts toward what you can deduct, instead of the whole amount. This is separate from reimbursement: reimbursement is about being paid back, business use % is about how much of the cost was genuinely for the business in the first place.
+
 **I made a mistake on an expense — how do I fix it?**
 There's no edit button by design. Open the expense in History and **void** it with a reason, then log a fresh correct entry. This keeps a clean audit trail — nothing is silently changed after the fact, which matters if your records are ever checked by HMRC.
 
 **What is "Auto-fill from receipt"?**
 A paid upgrade, currently in preview, that reads a receipt photo and fills in the category, amount, and date automatically — you still review and can edit everything before saving. It's not purchasable yet; manual entry is always free and always works, and stays that way as the fallback even once auto-fill ships properly.
+
+**What is "Import past receipts"?**
+For accounts with early access to auto-fill: a way to bulk-add receipts you already had before you started using Evolution. Pick several photos at once from Capture's "Import past receipts" link, each one gets auto-read the same way single-receipt auto-fill does, and you review and correct every row before importing. Each receipt is attributed to its own actual date, so an old receipt from an earlier tax year lands in that year's summary, not the current one.
 
 ## Recording income
 
@@ -67,7 +76,7 @@ Your expenses, income records, receipts, and tax summaries are stored in Evoluti
 No. Receipts are never served from a permanent public URL — every download goes through your authenticated session plus a separate short-lived signed link that expires quickly.
 
 **I don't have a stable internet connection at the point of sale — can I log an expense offline?**
-Not yet — offline queueing is a planned improvement, not yet part of the app. For now, an internet connection is needed to save an entry.
+Yes. If there's no connection when you save, it's kept on your device and looks like it saved normally — it uploads automatically once you're back online (or you can force it with "Retry now"). Any item still waiting shows in a **Pending uploads** section at the top of History. The one thing this depends on: don't uninstall the app or clear its storage before a pending item has actually synced, or that copy is lost the same way any unsaved local data would be.
 
 ## Export
 
