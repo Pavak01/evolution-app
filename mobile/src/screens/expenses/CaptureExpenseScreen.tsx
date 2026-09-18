@@ -103,7 +103,18 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
       if (result.merchant && !notes.trim()) setNotes(result.merchant);
       showStatus({ kind: "info", text: "Auto-filled from the receipt — review before saving." });
     } catch (error) {
-      showStatus({ kind: "error", text: error instanceof ApiError ? error.message : "Auto-fill failed — enter the details manually." });
+      // A 502/503/504 here is a gateway/timeout-style failure (large photo,
+      // slow connection, a transient hiccup) — not a real answer from the
+      // extraction call, so the raw status text isn't useful to show. Auto-
+      // fill is always optional, so this only ever needs to point back at
+      // manual entry, never block it.
+      const isGatewayError = error instanceof ApiError && [502, 503, 504].includes(error.status);
+      const message = isGatewayError
+        ? "Auto-fill timed out — try again, or enter the details manually."
+        : error instanceof ApiError
+          ? error.message
+          : "Auto-fill failed — enter the details manually.";
+      showStatus({ kind: "error", text: message });
     } finally {
       setIsExtracting(false);
     }
