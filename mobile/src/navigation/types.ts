@@ -10,7 +10,9 @@ export type ExpensesStackParamList = {
 };
 
 export type CaptureStackParamList = {
-  Capture: undefined;
+  // Named distinctly from the "Capture" tab that hosts this stack —
+  // React Navigation warns about nested screens sharing a name.
+  CaptureForm: undefined;
   ImportReceipts: undefined;
 };
 

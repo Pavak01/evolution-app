@@ -30,7 +30,7 @@ const headerOptions = { headerStyle: { backgroundColor: colors.navBg }, headerTi
 function CaptureStackScreen(): React.JSX.Element {
   return (
     <CaptureStack.Navigator screenOptions={headerOptions}>
-      <CaptureStack.Screen name="Capture" component={CaptureExpenseScreen} options={{ title: "Log a receipt" }} />
+      <CaptureStack.Screen name="CaptureForm" component={CaptureExpenseScreen} options={{ title: "Log a receipt" }} />
       <CaptureStack.Screen name="ImportReceipts" component={ImportReceiptsScreen} options={{ title: "Import past receipts" }} />
     </CaptureStack.Navigator>
   );

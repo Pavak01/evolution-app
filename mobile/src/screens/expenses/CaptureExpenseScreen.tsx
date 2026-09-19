@@ -17,7 +17,7 @@ import { getTodayIso } from "../../utils/taxYear";
 
 const CATEGORY_SUGGESTIONS = ["fuel", "travel", "parking_tolls", "vehicle_maintenance", "phone", "home_office", "ppe", "accountancy", "food", "other"];
 
-type Props = NativeStackScreenProps<CaptureStackParamList, "Capture">;
+type Props = NativeStackScreenProps<CaptureStackParamList, "CaptureForm">;
 
 export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
   const { user } = useAuth();
