@@ -1,8 +1,10 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import React, { useRef, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import React, { useCallback, useRef, useState } from "react";
 import { Text, View, type ScrollView } from "react-native";
 import { useAuth } from "../../auth/AuthContext";
 import { createExpense } from "../../api/expenses";
+import { getTaxSummary } from "../../api/tax";
 import { ApiError } from "../../api/client";
 import { extractReceiptFields } from "../../api/receiptExtraction";
 import type { PaymentMethod, ReimbursementStatus, TaxSummary } from "../../api/types";
@@ -13,7 +15,7 @@ import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCaptur
 import { enqueueExpense, generateLocalId, syncQueue } from "../../offlineQueue";
 import type { CaptureStackParamList } from "../../navigation/types";
 import { colors, spacing, typography } from "../../theme/tokens";
-import { getTodayIso } from "../../utils/taxYear";
+import { getTaxYearFromDate, getTodayIso } from "../../utils/taxYear";
 
 const CATEGORY_SUGGESTIONS = ["fuel", "travel", "parking_tolls", "vehicle_maintenance", "phone", "home_office", "ppe", "accountancy", "food", "other"];
 
@@ -47,6 +49,24 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
   const [isExtracting, setIsExtracting] = useState(false);
   const [status, setStatus] = useState<{ kind: "info" | "error"; text: string } | null>(null);
   const [lastSummary, setLastSummary] = useState<TaxSummary | null>(null);
+
+  // Without this, the running-total card only ever reflected whatever was
+  // true at the moment of the last save on this screen — voiding a
+  // duplicate from History, for example, wouldn't be reflected here until
+  // another expense was logged, while Summary (which always refetches on
+  // focus) showed the correct current figure. Refreshing on focus keeps
+  // the two screens agreeing.
+  useFocusEffect(
+    useCallback(() => {
+      void getTaxSummary(getTaxYearFromDate(new Date()))
+        .then(setLastSummary)
+        .catch(() => {
+          // Best-effort only — this card is a convenience snapshot, not
+          // the source of truth (that's Summary), so a failed refresh
+          // just leaves the previous figure showing rather than erroring.
+        });
+    }, [])
+  );
 
   const scrollRef = useRef<ScrollView>(null);
   // The status banner lives at the top of the screen precisely so feedback
