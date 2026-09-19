@@ -115,12 +115,11 @@ async function findDuplicateWarning(
 
   const timeMatched = eligible.find((row) => transactionTime && row.transaction_time === transactionTime);
   const candidate = timeMatched ?? eligible[0];
-  const description = timeMatched ? "the same transaction as one" : "similar to one";
+  const message = timeMatched
+    ? `This looks like the same transaction as one you logged on ${candidate.occurred_at} for ${candidate.category} (£${Number(candidate.total_amount).toFixed(2)}) — open it to void if this is a duplicate.`
+    : `This looks similar to one you logged on ${candidate.occurred_at} for ${candidate.category} (£${Number(candidate.total_amount).toFixed(2)}) — open it to void if this is a duplicate.`;
 
-  return {
-    expense_id: candidate.id,
-    message: `This looks like ${description} you logged on ${candidate.occurred_at} for ${candidate.category} (£${Number(candidate.total_amount).toFixed(2)}) — open it to void if this is a duplicate.`
-  };
+  return { expense_id: candidate.id, message };
 }
 
 async function loadExpenseResponse(
