@@ -67,8 +67,14 @@ export async function attachReceipt(
 }
 
 export async function listExpenses(params?: { tax_year?: string }): Promise<Expense[]> {
-  const query = params?.tax_year ? `?tax_year=${encodeURIComponent(params.tax_year)}` : "";
-  const result = await apiJson<{ expenses: Expense[] }>(`/expenses${query}`);
+  // Voided entries must stay visible (audit trail — see void's design intent)
+  // rather than disappearing, so History's one caller always includes them;
+  // the "voided" badge in ExpenseHistoryScreen is what distinguishes them.
+  const query = new URLSearchParams({ include_voided: "true" });
+  if (params?.tax_year) {
+    query.set("tax_year", params.tax_year);
+  }
+  const result = await apiJson<{ expenses: Expense[] }>(`/expenses?${query.toString()}`);
   return result.expenses;
 }
 

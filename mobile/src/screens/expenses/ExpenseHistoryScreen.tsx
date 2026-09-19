@@ -89,7 +89,10 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
         refreshControl={<RefreshControl refreshing={false} onRefresh={load} />}
         ListEmptyComponent={<Text style={styles.empty}>No expenses logged yet this tax year.</Text>}
         renderItem={({ item }) => (
-          <Pressable style={styles.row} onPress={() => navigation.navigate("ExpenseDetail", { expenseId: item.id })}>
+          <Pressable
+            style={[styles.row, item.voided_at ? styles.rowVoided : null]}
+            onPress={() => navigation.navigate("ExpenseDetail", { expenseId: item.id })}
+          >
             <View style={styles.rowMain}>
               <Text style={styles.category}>{item.category}</Text>
               <Text style={styles.date}>{item.occurred_at}</Text>
@@ -125,6 +128,9 @@ const styles = StyleSheet.create({
     borderColor: colors.cardBorder,
     padding: spacing.md
   },
+  // A small "voided" badge alone was easy to miss — dim the whole row too,
+  // so a voided entry reads as struck-through at a glance, not just on close inspection.
+  rowVoided: { opacity: 0.5 },
   rowMain: { gap: spacing.xs },
   category: { fontSize: typography.body, fontWeight: "700", color: colors.textMain, textTransform: "capitalize" },
   date: { fontSize: typography.small, color: colors.textMuted },
