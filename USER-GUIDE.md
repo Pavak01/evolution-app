@@ -36,7 +36,9 @@ This is the home screen — the action you'll use most, right after you pay for 
 
 After saving, you'll see your running total for the current tax year (net profit and how much to set aside for tax), and the form resets — ready for the next receipt. The date field is left as-is between saves, since logging several receipts from the same day back-to-back is the common case.
 
-**No signal? Still works.** If you save an expense with no internet connection, it's kept on your device and looks like it saved normally — it uploads automatically the next time you're back online, whether that's a minute later or after the app's been closed and reopened. You can see anything still waiting to upload as a **Pending uploads** section at the top of History, with a manual **Retry now** if you don't want to wait.
+**No signal? Still works.** If you save an expense with no internet connection, it's kept on your device and looks like it saved normally — it uploads automatically the next time you're back online, whether that's a minute later or after the app's been closed and reopened. You can see anything still waiting to upload as a **Pending uploads** section at the top of History, with a manual **Retry now** if you don't want to wait. Retrying — whether that's an automatic retry from Pending uploads or you tapping Save again after an error — never logs the same expense twice.
+
+**Possible duplicate?** If a receipt looks like one you've already logged — the same photo reused, or a matching category, amount, and date — you'll see a note right after saving pointing at the earlier entry. It never blocks the save; open the one you don't need in History and void it if it really is a duplicate.
 
 **Business use %**: every expense defaults to 100% business use. If something was only partly for work (a phone bill, home office costs), tap **Change** next to "Business use" and lower the percentage — only that portion counts toward your deductible total.
 

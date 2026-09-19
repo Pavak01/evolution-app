@@ -39,6 +39,12 @@ Some expenses are only partly for work — a phone bill, home office costs. It d
 **I made a mistake on an expense — how do I fix it?**
 There's no edit button by design. Open the expense in History and **void** it with a reason, then log a fresh correct entry. This keeps a clean audit trail — nothing is silently changed after the fact, which matters if your records are ever checked by HMRC.
 
+**Will retrying after "no connection" or an error ever log something twice?**
+No. Every submission carries a one-time ID behind the scenes, so if a save actually went through and only the confirmation was lost (a dropped connection, a brief server hiccup), retrying — including an automatic retry from the offline queue — returns your original entry instead of creating a second one.
+
+**I think I've logged the same receipt twice — does Evolution catch that?**
+Usually, yes. If a new expense uses the exact same receipt photo as one you've already logged, or shares the same category, amount, and date as another (sharpened to an exact time match when a receipt's printed transaction time was read automatically), you'll see a note right after saving pointing at the earlier entry. It never blocks the save or asks you to confirm first — open the one you don't need in History and void it with a reason, same as any other correction.
+
 **What is "Auto-fill from receipt"?**
 A paid upgrade, currently in preview, that reads a receipt photo and fills in the category, amount, and date automatically — you still review and can edit everything before saving. It's not purchasable yet; manual entry is always free and always works, and stays that way as the fallback even once auto-fill ships properly.
 
