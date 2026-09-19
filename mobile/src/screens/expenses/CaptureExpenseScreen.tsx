@@ -10,7 +10,7 @@ import { Card, DateField, Field, PrimaryButton, SmallAction, SnapshotTile, Statu
 import { ReceiptThumbnail } from "../../components/ReceiptThumbnail";
 import { Screen } from "../../components/Screen";
 import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCapture";
-import { enqueueExpense, syncQueue } from "../../offlineQueue";
+import { enqueueExpense, generateLocalId, syncQueue } from "../../offlineQueue";
 import type { CaptureStackParamList } from "../../navigation/types";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTodayIso } from "../../utils/taxYear";
@@ -34,6 +34,9 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
   const [isAdjustingBusinessUse, setIsAdjustingBusinessUse] = useState(false);
   const [notes, setNotes] = useState("");
   const [receipt, setReceipt] = useState<PickedFile | null>(null);
+  // OCR-only enrichment, never a manual-entry field — used server-side as a
+  // duplicate-matching signal only.
+  const [transactionTime, setTransactionTime] = useState<string | undefined>(undefined);
 
   // travel is the one category where a receipt genuinely may not exist yet
   // at capture time (see api/expenses.ts / offlineQueue.ts) — it can still
@@ -64,6 +67,7 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
     setIsAdjustingBusinessUse(false);
     setNotes("");
     setReceipt(null);
+    setTransactionTime(undefined);
     // occurredAt deliberately left as-is: back-to-back captures on the same day are the common case.
   }
 
@@ -101,6 +105,7 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
       if (result.total_amount !== null) setTotalAmount(String(result.total_amount));
       if (result.occurred_at) setOccurredAt(result.occurred_at);
       if (result.merchant && !notes.trim()) setNotes(result.merchant);
+      if (result.transaction_time) setTransactionTime(result.transaction_time);
       showStatus({ kind: "info", text: "Auto-filled from the receipt — review before saving." });
     } catch (error) {
       // A 502/503/504 here is a gateway/timeout-style failure (large photo,
@@ -129,6 +134,10 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
 
     setStatus(null);
     setIsSubmitting(true);
+    // Generated once, before the first attempt, and reused on any retry
+    // (direct or offline-queued) — lets the server recognize a retry after
+    // a lost response instead of creating a real duplicate.
+    const idempotencyKey = generateLocalId();
     const fields = {
       category: category.trim(),
       occurred_at: occurredAt,
@@ -137,17 +146,22 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
       reimbursement_status: reimbursementStatus,
       reimbursed_amount: reimbursementStatus === "partial" ? Number(reimbursedAmount) : undefined,
       business_use_percent: Number(businessUsePercent),
-      notes: notes.trim() || undefined
+      notes: notes.trim() || undefined,
+      idempotencyKey,
+      transactionTime
     };
     try {
-      const { summary } = await createExpense({
+      const { summary, duplicate_warning } = await createExpense({
         ...fields,
         receiptUri: receipt?.uri,
         receiptName: receipt?.name,
         receiptType: receipt?.mimeType
       });
       setLastSummary(summary);
-      showStatus({ kind: "info", text: "Expense logged." });
+      showStatus({
+        kind: "info",
+        text: duplicate_warning ? `Expense logged. ${duplicate_warning.message}` : "Expense logged."
+      });
       resetForm();
     } catch (error) {
       if (error instanceof ApiError) {
@@ -157,7 +171,7 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
         // Not a real server response — treat as a connectivity failure and
         // queue it. This is meant to feel like success: the point-of-sale
         // moment shouldn't require the user to think about their signal.
-        await enqueueExpense(fields, receipt?.uri, receipt?.name, receipt?.mimeType);
+        await enqueueExpense(fields, receipt?.uri, receipt?.name, receipt?.mimeType, idempotencyKey);
         showStatus({ kind: "info", text: "No connection — saved on your device. It'll upload automatically once you're back online." });
         resetForm();
         void syncQueue();

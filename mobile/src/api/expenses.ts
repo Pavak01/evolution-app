@@ -1,5 +1,5 @@
 import { apiJson, postMultipart } from "./client";
-import type { Expense, PaymentMethod, ReimbursementStatus, TaxSummary } from "./types";
+import type { DuplicateWarning, Expense, PaymentMethod, ReimbursementStatus, TaxSummary } from "./types";
 
 export type CreateExpenseInput = {
   category: string;
@@ -15,9 +15,17 @@ export type CreateExpenseInput = {
   receiptUri?: string;
   receiptName?: string;
   receiptType?: string;
+  // Sent unchanged on every retry of the same submission (direct attempt,
+  // then any offline-queue retries) so a lost response never creates a
+  // second expense — see offlineQueue.ts.
+  idempotencyKey?: string;
+  // OCR-only enrichment used for duplicate matching — never a manual-entry field.
+  transactionTime?: string;
 };
 
-export async function createExpense(input: CreateExpenseInput): Promise<{ expense: Expense; summary: TaxSummary }> {
+export async function createExpense(
+  input: CreateExpenseInput
+): Promise<{ expense: Expense; summary: TaxSummary; duplicate_warning: DuplicateWarning }> {
   const fields: Record<string, string> = {
     category: input.category,
     occurred_at: input.occurred_at,
@@ -34,6 +42,12 @@ export async function createExpense(input: CreateExpenseInput): Promise<{ expens
   if (input.notes) {
     fields.notes = input.notes;
   }
+  if (input.idempotencyKey) {
+    fields.idempotency_key = input.idempotencyKey;
+  }
+  if (input.transactionTime) {
+    fields.transaction_time = input.transactionTime;
+  }
 
   const file = input.receiptUri
     ? { uri: input.receiptUri, name: input.receiptName ?? "receipt", type: input.receiptType ?? "application/octet-stream", fieldName: "receipt" }
@@ -48,7 +62,7 @@ export async function attachReceipt(
   uri: string,
   name: string,
   type: string
-): Promise<{ expense: Expense; summary: TaxSummary }> {
+): Promise<{ expense: Expense; summary: TaxSummary; duplicate_warning: DuplicateWarning }> {
   return postMultipart(`/expenses/${expenseId}/receipt`, {}, { uri, name, type, fieldName: "receipt" });
 }
 

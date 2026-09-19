@@ -74,6 +74,22 @@ incomeRouter.post(
     const data = parsed.data;
     const taxYear = getTaxYearFromDate(data.received_date);
 
+    // A retry after a lost response (e.g. a transient gateway error) should
+    // return the original result, not create a real duplicate. Cheap pre-
+    // check to skip a pointless re-upload in the common case — the unique
+    // index on (user_id, idempotency_key) below is the actual source of
+    // truth if two retries ever race each other.
+    if (data.idempotency_key) {
+      const existing = await db.query<InvoiceRow>(
+        `SELECT ${invoiceColumns} FROM income_invoices WHERE user_id = $1 AND idempotency_key = $2 LIMIT 1`,
+        [authReq.userId, data.idempotency_key]
+      );
+      if (existing.rows.length > 0) {
+        const summary = await recomputeTaxSummary(authReq.userId, existing.rows[0].tax_year);
+        return res.status(200).json({ invoice: serializeInvoice(req, authReq, existing.rows[0]), summary });
+      }
+    }
+
     let storageKey: string | null = null;
     if (file) {
       const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -89,9 +105,10 @@ incomeRouter.post(
       const inserted = await db.query<InvoiceRow>(
         `INSERT INTO income_invoices (
            user_id, period_start, period_end, source, total_amount, received_date, tax_year,
-           invoice_storage_path, invoice_original_filename, notes, created_at
+           invoice_storage_path, invoice_original_filename, notes, idempotency_key, created_at
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+         ON CONFLICT (user_id, idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING
          RETURNING ${invoiceColumns}`,
         [
           authReq.userId,
@@ -103,9 +120,23 @@ incomeRouter.post(
           taxYear,
           storageKey,
           file?.originalname ?? null,
-          data.notes ?? null
+          data.notes ?? null,
+          data.idempotency_key ?? null
         ]
       );
+
+      if (inserted.rows.length === 0) {
+        // Lost the race to a concurrent retry with the same idempotency_key.
+        if (storageKey) {
+          await deleteReceiptObject(storageKey).catch(() => {});
+        }
+        const existing = await db.query<InvoiceRow>(
+          `SELECT ${invoiceColumns} FROM income_invoices WHERE user_id = $1 AND idempotency_key = $2 LIMIT 1`,
+          [authReq.userId, data.idempotency_key]
+        );
+        const summary = await recomputeTaxSummary(authReq.userId, existing.rows[0].tax_year);
+        return res.status(200).json({ invoice: serializeInvoice(req, authReq, existing.rows[0]), summary });
+      }
 
       const summary = await recomputeTaxSummary(authReq.userId, taxYear);
       return res.status(201).json({ invoice: serializeInvoice(req, authReq, inserted.rows[0]), summary });

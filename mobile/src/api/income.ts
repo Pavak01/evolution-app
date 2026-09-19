@@ -11,6 +11,10 @@ export type CreateIncomeInvoiceInput = {
   fileUri?: string;
   fileName?: string;
   fileType?: string;
+  // Sent unchanged on every retry of the same submission (direct attempt,
+  // then any offline-queue retries) so a lost response never creates a
+  // second income record — see offlineQueue.ts.
+  idempotencyKey?: string;
 };
 
 export async function createIncomeInvoice(
@@ -25,6 +29,9 @@ export async function createIncomeInvoice(
   };
   if (input.notes) {
     fields.notes = input.notes;
+  }
+  if (input.idempotencyKey) {
+    fields.idempotency_key = input.idempotencyKey;
   }
 
   const file = input.fileUri

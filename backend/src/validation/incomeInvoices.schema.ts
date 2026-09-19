@@ -9,7 +9,10 @@ export const incomeInvoiceWriteSchema = z
     source: z.string().trim().min(1).max(200),
     total_amount: z.coerce.number().positive(),
     received_date: isoDate,
-    notes: z.string().trim().max(1000).optional()
+    notes: z.string().trim().max(1000).optional(),
+    // Lets a retry after a lost response (e.g. a transient gateway error)
+    // return the original result instead of creating a real duplicate.
+    idempotency_key: z.string().trim().min(1).max(200).optional()
   })
   .superRefine((data, ctx) => {
     if (data.period_end < data.period_start) {

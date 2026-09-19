@@ -36,6 +36,11 @@ export type IncomeInvoice = {
   file_download_url: string | null;
 };
 
+// Surfaced after a successful save — informational only, never blocks or
+// re-prompts. Points at the earlier expense so the user can void it from
+// History if it really is a duplicate.
+export type DuplicateWarning = { expense_id: string; message: string } | null;
+
 export type ComplianceWarning = {
   code: string;
   message: string;

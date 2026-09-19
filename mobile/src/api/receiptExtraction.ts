@@ -5,6 +5,9 @@ export type ReceiptExtraction = {
   occurred_at: string | null;
   category: string | null;
   merchant: string | null;
+  // "HH:MM" printed on the receipt, when legible — used as a duplicate-
+  // matching signal, never shown as a manual-entry field.
+  transaction_time: string | null;
   extraction_succeeded: boolean;
 };
 

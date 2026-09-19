@@ -1,5 +1,6 @@
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { createHash } from "node:crypto";
 
 let cachedBucket: string | null = null;
 let cachedClient: S3Client | null = null;
@@ -126,6 +127,12 @@ function matchesSignature(buffer: Buffer, signature: number[]): boolean {
 
 function isWebp(buffer: Buffer): boolean {
   return buffer.length >= 12 && buffer.toString("ascii", 0, 4) === "RIFF" && buffer.toString("ascii", 8, 12) === "WEBP";
+}
+
+// Used to detect the same receipt image attached to more than one expense —
+// one receipt can only be proof for one actual transaction.
+export function computeReceiptContentHash(buffer: Buffer): string {
+  return createHash("sha256").update(buffer).digest("hex");
 }
 
 export function receiptContentMatchesDeclaredType(buffer: Buffer, declaredMimeType: string): boolean {

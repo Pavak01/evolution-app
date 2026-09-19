@@ -175,6 +175,29 @@ CREATE TABLE IF NOT EXISTS evolution.entitlements (
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- Optional client-supplied idempotency key: guards against a retry after a
+-- lost response (e.g. a transient gateway error) creating a real duplicate.
+-- Nullable and partial-indexed so requests that don't supply one behave
+-- exactly as before.
+ALTER TABLE evolution.expenses ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_expenses_user_idempotency_key
+  ON evolution.expenses(user_id, idempotency_key) WHERE idempotency_key IS NOT NULL;
+
+ALTER TABLE evolution.income_invoices ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_income_invoices_user_idempotency_key
+  ON evolution.income_invoices(user_id, idempotency_key) WHERE idempotency_key IS NOT NULL;
+
+-- OCR-extracted "HH:MM" printed on the receipt, when legible — a sharper
+-- duplicate-matching signal than date alone. Never required, never shown as
+-- a manual-entry field.
+ALTER TABLE evolution.expenses ADD COLUMN IF NOT EXISTS transaction_time TEXT;
+
+-- SHA-256 of the receipt file content — lets duplicate-detection find the
+-- exact same image reused across expenses. Indexed, not unique: duplicates
+-- are meant to be found and flagged, never rejected at the DB level.
+ALTER TABLE evolution.receipts ADD COLUMN IF NOT EXISTS content_hash TEXT;
+CREATE INDEX IF NOT EXISTS idx_receipts_user_content_hash ON evolution.receipts(user_id, content_hash);
+
 CREATE INDEX IF NOT EXISTS idx_expenses_user_tax_year ON evolution.expenses(user_id, tax_year) WHERE voided_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_expenses_user_occurred ON evolution.expenses(user_id, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS idx_receipts_expense ON evolution.receipts(expense_id);

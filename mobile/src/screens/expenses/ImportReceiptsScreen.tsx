@@ -7,7 +7,7 @@ import { Card, DateField, Field, PrimaryButton, SmallAction, StatusBanner } from
 import { ReceiptThumbnail } from "../../components/ReceiptThumbnail";
 import { Screen } from "../../components/Screen";
 import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCapture";
-import { enqueueExpense, syncQueue } from "../../offlineQueue";
+import { enqueueExpense, generateLocalId, syncQueue } from "../../offlineQueue";
 import { colors, spacing, typography } from "../../theme/tokens";
 
 const CATEGORY_SUGGESTIONS = ["fuel", "travel", "parking_tolls", "vehicle_maintenance", "phone", "home_office", "ppe", "accountancy", "food", "other"];
@@ -21,6 +21,9 @@ type ImportRow = {
   category: string;
   occurredAt: string;
   totalAmount: string;
+  // OCR-only enrichment, never a manual-entry field — used server-side as a
+  // duplicate-matching signal only.
+  transactionTime: string | undefined;
   outcome: "pending" | "submitting" | "done" | "failed" | "queued";
 };
 
@@ -59,6 +62,7 @@ export function ImportReceiptsScreen(): React.JSX.Element {
         category: "",
         occurredAt: "",
         totalAmount: "",
+        transactionTime: undefined,
         outcome: "pending"
       }));
       setRows((current) => [...current, ...newRows]);
@@ -75,7 +79,8 @@ export function ImportReceiptsScreen(): React.JSX.Element {
             included: result.extraction_succeeded,
             category: result.category ?? "",
             occurredAt: result.occurred_at ?? "",
-            totalAmount: result.total_amount !== null ? String(result.total_amount) : ""
+            totalAmount: result.total_amount !== null ? String(result.total_amount) : "",
+            transactionTime: result.transaction_time ?? undefined
           });
         } catch {
           updateRow(row.key, { isExtracting: false, extractionSucceeded: false, included: false });
@@ -99,6 +104,7 @@ export function ImportReceiptsScreen(): React.JSX.Element {
     let succeeded = 0;
     let queued = 0;
     let failed = 0;
+    let duplicates = 0;
 
     for (const row of included) {
       const amount = Number(row.totalAmount);
@@ -109,25 +115,39 @@ export function ImportReceiptsScreen(): React.JSX.Element {
       }
 
       updateRow(row.key, { outcome: "submitting" });
+      // Generated once per row, before its attempt, and reused on any retry
+      // (direct or offline-queued) — lets the server recognize a retry
+      // after a lost response instead of creating a real duplicate.
+      const idempotencyKey = generateLocalId();
       const fields = {
         category: row.category.trim(),
         occurred_at: row.occurredAt,
         payment_method: DEFAULT_PAYMENT_METHOD,
         total_amount: amount,
         reimbursement_status: DEFAULT_REIMBURSEMENT_STATUS,
-        business_use_percent: 100
+        business_use_percent: 100,
+        idempotencyKey,
+        transactionTime: row.transactionTime
       };
 
       try {
-        await createExpense({ ...fields, receiptUri: row.file.uri, receiptName: row.file.name, receiptType: row.file.mimeType });
+        const { duplicate_warning } = await createExpense({
+          ...fields,
+          receiptUri: row.file.uri,
+          receiptName: row.file.name,
+          receiptType: row.file.mimeType
+        });
         updateRow(row.key, { outcome: "done" });
         succeeded += 1;
+        if (duplicate_warning) {
+          duplicates += 1;
+        }
       } catch (error) {
         if (error instanceof ApiError) {
           updateRow(row.key, { outcome: "failed" });
           failed += 1;
         } else {
-          await enqueueExpense(fields, row.file.uri, row.file.name, row.file.mimeType);
+          await enqueueExpense(fields, row.file.uri, row.file.name, row.file.mimeType, idempotencyKey);
           updateRow(row.key, { outcome: "queued" });
           queued += 1;
         }
@@ -141,7 +161,8 @@ export function ImportReceiptsScreen(): React.JSX.Element {
     const parts = [
       succeeded > 0 ? `${succeeded} imported` : null,
       queued > 0 ? `${queued} saved offline (will sync)` : null,
-      failed > 0 ? `${failed} failed — fix and retry` : null
+      failed > 0 ? `${failed} failed — fix and retry` : null,
+      duplicates > 0 ? `${duplicates} possible duplicate${duplicates === 1 ? "" : "s"} — check History` : null
     ].filter(Boolean);
     setStatus({ kind: failed > 0 ? "error" : "info", text: parts.join(", ") || "Nothing imported." });
     setIsImporting(false);

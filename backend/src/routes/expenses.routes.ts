@@ -8,7 +8,12 @@ import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { uploadRateLimit } from "../middleware/rateLimit.js";
 import { upload } from "../middleware/upload.js";
 import { extractReceiptFields } from "../receiptExtraction.js";
-import { deleteReceiptObject, receiptContentMatchesDeclaredType, uploadReceiptObject } from "../receiptStorage.js";
+import {
+  computeReceiptContentHash,
+  deleteReceiptObject,
+  receiptContentMatchesDeclaredType,
+  uploadReceiptObject
+} from "../receiptStorage.js";
 import { getTaxYearFromDate } from "../rulesEngine.js";
 import { recomputeTaxSummary } from "../taxSummary.js";
 import { deriveExpenseAmounts, expenseListQuerySchema, expenseWriteSchema, voidSchema } from "../validation/expenses.schema.js";
@@ -51,6 +56,100 @@ function serializeExpense(row: ExpenseRow) {
   };
 }
 
+type DuplicateWarning = { expense_id: string; message: string } | null;
+
+// Never blocks or delays a save — this only ever runs after the write has
+// committed, and is purely informational (see the void-with-reason
+// correction flow the message points users at).
+async function findDuplicateWarning(
+  userId: string,
+  expenseId: string,
+  contentHash: string | null,
+  category: string,
+  totalAmount: number,
+  occurredAt: string,
+  transactionTime: string | null
+): Promise<DuplicateWarning> {
+  if (contentHash) {
+    const hashMatch = await db.query<{ expense_id: string; occurred_at: string; category: string; total_amount: string }>(
+      `SELECT r.expense_id, e.occurred_at::text, e.category, e.total_amount::text
+       FROM receipts r
+       JOIN expenses e ON e.id = r.expense_id
+       WHERE r.user_id = $1 AND r.content_hash = $2 AND r.expense_id != $3
+       ORDER BY r.created_at ASC
+       LIMIT 1`,
+      [userId, contentHash, expenseId]
+    );
+    if (hashMatch.rows.length > 0) {
+      const match = hashMatch.rows[0];
+      return {
+        expense_id: match.expense_id,
+        message: `This looks like the same receipt as one you logged on ${match.occurred_at} for ${match.category} (£${Number(match.total_amount).toFixed(2)}) — open it to void if this is a duplicate.`
+      };
+    }
+  }
+
+  const metadataMatches = await db.query<{
+    id: string;
+    occurred_at: string;
+    category: string;
+    total_amount: string;
+    transaction_time: string | null;
+  }>(
+    `SELECT id, occurred_at::text, category, total_amount::text, transaction_time
+     FROM expenses
+     WHERE user_id = $1 AND id != $2 AND voided_at IS NULL AND category = $3 AND total_amount = $4 AND occurred_at = $5`,
+    [userId, expenseId, category, totalAmount, occurredAt]
+  );
+
+  // When both this expense and a candidate have a printed transaction time,
+  // require it to match too — turns a moderate-confidence date-level match
+  // into a high-confidence minute-level one, and rules out same-day/same-
+  // amount coincidences that a time mismatch actually disproves.
+  const eligible = metadataMatches.rows.filter(
+    (row) => !(transactionTime && row.transaction_time && row.transaction_time !== transactionTime)
+  );
+  if (eligible.length === 0) {
+    return null;
+  }
+
+  const timeMatched = eligible.find((row) => transactionTime && row.transaction_time === transactionTime);
+  const candidate = timeMatched ?? eligible[0];
+  const description = timeMatched ? "the same transaction as one" : "similar to one";
+
+  return {
+    expense_id: candidate.id,
+    message: `This looks like ${description} you logged on ${candidate.occurred_at} for ${candidate.category} (£${Number(candidate.total_amount).toFixed(2)}) — open it to void if this is a duplicate.`
+  };
+}
+
+async function loadExpenseResponse(
+  req: Request,
+  authReq: AuthenticatedRequest,
+  expenseId: string
+): Promise<{ expense: ReturnType<typeof serializeExpense> & { receipt_download_url: string | null }; summary: Awaited<ReturnType<typeof recomputeTaxSummary>> }> {
+  const result = await db.query<ExpenseRow & { receipt_id: string | null }>(
+    `SELECT e.id, e.category, e.occurred_at::text, e.tax_year, e.payment_method, e.total_amount::text,
+            e.reimbursement_status, e.reimbursed_amount::text, e.net_deductible_amount::text,
+            e.business_use_percent::text, e.notes, e.voided_at::text, e.void_reason, e.created_at::text,
+            r.id AS receipt_id
+     FROM expenses e
+     LEFT JOIN receipts r ON r.expense_id = e.id
+     WHERE e.id = $1 AND e.user_id = $2
+     LIMIT 1`,
+    [expenseId, authReq.userId]
+  );
+  const row = result.rows[0];
+  const summary = await recomputeTaxSummary(authReq.userId, row.tax_year);
+  return {
+    expense: {
+      ...serializeExpense(row),
+      receipt_download_url: row.receipt_id ? getReceiptDownloadUrl(req, authReq.userId, row.receipt_id) : null
+    },
+    summary
+  };
+}
+
 // Single multipart request: the receipt photo plus its fields are normally
 // captured together at point of sale, matching the real-world action this
 // app is built around. `travel` is the one exception — its receipt is
@@ -83,11 +182,28 @@ expensesRouter.post(
       return res.status(400).json({ error: "File content does not match its declared type" });
     }
 
+    // A retry after a lost response (e.g. a transient gateway error) should
+    // return the original result, not create a real duplicate. Cheap pre-
+    // check to skip a pointless re-upload in the common case — the unique
+    // index on (user_id, idempotency_key) below is the actual source of
+    // truth if two retries ever race each other.
+    if (data.idempotency_key) {
+      const existing = await db.query<{ id: string }>(
+        "SELECT id FROM expenses WHERE user_id = $1 AND idempotency_key = $2 LIMIT 1",
+        [authReq.userId, data.idempotency_key]
+      );
+      if (existing.rows.length > 0) {
+        const response = await loadExpenseResponse(req, authReq, existing.rows[0].id);
+        return res.status(200).json({ ...response, duplicate_warning: null });
+      }
+    }
+
     const { reimbursed_amount, net_deductible_amount } = deriveExpenseAmounts(data);
     const taxYear = getTaxYearFromDate(data.occurred_at);
 
     const safeName = req.file ? req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_") : null;
     const storageKey = req.file ? `receipts/${authReq.userId}/${uuidv4()}-${safeName}` : null;
+    const contentHash = req.file ? computeReceiptContentHash(req.file.buffer) : null;
 
     if (req.file && storageKey) {
       try {
@@ -104,9 +220,11 @@ expensesRouter.post(
       const expenseInsert = await client.query<ExpenseRow>(
         `INSERT INTO expenses (
            user_id, category, occurred_at, tax_year, payment_method, total_amount,
-           reimbursement_status, reimbursed_amount, net_deductible_amount, business_use_percent, notes, created_at
+           reimbursement_status, reimbursed_amount, net_deductible_amount, business_use_percent, notes,
+           idempotency_key, transaction_time, created_at
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
+         ON CONFLICT (user_id, idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING
          RETURNING id, category, occurred_at::text, tax_year, payment_method, total_amount::text,
                    reimbursement_status, reimbursed_amount::text, net_deductible_amount::text,
                    business_use_percent::text, notes, voided_at::text, void_reason, created_at::text`,
@@ -121,19 +239,37 @@ expensesRouter.post(
           reimbursed_amount,
           net_deductible_amount,
           data.business_use_percent,
-          data.notes ?? null
+          data.notes ?? null,
+          data.idempotency_key ?? null,
+          data.transaction_time ?? null
         ]
       );
+
+      if (expenseInsert.rows.length === 0) {
+        // Lost the race to a concurrent retry with the same idempotency_key
+        // — nothing else was written, so just roll back and echo the winner
+        // (client.release() happens in `finally`, not here).
+        await client.query("ROLLBACK");
+        if (storageKey) {
+          await deleteReceiptObject(storageKey).catch(() => {});
+        }
+        const existing = await db.query<{ id: string }>(
+          "SELECT id FROM expenses WHERE user_id = $1 AND idempotency_key = $2 LIMIT 1",
+          [authReq.userId, data.idempotency_key]
+        );
+        const response = await loadExpenseResponse(req, authReq, existing.rows[0].id);
+        return res.status(200).json({ ...response, duplicate_warning: null });
+      }
 
       const expense = expenseInsert.rows[0];
       let receiptId: string | null = null;
 
       if (req.file && storageKey) {
         const receiptInsert = await client.query<{ id: string }>(
-          `INSERT INTO receipts (expense_id, user_id, original_filename, storage_path, mime_type, file_size_bytes, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6, NOW())
+          `INSERT INTO receipts (expense_id, user_id, original_filename, storage_path, mime_type, file_size_bytes, content_hash, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
            RETURNING id`,
-          [expense.id, authReq.userId, req.file.originalname, storageKey, req.file.mimetype, req.file.size]
+          [expense.id, authReq.userId, req.file.originalname, storageKey, req.file.mimetype, req.file.size, contentHash]
         );
         receiptId = receiptInsert.rows[0].id;
       }
@@ -141,13 +277,23 @@ expensesRouter.post(
       await client.query("COMMIT");
 
       const summary = await recomputeTaxSummary(authReq.userId, taxYear);
+      const duplicateWarning = await findDuplicateWarning(
+        authReq.userId,
+        expense.id,
+        contentHash,
+        data.category,
+        data.total_amount,
+        data.occurred_at,
+        data.transaction_time ?? null
+      );
 
       return res.status(201).json({
         expense: {
           ...serializeExpense(expense),
           receipt_download_url: receiptId ? getReceiptDownloadUrl(req, authReq.userId, receiptId) : null
         },
-        summary
+        summary,
+        duplicate_warning: duplicateWarning
       });
     } catch (error) {
       await client.query("ROLLBACK");
@@ -186,8 +332,8 @@ expensesRouter.post(
     }
 
     try {
-      const expenseResult = await db.query<{ id: string; tax_year: string }>(
-        "SELECT id, tax_year FROM expenses WHERE id = $1 AND user_id = $2 AND voided_at IS NULL LIMIT 1",
+      const expenseResult = await db.query<{ id: string; tax_year: string; category: string; total_amount: string; occurred_at: string; transaction_time: string | null }>(
+        "SELECT id, tax_year, category, total_amount::text, occurred_at::text, transaction_time FROM expenses WHERE id = $1 AND user_id = $2 AND voided_at IS NULL LIMIT 1",
         [req.params.id, authReq.userId]
       );
       if (expenseResult.rows.length === 0) {
@@ -201,6 +347,7 @@ expensesRouter.post(
 
       const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
       const storageKey = `receipts/${authReq.userId}/${uuidv4()}-${safeName}`;
+      const contentHash = computeReceiptContentHash(req.file.buffer);
 
       try {
         await uploadReceiptObject(storageKey, req.file.buffer, req.file.mimetype);
@@ -211,10 +358,10 @@ expensesRouter.post(
       let receiptId: string;
       try {
         const receiptInsert = await db.query<{ id: string }>(
-          `INSERT INTO receipts (expense_id, user_id, original_filename, storage_path, mime_type, file_size_bytes, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6, NOW())
+          `INSERT INTO receipts (expense_id, user_id, original_filename, storage_path, mime_type, file_size_bytes, content_hash, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
            RETURNING id`,
-          [req.params.id, authReq.userId, req.file.originalname, storageKey, req.file.mimetype, req.file.size]
+          [req.params.id, authReq.userId, req.file.originalname, storageKey, req.file.mimetype, req.file.size, contentHash]
         );
         receiptId = receiptInsert.rows[0].id;
       } catch (error) {
@@ -231,13 +378,24 @@ expensesRouter.post(
       );
 
       const summary = await recomputeTaxSummary(authReq.userId, expenseResult.rows[0].tax_year);
+      const expenseInfo = expenseResult.rows[0];
+      const duplicateWarning = await findDuplicateWarning(
+        authReq.userId,
+        expenseInfo.id,
+        contentHash,
+        expenseInfo.category,
+        Number(expenseInfo.total_amount),
+        expenseInfo.occurred_at,
+        expenseInfo.transaction_time
+      );
 
       return res.status(201).json({
         expense: {
           ...serializeExpense(expenseRow.rows[0]),
           receipt_download_url: getReceiptDownloadUrl(req, authReq.userId, receiptId)
         },
-        summary
+        summary,
+        duplicate_warning: duplicateWarning
       });
     } catch (error) {
       return sendError(res, 500, "Failed to attach receipt", error);

@@ -46,7 +46,11 @@ const extractionResultSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .nullable(),
   category: z.enum(CATEGORY_SUGGESTIONS as [string, ...string[]]).nullable(),
-  merchant: z.string().trim().min(1).max(200).nullable()
+  merchant: z.string().trim().min(1).max(200).nullable(),
+  transaction_time: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .nullable()
 });
 
 export type ReceiptExtractionResult = {
@@ -54,6 +58,9 @@ export type ReceiptExtractionResult = {
   occurred_at: string | null;
   category: string | null;
   merchant: string | null;
+  // "HH:MM" printed on the receipt, when legible — used as a duplicate-
+  // matching signal, never shown as a manual-entry field.
+  transaction_time: string | null;
   extraction_succeeded: boolean;
 };
 
@@ -62,6 +69,7 @@ const EMPTY_RESULT: ReceiptExtractionResult = {
   occurred_at: null,
   category: null,
   merchant: null,
+  transaction_time: null,
   extraction_succeeded: false
 };
 
@@ -91,9 +99,9 @@ export async function extractReceiptFields(buffer: Buffer, mimeType: string): Pr
               text:
                 "This is a photo of a receipt. Extract the total amount paid, the date of the transaction, " +
                 `a best-guess expense category from exactly this list: ${CATEGORY_SUGGESTIONS.join(", ")}, ` +
-                "and the merchant/vendor name. " +
+                "the merchant/vendor name, and the transaction time if the receipt prints one. " +
                 "Reply with ONLY a single JSON object, no other text, in this exact shape: " +
-                '{"total_amount": number or null, "occurred_at": "YYYY-MM-DD" or null, "category": one of the list above or null, "merchant": string or null}. ' +
+                '{"total_amount": number or null, "occurred_at": "YYYY-MM-DD" or null, "category": one of the list above or null, "merchant": string or null, "transaction_time": "HH:MM" (24-hour) or null}. ' +
                 "Use null for any field you cannot determine confidently. Do not guess a category unless the receipt content clearly matches it."
             }
           ]

@@ -11,7 +11,12 @@ export const expenseWriteSchema = z
     reimbursement_status: z.enum(["none", "partial", "full"]).default("none"),
     reimbursed_amount: z.coerce.number().min(0).optional(),
     business_use_percent: z.coerce.number().min(1).max(100).default(100),
-    notes: z.string().trim().max(1000).optional()
+    notes: z.string().trim().max(1000).optional(),
+    // Lets a retry after a lost response (e.g. a transient gateway error)
+    // return the original result instead of creating a real duplicate.
+    idempotency_key: z.string().trim().min(1).max(200).optional(),
+    // OCR-only enrichment used for duplicate matching — never a manual-entry field.
+    transaction_time: z.string().regex(/^\d{2}:\d{2}$/).optional()
   })
   .superRefine((data, ctx) => {
     const reimbursed = data.reimbursed_amount ?? 0;

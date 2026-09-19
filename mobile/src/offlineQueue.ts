@@ -31,7 +31,7 @@ export type PendingItem = PendingExpense | PendingIncome;
 const QUEUE_PATH = `${FileSystem.documentDirectory}pending-queue.json`;
 const UPLOADS_DIR = `${FileSystem.documentDirectory}pending-uploads/`;
 
-function generateLocalId(): string {
+export function generateLocalId(): string {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
 }
 
@@ -77,9 +77,15 @@ export async function enqueueExpense(
   input: Omit<CreateExpenseInput, "receiptUri" | "receiptName" | "receiptType">,
   receiptUri: string | undefined,
   receiptName: string | undefined,
-  receiptType: string | undefined
+  receiptType: string | undefined,
+  // Reuse the id a direct attempt already sent as its idempotency_key,
+  // rather than minting a fresh one — otherwise a direct attempt that
+  // actually succeeded (only the response was lost) would slip through a
+  // later retry as a "new" submission instead of being recognized as the
+  // same one.
+  existingId?: string
 ): Promise<void> {
-  const localId = generateLocalId();
+  const localId = existingId ?? generateLocalId();
   const localFilePath = receiptUri ? await persistFile(receiptUri, localId, receiptName ?? "receipt") : null;
   const items = await readQueue();
   items.push({
@@ -98,9 +104,12 @@ export async function enqueueIncome(
   input: Omit<CreateIncomeInvoiceInput, "fileUri" | "fileName" | "fileType">,
   fileUri: string | undefined,
   fileName: string | undefined,
-  fileType: string | undefined
+  fileType: string | undefined,
+  // See enqueueExpense's existingId for why this is reused rather than
+  // freshly generated when the caller already has one.
+  existingId?: string
 ): Promise<void> {
-  const localId = generateLocalId();
+  const localId = existingId ?? generateLocalId();
   const localFilePath = fileUri ? await persistFile(fileUri, localId, fileName ?? "invoice") : null;
   const items = await readQueue();
   items.push({
