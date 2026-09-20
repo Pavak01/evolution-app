@@ -34,11 +34,11 @@ This is the home screen — the action you'll use most, right after you pay for 
 6. Add an optional note.
 7. Tap **Save expense**.
 
-After saving, you'll see your running total for the current tax year (net profit and how much to set aside for tax), and the form resets — ready for the next receipt. The date field is left as-is between saves, since logging several receipts from the same day back-to-back is the common case.
+After saving, you'll see your running total for the current tax year (net profit and how much to set aside for tax), and the form resets — ready for the next receipt. The date field is left as-is between saves, since logging several receipts from the same day back-to-back is the common case. This total always reflects your current figures — it refreshes whenever you return to this screen, not just right after a save, so voiding something in History is reflected here too.
 
 **No signal? Still works.** If you save an expense with no internet connection, it's kept on your device and looks like it saved normally — it uploads automatically the next time you're back online, whether that's a minute later or after the app's been closed and reopened. You can see anything still waiting to upload as a **Pending uploads** section at the top of History, with a manual **Retry now** if you don't want to wait. Retrying — whether that's an automatic retry from Pending uploads or you tapping Save again after an error — never logs the same expense twice.
 
-**Possible duplicate?** If a receipt looks like one you've already logged — the same photo reused, or a matching category, amount, and date — you'll see a note right after saving pointing at the earlier entry. It never blocks the save; open the one you don't need in History and void it if it really is a duplicate.
+**Possible duplicate?** If a receipt looks like one you've already logged — the same photo reused, or a matching category, amount, and date — you'll see a note right after saving pointing at the earlier entry. It never blocks the save. Both entries then stay marked **"possible duplicate"** in History until you act on it — open either one for a link straight to the other, and void whichever one you don't need; the flag clears once you do.
 
 **Business use %**: every expense defaults to 100% business use. If something was only partly for work (a phone bill, home office costs), tap **Change** next to "Business use" and lower the percentage — only that portion counts toward your deductible total.
 
@@ -48,7 +48,7 @@ After saving, you'll see your running total for the current tax year (net profit
 
 **Auto-fill from receipt**: a paid upgrade, currently in preview, that reads a picked receipt photo and fills in the category, amount, and date for you — still fully editable before you save. Not yet purchasable; accounts with early access see an **Auto-fill from receipt** button once a photo is added, everyone else sees a "coming soon" note in its place.
 
-**Import past receipts**: for accounts with early access to auto-fill, a link above the capture form opens a bulk-import flow for receipts you already had before you started using Evolution — pick several photos at once, each gets auto-read, then you review and correct before importing them all.
+**Import past receipts**: for accounts with early access to auto-fill, a link above the capture form opens a bulk-import flow for receipts you already had before you started using Evolution — pick several photos at once, each gets auto-read, then you review and correct before importing them all. Each receipt lands in whichever tax year its own date actually falls in, which is often not the current one — after importing, you'll see the current year's running total, plus a note if some of what you just imported went to a different year instead. If a receipt's date is likely past HMRC's amendment deadline for its tax year, you'll see a warning next to it — it's not blocked, just flagged, since it's still your call whether to include it.
 
 ## Record income
 
@@ -73,7 +73,7 @@ Switch between the current and previous tax year using the buttons at the top. I
 
 ## History
 
-Browse everything you've logged for the current tax year, newest first. Tap any entry to see the full detail: amounts, payment method, reimbursement status, and the receipt itself (**View receipt** opens it in an in-app viewer, with an option to share it). An entry showing **"missing receipt"** is a travel expense saved without one yet — open it and tap **Attach receipt** once you have proof.
+Browse everything you've logged for the current tax year, newest first. Tap any entry to see the full detail: amounts, payment method, reimbursement status, and the receipt itself (**View receipt** opens it in an in-app viewer, with an option to share it). An entry showing **"missing receipt"** is a travel expense saved without one yet — open it and tap **Attach receipt** once you have proof. An entry showing **"possible duplicate"** matched another one you've logged — open it for the full detail and a link to the other entry.
 
 **Voiding an entry**: there's no edit-in-place. If you made a mistake, open the entry and **void** it with a reason (for example, "duplicate entry" or "wrong amount"). Voided entries stay visible for your records but no longer count toward your totals — this keeps an accurate audit trail rather than silently overwriting history, which matters for tax compliance.
 

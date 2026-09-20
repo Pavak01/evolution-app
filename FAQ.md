@@ -43,13 +43,16 @@ There's no edit button by design. Open the expense in History and **void** it wi
 No. Every submission carries a one-time ID behind the scenes, so if a save actually went through and only the confirmation was lost (a dropped connection, a brief server hiccup), retrying — including an automatic retry from the offline queue — returns your original entry instead of creating a second one.
 
 **I think I've logged the same receipt twice — does Evolution catch that?**
-Usually, yes. If a new expense uses the exact same receipt photo as one you've already logged, or shares the same category, amount, and date as another (sharpened to an exact time match when a receipt's printed transaction time was read automatically), you'll see a note right after saving pointing at the earlier entry. It never blocks the save or asks you to confirm first — open the one you don't need in History and void it with a reason, same as any other correction.
+Usually, yes. If a new expense uses the exact same receipt photo as one you've already logged, or shares the same category, amount, and date as another (sharpened to an exact time match when a receipt's printed transaction time was read automatically), you'll see a note right after saving pointing at the earlier entry. This isn't just a one-off notice — both entries stay marked **"possible duplicate"** in History (next to "voided" or "missing receipt") until you act on it, and the expense's own detail page links straight to the other one. It never blocks the save or asks you to confirm first — open the one you don't need and void it with a reason, same as any other correction; once you do, the flag clears on its own.
 
 **What is "Auto-fill from receipt"?**
 A paid upgrade, currently in preview, that reads a receipt photo and fills in the category, amount, and date automatically — you still review and can edit everything before saving. It's not purchasable yet; manual entry is always free and always works, and stays that way as the fallback even once auto-fill ships properly.
 
 **What is "Import past receipts"?**
-For accounts with early access to auto-fill: a way to bulk-add receipts you already had before you started using Evolution. Pick several photos at once from Capture's "Import past receipts" link, each one gets auto-read the same way single-receipt auto-fill does, and you review and correct every row before importing. Each receipt is attributed to its own actual date, so an old receipt from an earlier tax year lands in that year's summary, not the current one.
+For accounts with early access to auto-fill: a way to bulk-add receipts you already had before you started using Evolution. Pick several photos at once from Capture's "Import past receipts" link, each one gets auto-read the same way single-receipt auto-fill does, and you review and correct every row before importing. Each receipt is attributed to its own actual date, so an old receipt from an earlier tax year lands in that year's summary, not the current one — after importing, the running total shown is for the current tax year, with a note if some of what you just imported actually landed elsewhere.
+
+**Can I still claim a receipt from a previous tax year?**
+Often, yes — a UK Self Assessment return is due 31 January following the end of its tax year, and can still be amended up to 12 months after that. So a receipt from a year that hasn't been filed yet, or is still within its amendment window, is genuinely still claimable. During Import past receipts, a receipt dated in a year that's likely past that window gets a warning (not a block) — it's still your call whether to include it.
 
 ## Recording income
 
