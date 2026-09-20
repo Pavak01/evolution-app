@@ -28,7 +28,7 @@ const CATEGORY_SUGGESTIONS = [
   "vehicle_maintenance",
   "phone",
   "home_office",
-  "ppe",
+  "clothing",
   "accountancy",
   "food",
   "other"

@@ -11,7 +11,7 @@ const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
   vehicle_maintenance: "Vehicle maintenance",
   phone: "Phone",
   home_office: "Home office",
-  ppe: "PPE",
+  clothing: "Clothing",
   accountancy: "Accountancy",
   food: "Food",
   other: "Other"

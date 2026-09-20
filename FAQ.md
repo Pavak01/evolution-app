@@ -28,7 +28,7 @@ A screenshot of the payment confirmation, app receipt, or email counts as a rece
 Not currently — a photo or screenshot of the PDF works as a substitute.
 
 **What categories are available?**
-Quick-pick suggestions are: fuel, travel, parking & tolls, vehicle maintenance, phone, home office, PPE, accountancy, food, and other. You can also type any category name of your own — the suggestions are shortcuts, not a fixed list.
+Quick-pick suggestions are: fuel, travel, parking & tolls, vehicle maintenance, phone, home office, clothing, accountancy, food, and other. You can also type any category name of your own — the suggestions are shortcuts, not a fixed list.
 
 **What's the difference between "Partially" and "Fully" reimbursed?**
 Fully reimbursed means someone paid you back the entire amount — it's not a deductible cost to you, so it won't reduce your taxable profit. Partially reimbursed means only part of it was paid back; the unreimbursed remainder is what counts as your deductible expense. If nothing was reimbursed, the full amount counts.

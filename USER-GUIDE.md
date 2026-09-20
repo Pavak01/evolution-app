@@ -25,7 +25,7 @@ If your account has two-factor authentication (2FA) turned on, after entering yo
 This is the home screen — the action you'll use most, right after you pay for something.
 
 1. **Take photo** (camera) or **Choose photo** (your photo library).
-2. Enter a **category**. Tap one of the quick suggestions — `fuel`, `travel`, `parking_tolls`, `vehicle_maintenance`, `phone`, `home_office`, `ppe`, `accountancy`, `food`, `other` — or type your own.
+2. Enter a **category**. Tap one of the quick suggestions — Fuel, Travel, Parking & tolls, Vehicle maintenance, Phone, Home office, Clothing, Accountancy, Food, Other — or type your own.
 3. Confirm the **date** (defaults to today) and enter the **amount**.
 4. Choose **payment method**: Card or Cash.
 5. Choose whether it was **reimbursed**: No, Partially, or Fully.
