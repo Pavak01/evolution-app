@@ -19,6 +19,10 @@ export type Expense = {
   // Null for a travel expense saved without a receipt yet — see
   // "capture now, attach proof later" in CaptureExpenseScreen/ExpenseDetailScreen.
   receipt_download_url: string | null;
+  // Persisted duplicate-detection result from when this expense was saved
+  // (or had a receipt attached) — recomputed on every read, so it's null
+  // again once the flagged expense is voided.
+  possible_duplicate: DuplicateWarning;
 };
 
 export type IncomeInvoice = {

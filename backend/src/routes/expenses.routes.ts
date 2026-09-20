@@ -58,6 +58,32 @@ function serializeExpense(row: ExpenseRow) {
 
 type DuplicateWarning = { expense_id: string; message: string } | null;
 
+// Columns from a LEFT JOIN against the expense (if any, and if it's still
+// non-voided — an acted-on duplicate stops being flagged) referenced by
+// duplicate_of_expense_id, the persisted counterpart to the one-time
+// duplicate_warning below: set once at save/attach time, but recomputed
+// fresh from live data on every read so it never shows stale details and
+// clears itself once the flagged expense is voided.
+type DuplicateJoinRow = {
+  dup_id: string | null;
+  dup_occurred_at: string | null;
+  dup_category: string | null;
+  dup_total_amount: string | null;
+};
+
+function serializePossibleDuplicate(row: DuplicateJoinRow): DuplicateWarning {
+  if (!row.dup_id || !row.dup_occurred_at || !row.dup_category || row.dup_total_amount === null) {
+    return null;
+  }
+  return {
+    expense_id: row.dup_id,
+    message: `This looks similar to one you logged on ${row.dup_occurred_at} for ${row.dup_category} (£${Number(row.dup_total_amount).toFixed(2)}) — open it to void if this is a duplicate.`
+  };
+}
+
+const duplicateJoin = `LEFT JOIN expenses d ON d.id = e.duplicate_of_expense_id AND d.voided_at IS NULL`;
+const duplicateJoinColumns = `d.id AS dup_id, d.occurred_at::text AS dup_occurred_at, d.category AS dup_category, d.total_amount::text AS dup_total_amount`;
+
 // Never blocks or delays a save — this only ever runs after the write has
 // committed, and is purely informational (see the void-with-reason
 // correction flow the message points users at).
@@ -126,14 +152,18 @@ async function loadExpenseResponse(
   req: Request,
   authReq: AuthenticatedRequest,
   expenseId: string
-): Promise<{ expense: ReturnType<typeof serializeExpense> & { receipt_download_url: string | null }; summary: Awaited<ReturnType<typeof recomputeTaxSummary>> }> {
-  const result = await db.query<ExpenseRow & { receipt_id: string | null }>(
+): Promise<{
+  expense: ReturnType<typeof serializeExpense> & { receipt_download_url: string | null; possible_duplicate: DuplicateWarning };
+  summary: Awaited<ReturnType<typeof recomputeTaxSummary>>;
+}> {
+  const result = await db.query<ExpenseRow & { receipt_id: string | null } & DuplicateJoinRow>(
     `SELECT e.id, e.category, e.occurred_at::text, e.tax_year, e.payment_method, e.total_amount::text,
             e.reimbursement_status, e.reimbursed_amount::text, e.net_deductible_amount::text,
             e.business_use_percent::text, e.notes, e.voided_at::text, e.void_reason, e.created_at::text,
-            r.id AS receipt_id
+            r.id AS receipt_id, ${duplicateJoinColumns}
      FROM expenses e
      LEFT JOIN receipts r ON r.expense_id = e.id
+     ${duplicateJoin}
      WHERE e.id = $1 AND e.user_id = $2
      LIMIT 1`,
     [expenseId, authReq.userId]
@@ -143,7 +173,8 @@ async function loadExpenseResponse(
   return {
     expense: {
       ...serializeExpense(row),
-      receipt_download_url: row.receipt_id ? getReceiptDownloadUrl(req, authReq.userId, row.receipt_id) : null
+      receipt_download_url: row.receipt_id ? getReceiptDownloadUrl(req, authReq.userId, row.receipt_id) : null,
+      possible_duplicate: serializePossibleDuplicate(row)
     },
     summary
   };
@@ -286,10 +317,22 @@ expensesRouter.post(
         data.transaction_time ?? null
       );
 
+      // Persists the same signal duplicate_warning carries below so it
+      // survives past this one response — History can then show it as a
+      // badge whenever this expense is viewed later, not just right now.
+      // Best-effort: the save already succeeded, so a failure here should
+      // never turn into an error response.
+      if (duplicateWarning) {
+        await db
+          .query("UPDATE expenses SET duplicate_of_expense_id = $1 WHERE id = $2", [duplicateWarning.expense_id, expense.id])
+          .catch(() => {});
+      }
+
       return res.status(201).json({
         expense: {
           ...serializeExpense(expense),
-          receipt_download_url: receiptId ? getReceiptDownloadUrl(req, authReq.userId, receiptId) : null
+          receipt_download_url: receiptId ? getReceiptDownloadUrl(req, authReq.userId, receiptId) : null,
+          possible_duplicate: duplicateWarning
         },
         summary,
         duplicate_warning: duplicateWarning
@@ -388,10 +431,17 @@ expensesRouter.post(
         expenseInfo.transaction_time
       );
 
+      if (duplicateWarning) {
+        await db
+          .query("UPDATE expenses SET duplicate_of_expense_id = $1 WHERE id = $2", [duplicateWarning.expense_id, expenseInfo.id])
+          .catch(() => {});
+      }
+
       return res.status(201).json({
         expense: {
           ...serializeExpense(expenseRow.rows[0]),
-          receipt_download_url: getReceiptDownloadUrl(req, authReq.userId, receiptId)
+          receipt_download_url: getReceiptDownloadUrl(req, authReq.userId, receiptId),
+          possible_duplicate: duplicateWarning
         },
         summary,
         duplicate_warning: duplicateWarning
@@ -472,13 +522,14 @@ expensesRouter.get("/expenses", requireAuth, async (req: Request, res: Response)
   }
 
   try {
-    const rows = await db.query<ExpenseRow & { receipt_id: string | null }>(
+    const rows = await db.query<ExpenseRow & { receipt_id: string | null } & DuplicateJoinRow>(
       `SELECT e.id, e.category, e.occurred_at::text, e.tax_year, e.payment_method, e.total_amount::text,
               e.reimbursement_status, e.reimbursed_amount::text, e.net_deductible_amount::text,
               e.business_use_percent::text, e.notes, e.voided_at::text, e.void_reason, e.created_at::text,
-              r.id AS receipt_id
+              r.id AS receipt_id, ${duplicateJoinColumns}
        FROM expenses e
        LEFT JOIN receipts r ON r.expense_id = e.id
+       ${duplicateJoin}
        WHERE ${conditions.join(" AND ")}
        ORDER BY e.occurred_at DESC, e.created_at DESC`,
       params
@@ -487,7 +538,8 @@ expensesRouter.get("/expenses", requireAuth, async (req: Request, res: Response)
     return res.json({
       expenses: rows.rows.map((row) => ({
         ...serializeExpense(row),
-        receipt_download_url: row.receipt_id ? getReceiptDownloadUrl(req, authReq.userId, row.receipt_id) : null
+        receipt_download_url: row.receipt_id ? getReceiptDownloadUrl(req, authReq.userId, row.receipt_id) : null,
+        possible_duplicate: serializePossibleDuplicate(row)
       }))
     });
   } catch (error) {
@@ -499,13 +551,14 @@ expensesRouter.get("/expenses/:id", requireAuth, async (req: Request, res: Respo
   const authReq = req as AuthenticatedRequest;
 
   try {
-    const result = await db.query<ExpenseRow & { receipt_id: string | null }>(
+    const result = await db.query<ExpenseRow & { receipt_id: string | null } & DuplicateJoinRow>(
       `SELECT e.id, e.category, e.occurred_at::text, e.tax_year, e.payment_method, e.total_amount::text,
               e.reimbursement_status, e.reimbursed_amount::text, e.net_deductible_amount::text,
               e.business_use_percent::text, e.notes, e.voided_at::text, e.void_reason, e.created_at::text,
-              r.id AS receipt_id
+              r.id AS receipt_id, ${duplicateJoinColumns}
        FROM expenses e
        LEFT JOIN receipts r ON r.expense_id = e.id
+       ${duplicateJoin}
        WHERE e.id = $1 AND e.user_id = $2
        LIMIT 1`,
       [req.params.id, authReq.userId]
@@ -519,7 +572,8 @@ expensesRouter.get("/expenses/:id", requireAuth, async (req: Request, res: Respo
     return res.json({
       expense: {
         ...serializeExpense(row),
-        receipt_download_url: row.receipt_id ? getReceiptDownloadUrl(req, authReq.userId, row.receipt_id) : null
+        receipt_download_url: row.receipt_id ? getReceiptDownloadUrl(req, authReq.userId, row.receipt_id) : null,
+        possible_duplicate: serializePossibleDuplicate(row)
       }
     });
   } catch (error) {

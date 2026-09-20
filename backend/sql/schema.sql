@@ -198,6 +198,13 @@ ALTER TABLE evolution.expenses ADD COLUMN IF NOT EXISTS transaction_time TEXT;
 ALTER TABLE evolution.receipts ADD COLUMN IF NOT EXISTS content_hash TEXT;
 CREATE INDEX IF NOT EXISTS idx_receipts_user_content_hash ON evolution.receipts(user_id, content_hash);
 
+-- Persists the duplicate match found at save/attach time so it survives
+-- past that one response — History can show it as a badge whenever the
+-- expense is viewed later. Nullable/no cascade: expenses are never hard-
+-- deleted, only voided, so the reference always resolves.
+ALTER TABLE evolution.expenses ADD COLUMN IF NOT EXISTS duplicate_of_expense_id UUID REFERENCES evolution.expenses(id);
+CREATE INDEX IF NOT EXISTS idx_expenses_duplicate_of ON evolution.expenses(duplicate_of_expense_id) WHERE duplicate_of_expense_id IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS idx_expenses_user_tax_year ON evolution.expenses(user_id, tax_year) WHERE voided_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_expenses_user_occurred ON evolution.expenses(user_id, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS idx_receipts_expense ON evolution.receipts(expense_id);

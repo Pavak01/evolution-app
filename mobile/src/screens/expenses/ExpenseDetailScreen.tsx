@@ -120,6 +120,21 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
         )}
       </Card>
 
+      {expense.possible_duplicate && !expense.voided_at && (
+        <Card>
+          <Text style={{ fontSize: typography.body, fontWeight: "700", color: colors.danger, marginBottom: spacing.sm }}>
+            Possible duplicate
+          </Text>
+          <Text style={{ color: colors.textSecondary }}>{expense.possible_duplicate.message}</Text>
+          <Text
+            style={{ color: colors.accent, marginTop: spacing.sm, fontWeight: "600" }}
+            onPress={() => navigation.navigate("ExpenseDetail", { expenseId: expense.possible_duplicate!.expense_id })}
+          >
+            Open the other entry
+          </Text>
+        </Card>
+      )}
+
       {expense.receipt_download_url ? (
         <PrimaryButton label="View receipt" onPress={handleViewReceipt} />
       ) : (
