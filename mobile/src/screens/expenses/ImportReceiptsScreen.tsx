@@ -11,6 +11,7 @@ import { Screen } from "../../components/Screen";
 import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCapture";
 import { enqueueExpense, generateLocalId, syncQueue } from "../../offlineQueue";
 import { colors, spacing, typography } from "../../theme/tokens";
+import { humanizeCategory } from "../../utils/category";
 import { getTaxYearFromDate, isTaxYearStillClaimable } from "../../utils/taxYear";
 
 const CATEGORY_SUGGESTIONS = ["fuel", "travel", "parking_tolls", "vehicle_maintenance", "phone", "home_office", "ppe", "accountancy", "food", "other"];
@@ -230,7 +231,7 @@ export function ImportReceiptsScreen(): React.JSX.Element {
                 {CATEGORY_SUGGESTIONS.map((suggestion) => (
                   <SmallAction
                     key={suggestion}
-                    label={suggestion}
+                    label={humanizeCategory(suggestion)}
                     active={row.category === suggestion}
                     onPress={() => updateRow(row.key, { category: suggestion })}
                   />

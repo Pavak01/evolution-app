@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 import { getReceiptDownloadUrl } from "../auth/tokens.js";
+import { humanizeCategory } from "../categoryDisplay.js";
 import { db } from "../db.js";
 import { isOcrUpgradeActive } from "../entitlements.js";
 import { sendError } from "../middleware/errorHandler.js";
@@ -77,7 +78,7 @@ function serializePossibleDuplicate(row: DuplicateJoinRow): DuplicateWarning {
   }
   return {
     expense_id: row.dup_id,
-    message: `This looks similar to one you logged on ${row.dup_occurred_at} for ${row.dup_category} (£${Number(row.dup_total_amount).toFixed(2)}) — open it to void if this is a duplicate.`
+    message: `This looks similar to one you logged on ${row.dup_occurred_at} for ${humanizeCategory(row.dup_category)} (£${Number(row.dup_total_amount).toFixed(2)}) — open it to void if this is a duplicate.`
   };
 }
 
@@ -110,7 +111,7 @@ async function findDuplicateWarning(
       const match = hashMatch.rows[0];
       return {
         expense_id: match.expense_id,
-        message: `This looks like the same receipt as one you logged on ${match.occurred_at} for ${match.category} (£${Number(match.total_amount).toFixed(2)}) — open it to void if this is a duplicate.`
+        message: `This looks like the same receipt as one you logged on ${match.occurred_at} for ${humanizeCategory(match.category)} (£${Number(match.total_amount).toFixed(2)}) — open it to void if this is a duplicate.`
       };
     }
   }
@@ -142,8 +143,8 @@ async function findDuplicateWarning(
   const timeMatched = eligible.find((row) => transactionTime && row.transaction_time === transactionTime);
   const candidate = timeMatched ?? eligible[0];
   const message = timeMatched
-    ? `This looks like the same transaction as one you logged on ${candidate.occurred_at} for ${candidate.category} (£${Number(candidate.total_amount).toFixed(2)}) — open it to void if this is a duplicate.`
-    : `This looks similar to one you logged on ${candidate.occurred_at} for ${candidate.category} (£${Number(candidate.total_amount).toFixed(2)}) — open it to void if this is a duplicate.`;
+    ? `This looks like the same transaction as one you logged on ${candidate.occurred_at} for ${humanizeCategory(candidate.category)} (£${Number(candidate.total_amount).toFixed(2)}) — open it to void if this is a duplicate.`
+    : `This looks similar to one you logged on ${candidate.occurred_at} for ${humanizeCategory(candidate.category)} (£${Number(candidate.total_amount).toFixed(2)}) — open it to void if this is a duplicate.`;
 
   return { expense_id: candidate.id, message };
 }

@@ -10,6 +10,7 @@ import { ImageViewerModal } from "../../components/ImageViewerModal";
 import { Screen } from "../../components/Screen";
 import { useReceiptCapture } from "../../hooks/useReceiptCapture";
 import { colors, spacing, typography } from "../../theme/tokens";
+import { humanizeCategory } from "../../utils/category";
 import type { ExpensesStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<ExpensesStackParamList, "ExpenseDetail">;
@@ -100,8 +101,8 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
 
   return (
     <Screen>
-      <Text style={{ fontSize: typography.h1, fontWeight: "700", color: colors.textMain, textTransform: "capitalize" }}>
-        {expense.category}
+      <Text style={{ fontSize: typography.h1, fontWeight: "700", color: colors.textMain }}>
+        {humanizeCategory(expense.category)}
       </Text>
 
       <Card>

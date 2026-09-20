@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { humanizeCategory } from "../categoryDisplay.js";
 import { db } from "../db.js";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { sendError } from "../middleware/errorHandler.js";
@@ -176,35 +177,38 @@ taxRouter.get("/tax-years/:taxYear/export", requireAuth, async (req: Request, re
       })),
       pending_receipt_note:
         pendingCount > 0
-          ? `${pendingCount} travel expense${pendingCount === 1 ? "" : "s"} in this export ${pendingCount === 1 ? "is" : "are"} still awaiting a receipt and excluded from the box totals above until proof is attached — see expense_line_items for which ones.`
+          ? `${pendingCount} travel expense${pendingCount === 1 ? "" : "s"} in this export ${pendingCount === 1 ? "is" : "are"} still awaiting a receipt and excluded from the box totals above until proof is attached — see the expense list below for which ones.`
           : null,
       income_line_items: incomeLineItems,
       expense_line_items: expenseLineItems
     };
 
     if (format === "csv") {
+      // Every header and value here is something a person reads directly —
+      // never the app's own snake_case identifiers (those stay internal to
+      // the JSON payload above, which is machine-oriented by convention).
       const lines = [
-        "field,value",
-        `tax_year,${payload.tax_year}`,
-        `total_income,${payload.totals.total_income}`,
-        `total_expenses,${payload.totals.total_expenses}`,
-        `net_profit,${payload.totals.net_profit}`,
-        `estimated_income_tax_planning_estimate_not_for_return,${payload.planning_estimates_not_for_return.estimated_income_tax}`,
-        `estimated_ni_planning_estimate_not_for_return,${payload.planning_estimates_not_for_return.estimated_ni}`,
+        "Field,Value",
+        `Tax year,${payload.tax_year}`,
+        `Total income,${payload.totals.total_income}`,
+        `Total expenses,${payload.totals.total_expenses}`,
+        `Net profit,${payload.totals.net_profit}`,
+        `Estimated income tax (planning estimate — not a return figure),${payload.planning_estimates_not_for_return.estimated_income_tax}`,
+        `Estimated NI (planning estimate — not a return figure),${payload.planning_estimates_not_for_return.estimated_ni}`,
         ""
       ];
 
-      lines.push("SA103S box,label,total");
+      lines.push("SA103S box,Total");
       for (const row of payload.self_assessment_sa103s_boxes) {
-        lines.push([row.box, csvField(row.label), row.total].join(","));
+        lines.push([csvField(row.label), row.total].join(","));
       }
       if (payload.pending_receipt_note) {
-        lines.push(`note,${csvField(payload.pending_receipt_note)}`);
+        lines.push(`Note,${csvField(payload.pending_receipt_note)}`);
       }
       lines.push("");
 
-      lines.push("Income line items");
-      lines.push("date,source,period_start,period_end,total_amount,notes");
+      lines.push("Income");
+      lines.push("Date,Source,Period start,Period end,Total amount,Notes");
       for (const item of payload.income_line_items) {
         lines.push(
           [item.received_date, csvField(item.source), item.period_start, item.period_end, item.total_amount, csvField(item.notes ?? "")].join(",")
@@ -212,22 +216,20 @@ taxRouter.get("/tax-years/:taxYear/export", requireAuth, async (req: Request, re
       }
       lines.push("");
 
-      lines.push("Expense line items");
-      lines.push(
-        "date,category,sa103s_box,total_amount,reimbursed_amount,net_deductible_amount,business_use_percent,payment_method,counted_in_return,notes"
-      );
+      lines.push("Expenses");
+      lines.push("Date,Category,SA103S box,Total amount,Reimbursed amount,Net deductible amount,Business use %,Payment method,Counted in return,Notes");
       for (const item of payload.expense_line_items) {
         lines.push(
           [
             item.occurred_at,
-            csvField(item.category),
-            item.sa103s_box,
+            csvField(humanizeCategory(item.category)),
+            csvField(item.sa103s_box_label),
             item.total_amount,
             item.reimbursed_amount,
             item.net_deductible_amount,
             item.business_use_percent,
-            item.payment_method,
-            item.counted_in_return,
+            item.payment_method === "card" ? "Card" : "Cash",
+            item.counted_in_return ? "Yes" : "No",
             csvField(item.notes ?? "")
           ].join(",")
         );

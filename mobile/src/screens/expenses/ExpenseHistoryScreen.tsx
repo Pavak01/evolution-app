@@ -9,6 +9,7 @@ import { PendingUploads } from "../../components/PendingUploads";
 import { StatusBanner } from "../../components/Controls";
 import { listPending, removePending, syncQueue, type PendingItem } from "../../offlineQueue";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
+import { humanizeCategory } from "../../utils/category";
 import { getTaxYearFromDate } from "../../utils/taxYear";
 import type { ExpensesStackParamList } from "../../navigation/types";
 
@@ -94,7 +95,7 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
             onPress={() => navigation.navigate("ExpenseDetail", { expenseId: item.id })}
           >
             <View style={styles.rowMain}>
-              <Text style={styles.category}>{item.category}</Text>
+              <Text style={styles.category}>{humanizeCategory(item.category)}</Text>
               <Text style={styles.date}>{item.occurred_at}</Text>
             </View>
             <View style={styles.rowEnd}>

@@ -15,6 +15,7 @@ import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCaptur
 import { enqueueExpense, generateLocalId, syncQueue } from "../../offlineQueue";
 import type { CaptureStackParamList } from "../../navigation/types";
 import { colors, spacing, typography } from "../../theme/tokens";
+import { humanizeCategory } from "../../utils/category";
 import { getTaxYearFromDate, getTodayIso } from "../../utils/taxYear";
 
 const CATEGORY_SUGGESTIONS = ["fuel", "travel", "parking_tolls", "vehicle_maintenance", "phone", "home_office", "ppe", "accountancy", "food", "other"];
@@ -246,7 +247,12 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
         <Field label="Category" value={category} onChange={setCategory} placeholder="fuel, food, phone..." />
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginBottom: spacing.md }}>
           {CATEGORY_SUGGESTIONS.map((suggestion) => (
-            <SmallAction key={suggestion} label={suggestion} active={category === suggestion} onPress={() => setCategory(suggestion)} />
+            <SmallAction
+              key={suggestion}
+              label={humanizeCategory(suggestion)}
+              active={category === suggestion}
+              onPress={() => setCategory(suggestion)}
+            />
           ))}
         </View>
 
