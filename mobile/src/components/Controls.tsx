@@ -43,13 +43,17 @@ export function Field({
   value,
   onChange,
   keyboardType,
-  placeholder
+  placeholder,
+  onFocus
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   keyboardType?: KeyboardTypeOptions;
   placeholder?: string;
+  // Lets a screen scroll a low-down field (e.g. a void reason near the
+  // bottom) into view when the keyboard opens and would otherwise cover it.
+  onFocus?: () => void;
 }): React.JSX.Element {
   return (
     <View style={styles.fieldWrap}>
@@ -60,6 +64,7 @@ export function Field({
         style={styles.input}
         keyboardType={keyboardType}
         placeholder={placeholder}
+        onFocus={onFocus}
       />
     </View>
   );
