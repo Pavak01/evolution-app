@@ -3,12 +3,15 @@ import { ActivityIndicator, Text, View } from "react-native";
 import { ApiError } from "../../api/client";
 import { createExpense } from "../../api/expenses";
 import { extractReceiptFields } from "../../api/receiptExtraction";
-import { Card, DateField, Field, PrimaryButton, SmallAction, StatusBanner } from "../../components/Controls";
+import { getTaxSummary } from "../../api/tax";
+import type { TaxSummary } from "../../api/types";
+import { Card, DateField, Field, PrimaryButton, SmallAction, SnapshotTile, StatusBanner } from "../../components/Controls";
 import { ReceiptThumbnail } from "../../components/ReceiptThumbnail";
 import { Screen } from "../../components/Screen";
 import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCapture";
 import { enqueueExpense, generateLocalId, syncQueue } from "../../offlineQueue";
 import { colors, spacing, typography } from "../../theme/tokens";
+import { getTaxYearFromDate, isTaxYearStillClaimable } from "../../utils/taxYear";
 
 const CATEGORY_SUGGESTIONS = ["fuel", "travel", "parking_tolls", "vehicle_maintenance", "phone", "home_office", "ppe", "accountancy", "food", "other"];
 
@@ -41,6 +44,8 @@ export function ImportReceiptsScreen(): React.JSX.Element {
   const [isPicking, setIsPicking] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [status, setStatus] = useState<{ kind: "info" | "error"; text: string } | null>(null);
+  const [lastSummary, setLastSummary] = useState<TaxSummary | null>(null);
+  const [otherTaxYears, setOtherTaxYears] = useState<string[]>([]);
 
   function updateRow(key: string, patch: Partial<ImportRow>): void {
     setRows((current) => current.map((row) => (row.key === key ? { ...row, ...patch } : row)));
@@ -105,6 +110,8 @@ export function ImportReceiptsScreen(): React.JSX.Element {
     let queued = 0;
     let failed = 0;
     let duplicates = 0;
+    const currentTaxYear = getTaxYearFromDate(new Date());
+    const touchedOtherYears = new Set<string>();
 
     for (const row of included) {
       const amount = Number(row.totalAmount);
@@ -131,7 +138,7 @@ export function ImportReceiptsScreen(): React.JSX.Element {
       };
 
       try {
-        const { duplicate_warning } = await createExpense({
+        const { expense, duplicate_warning } = await createExpense({
           ...fields,
           receiptUri: row.file.uri,
           receiptName: row.file.name,
@@ -141,6 +148,13 @@ export function ImportReceiptsScreen(): React.JSX.Element {
         succeeded += 1;
         if (duplicate_warning) {
           duplicates += 1;
+        }
+        // The server is the source of truth for which tax year a date lands
+        // in (5/6 April boundary) — a legacy receipt very often belongs to
+        // an earlier year than today's, which the running total below
+        // (always the current year) wouldn't reflect.
+        if (expense.tax_year !== currentTaxYear) {
+          touchedOtherYears.add(expense.tax_year);
         }
       } catch (error) {
         if (error instanceof ApiError) {
@@ -165,6 +179,17 @@ export function ImportReceiptsScreen(): React.JSX.Element {
       duplicates > 0 ? `${duplicates} possible duplicate${duplicates === 1 ? "" : "s"} — check History` : null
     ].filter(Boolean);
     setStatus({ kind: failed > 0 ? "error" : "info", text: parts.join(", ") || "Nothing imported." });
+    setOtherTaxYears(Array.from(touchedOtherYears));
+
+    if (succeeded > 0) {
+      try {
+        setLastSummary(await getTaxSummary(currentTaxYear));
+      } catch {
+        // Running total is a convenience, not the source of truth (that's
+        // Summary) — a failed refresh just leaves the card showing nothing new.
+      }
+    }
+
     setIsImporting(false);
   }
 
@@ -217,6 +242,12 @@ export function ImportReceiptsScreen(): React.JSX.Element {
                 onChange={(value) => updateRow(row.key, { occurredAt: value })}
                 maximumDate={new Date()}
               />
+              {row.occurredAt && !isTaxYearStillClaimable(getTaxYearFromDate(new Date(row.occurredAt))) && (
+                <Text style={{ color: colors.danger, fontSize: typography.small, marginBottom: spacing.sm }}>
+                  This falls in tax year {getTaxYearFromDate(new Date(row.occurredAt))}, which is likely past HMRC's
+                  amendment deadline — it can probably no longer be claimed. Still your call whether to include it.
+                </Text>
+              )}
               <Field
                 label="Amount (£)"
                 value={row.totalAmount}
@@ -241,6 +272,24 @@ export function ImportReceiptsScreen(): React.JSX.Element {
           isLoading={isImporting}
           disabled={pendingCount === 0}
         />
+      )}
+
+      {lastSummary && (
+        <Card>
+          <Text style={{ fontSize: typography.body, fontWeight: "700", color: colors.textSecondary, marginBottom: spacing.sm }}>
+            {lastSummary.tax_year} running total
+          </Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
+            <SnapshotTile label="Net profit" value={`£${lastSummary.net_profit.toFixed(2)}`} />
+            <SnapshotTile label="Set aside for tax" value={`£${lastSummary.estimate.total_to_set_aside.toFixed(2)}`} />
+          </View>
+          {otherTaxYears.length > 0 && (
+            <Text style={{ color: colors.textMuted, fontSize: typography.small, marginTop: spacing.sm }}>
+              This total is for {lastSummary.tax_year} only — some of what you just imported was logged to{" "}
+              {otherTaxYears.join(", ")} instead, based on its own date, and shows up in that year's summary.
+            </Text>
+          )}
+        </Card>
       )}
     </Screen>
   );

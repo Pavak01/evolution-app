@@ -15,3 +15,15 @@ export function getTaxYearFromDate(date: Date): string {
 export function getTodayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
+
+// A UK tax year's Self Assessment return is due 31 January following its
+// end (e.g. "2025-26", ending 5 April 2026, is due 31 Jan 2027), and HMRC
+// allows amending a filed return up to 12 months after that deadline — so
+// "2025-26" receipts remain claimable until 31 Jan 2028. Used only to warn
+// (never to block a save) when a legacy-imported receipt lands in a year
+// that's likely already closed.
+export function isTaxYearStillClaimable(taxYear: string, asOf: Date = new Date()): boolean {
+  const startYear = Number(taxYear.slice(0, 4));
+  const amendmentDeadline = new Date(startYear + 3, 0, 31, 23, 59, 59);
+  return asOf.getTime() <= amendmentDeadline.getTime();
+}
