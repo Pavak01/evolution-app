@@ -90,7 +90,13 @@ Yes. If there's no connection when you save, it's kept on your device and looks 
 ## Export
 
 **What formats can I export in, and what's in the file?**
-CSV or JSON, for a given tax year, covering every non-voided expense and income record — useful for handing to an accountant or keeping your own backup outside the app.
+CSV or JSON, for a given tax year. Beyond the totals, it's shaped around your actual Self Assessment return: expense categories are grouped into the same boxes HMRC's SA103S form asks for (fuel, travel, parking, and vehicle maintenance all combine into "car, van and travel expenses," for example), alongside a full itemized list of every non-voided expense and income record for handing to an accountant or keeping your own backup.
+
+**Can I fill out my Self Assessment straight from this export?**
+It gets you most of the way there — the box totals map onto SA103S's actual line items — but always sanity-check against the itemized backup before copying figures over, and treat the estimated income tax/NI figures as planning numbers only; they're not part of what the form asks for.
+
+**A travel expense doesn't have a receipt yet — does it still show up in the export?**
+Yes, so nothing is silently missing from your records, but it's excluded from the box totals and clearly marked as not yet counted — the same "no proof, no claim" rule the rest of the app applies. Attach the receipt first if you want it included in this tax year's figures.
 
 **Where does the exported file go?**
 It's handed to your device's share sheet, so you choose where it goes — save it, email it, or open it in another app.

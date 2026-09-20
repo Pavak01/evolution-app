@@ -79,11 +79,13 @@ Browse everything you've logged for the current tax year, newest first. Tap any 
 
 ## Export
 
-Generate a file of everything logged for a given tax year.
+Generate a file of everything logged for a given tax year, shaped around your actual Self Assessment return.
 
 1. Enter the tax year (for example, `2026-27`).
 2. Tap **Export as CSV** or **Export as JSON**.
 3. The file is generated and offered through your device's share sheet — save it, email it to your accountant, or open it in another app.
+
+The file has three parts: your totals, category totals grouped into HMRC's SA103S boxes (fuel/travel/parking/vehicle maintenance combine into "car, van and travel expenses," phone/home office into "office costs," and so on), and a full itemized list of every expense and income record for the year. A travel expense still waiting on a receipt appears in the itemized list but is excluded from the box totals and marked as not yet counted, until you attach proof. The estimated income tax/NI figures are labelled as planning estimates — useful for setting money aside, but not part of what the return itself asks for.
 
 ## Settings
 
