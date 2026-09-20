@@ -18,7 +18,7 @@ import { colors, spacing, typography } from "../../theme/tokens";
 import { humanizeCategory } from "../../utils/category";
 import { getTaxYearFromDate, getTodayIso } from "../../utils/taxYear";
 
-const CATEGORY_SUGGESTIONS = ["fuel", "travel", "parking_tolls", "vehicle_maintenance", "phone", "home_office", "clothing", "accountancy", "food", "other"];
+const CATEGORY_SUGGESTIONS = ["fuel", "travel", "parking_tolls", "phone", "home_office", "clothing", "accountancy", "food", "other"];
 
 type Props = NativeStackScreenProps<CaptureStackParamList, "CaptureForm">;
 

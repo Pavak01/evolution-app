@@ -28,7 +28,7 @@ A screenshot of the payment confirmation, app receipt, or email counts as a rece
 Not currently — a photo or screenshot of the PDF works as a substitute.
 
 **What categories are available?**
-Quick-pick suggestions are: fuel, travel, parking & tolls, vehicle maintenance, phone, home office, clothing, accountancy, food, and other. You can also type any category name of your own — the suggestions are shortcuts, not a fixed list.
+Quick-pick suggestions are: fuel, travel, parking & tolls, phone, home office, clothing, accountancy, food, and other. You can also type any category name of your own — the suggestions are shortcuts, not a fixed list.
 
 **What's the difference between "Partially" and "Fully" reimbursed?**
 Fully reimbursed means someone paid you back the entire amount — it's not a deductible cost to you, so it won't reduce your taxable profit. Partially reimbursed means only part of it was paid back; the unreimbursed remainder is what counts as your deductible expense. If nothing was reimbursed, the full amount counts.
@@ -89,8 +89,8 @@ Yes. If there's no connection when you save, it's kept on your device and looks 
 
 ## Export
 
-**What formats can I export in, and what's in the file?**
-CSV or JSON, for a given tax year. Beyond the totals, it's shaped around your actual Self Assessment return: expense categories are grouped into the same boxes HMRC's SA103S form asks for (fuel, travel, parking, and vehicle maintenance all combine into "car, van and travel expenses," for example), alongside a full itemized list of every non-voided expense and income record for handing to an accountant or keeping your own backup.
+**What's in the exported file?**
+A CSV file, for a given tax year. Beyond the totals, it's shaped around your actual Self Assessment return: expense categories are grouped into the same boxes HMRC's SA103S form asks for (fuel, travel, and parking all combine into "car, van and travel expenses," for example), alongside a full itemized list of every non-voided expense and income record for handing to an accountant or keeping your own backup.
 
 **Can I fill out my Self Assessment straight from this export?**
 It gets you most of the way there — the box totals map onto SA103S's actual line items — but always sanity-check against the itemized backup before copying figures over, and treat the estimated income tax/NI figures as planning numbers only; they're not part of what the form asks for.

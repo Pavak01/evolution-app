@@ -25,7 +25,6 @@ const CATEGORY_SUGGESTIONS = [
   "fuel",
   "travel",
   "parking_tolls",
-  "vehicle_maintenance",
   "phone",
   "home_office",
   "clothing",

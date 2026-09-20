@@ -25,7 +25,7 @@ If your account has two-factor authentication (2FA) turned on, after entering yo
 This is the home screen — the action you'll use most, right after you pay for something.
 
 1. **Take photo** (camera) or **Choose photo** (your photo library).
-2. Enter a **category**. Tap one of the quick suggestions — Fuel, Travel, Parking & tolls, Vehicle maintenance, Phone, Home office, Clothing, Accountancy, Food, Other — or type your own.
+2. Enter a **category**. Tap one of the quick suggestions — Fuel, Travel, Parking & tolls, Phone, Home office, Clothing, Accountancy, Food, Other — or type your own.
 3. Confirm the **date** (defaults to today) and enter the **amount**.
 4. Choose **payment method**: Card or Cash.
 5. Choose whether it was **reimbursed**: No, Partially, or Fully.
@@ -82,10 +82,10 @@ Browse everything you've logged for the current tax year, newest first. Tap any 
 Generate a file of everything logged for a given tax year, shaped around your actual Self Assessment return.
 
 1. Enter the tax year (for example, `2026-27`).
-2. Tap **Export as CSV** or **Export as JSON**.
+2. Tap **Export as CSV**.
 3. The file is generated and offered through your device's share sheet — save it, email it to your accountant, or open it in another app.
 
-The file has three parts: your totals, category totals grouped into HMRC's SA103S boxes (fuel/travel/parking/vehicle maintenance combine into "car, van and travel expenses," phone/home office into "office costs," and so on), and a full itemized list of every expense and income record for the year. A travel expense still waiting on a receipt appears in the itemized list but is excluded from the box totals and marked as not yet counted, until you attach proof. The estimated income tax/NI figures are labelled as planning estimates — useful for setting money aside, but not part of what the return itself asks for.
+The file has three parts: your totals, category totals grouped into HMRC's SA103S boxes (fuel/travel/parking combine into "car, van and travel expenses," phone/home office into "office costs," and so on), and a full itemized list of every expense and income record for the year. A travel expense still waiting on a receipt appears in the itemized list but is excluded from the box totals and marked as not yet counted, until you attach proof. The estimated income tax/NI figures are labelled as planning estimates — useful for setting money aside, but not part of what the return itself asks for.
 
 ## Settings
 
