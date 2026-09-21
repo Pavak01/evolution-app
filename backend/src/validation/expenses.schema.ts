@@ -86,5 +86,13 @@ export const expenseListQuerySchema = z.object({
   include_voided: z
     .enum(["true", "false"])
     .optional()
-    .transform((v) => v === "true")
+    .transform((v) => v === "true"),
+  // Free text, matched against category and notes — lets a receipt be found
+  // instead of scrolled to, once there are thousands of them.
+  search: z.string().trim().min(1).max(200).optional(),
+  min_amount: z.coerce.number().min(0).optional(),
+  max_amount: z.coerce.number().min(0).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  // Opaque — the client only ever echoes back a next_cursor it was handed.
+  cursor: z.string().optional()
 });

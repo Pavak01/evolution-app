@@ -202,6 +202,12 @@ CREATE TABLE IF NOT EXISTS evolution.filed_tax_years (
 );
 CREATE INDEX IF NOT EXISTS idx_filed_tax_years_user_tax_year ON evolution.filed_tax_years(user_id, tax_year) WHERE unlocked_at IS NULL;
 
+-- Supports History's keyset pagination (GET /expenses cursor) — the
+-- existing idx_expenses_user_occurred only covers occurred_at, not the
+-- full (occurred_at, created_at, id) tiebreak chain the cursor compares against.
+CREATE INDEX IF NOT EXISTS idx_expenses_user_history_cursor
+  ON evolution.expenses(user_id, occurred_at DESC, created_at DESC, id DESC);
+
 -- Optional client-supplied idempotency key: guards against a retry after a
 -- lost response (e.g. a transient gateway error) creating a real duplicate.
 -- Nullable and partial-indexed so requests that don't supply one behave

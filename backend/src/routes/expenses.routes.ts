@@ -487,6 +487,22 @@ expensesRouter.post(
   }
 );
 
+function encodeExpenseCursor(occurredAt: string, createdAt: string, id: string): string {
+  return Buffer.from(`${occurredAt}|${createdAt}|${id}`, "utf-8").toString("base64");
+}
+
+function decodeExpenseCursor(cursor: string): { occurredAt: string; createdAt: string; id: string } | null {
+  try {
+    const [occurredAt, createdAt, id] = Buffer.from(cursor, "base64").toString("utf-8").split("|");
+    if (!occurredAt || !createdAt || !id) return null;
+    return { occurredAt, createdAt, id };
+  } catch {
+    return null;
+  }
+}
+
+const DEFAULT_EXPENSE_PAGE_SIZE = 50;
+
 expensesRouter.get("/expenses", requireAuth, async (req: Request, res: Response) => {
   const authReq = req as AuthenticatedRequest;
   const parsed = expenseListQuerySchema.safeParse(req.query);
@@ -494,6 +510,7 @@ expensesRouter.get("/expenses", requireAuth, async (req: Request, res: Response)
     return res.status(400).json({ error: "Invalid query", details: parsed.error.flatten() });
   }
   const q = parsed.data;
+  const limit = q.limit ?? DEFAULT_EXPENSE_PAGE_SIZE;
 
   const conditions: string[] = ["e.user_id = $1"];
   const params: unknown[] = [authReq.userId];
@@ -521,6 +538,28 @@ expensesRouter.get("/expenses", requireAuth, async (req: Request, res: Response)
     params.push(q.reimbursement_status);
     conditions.push(`e.reimbursement_status = $${params.length}`);
   }
+  if (q.search) {
+    params.push(`%${q.search}%`);
+    conditions.push(`(e.category ILIKE $${params.length} OR e.notes ILIKE $${params.length})`);
+  }
+  if (q.min_amount !== undefined) {
+    params.push(q.min_amount);
+    conditions.push(`e.total_amount >= $${params.length}`);
+  }
+  if (q.max_amount !== undefined) {
+    params.push(q.max_amount);
+    conditions.push(`e.total_amount <= $${params.length}`);
+  }
+  if (q.cursor) {
+    const decoded = decodeExpenseCursor(q.cursor);
+    if (!decoded) {
+      return res.status(400).json({ error: "Invalid cursor" });
+    }
+    params.push(decoded.occurredAt, decoded.createdAt, decoded.id);
+    conditions.push(`(e.occurred_at, e.created_at, e.id) < ($${params.length - 2}, $${params.length - 1}, $${params.length})`);
+  }
+
+  params.push(limit + 1);
 
   try {
     const rows = await db.query<ExpenseRow & { receipt_id: string | null } & DuplicateJoinRow>(
@@ -532,16 +571,23 @@ expensesRouter.get("/expenses", requireAuth, async (req: Request, res: Response)
        LEFT JOIN receipts r ON r.expense_id = e.id
        ${duplicateJoin}
        WHERE ${conditions.join(" AND ")}
-       ORDER BY e.occurred_at DESC, e.created_at DESC`,
+       ORDER BY e.occurred_at DESC, e.created_at DESC, e.id DESC
+       LIMIT $${params.length}`,
       params
     );
 
+    const hasMore = rows.rows.length > limit;
+    const page = hasMore ? rows.rows.slice(0, limit) : rows.rows;
+    const last = page[page.length - 1];
+    const nextCursor = hasMore && last ? encodeExpenseCursor(last.occurred_at, last.created_at, last.id) : null;
+
     return res.json({
-      expenses: rows.rows.map((row) => ({
+      expenses: page.map((row) => ({
         ...serializeExpense(row),
         receipt_download_url: row.receipt_id ? getReceiptDownloadUrl(req, authReq.userId, row.receipt_id) : null,
         possible_duplicate: serializePossibleDuplicate(row)
-      }))
+      })),
+      next_cursor: nextCursor
     });
   } catch (error) {
     return sendError(res, 500, "Failed to list expenses", error);

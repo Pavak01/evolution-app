@@ -1,12 +1,12 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { listExpenses } from "../../api/expenses";
 import { ApiError } from "../../api/client";
 import type { Expense } from "../../api/types";
 import { PendingUploads } from "../../components/PendingUploads";
-import { StatusBanner } from "../../components/Controls";
+import { Card, DateField, Field, SmallAction, StatusBanner } from "../../components/Controls";
 import { listPending, removePending, syncQueue, type PendingItem } from "../../offlineQueue";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { humanizeCategory } from "../../utils/category";
@@ -15,40 +15,91 @@ import type { ExpensesStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<ExpensesStackParamList, "ExpenseHistory">;
 
+const CATEGORY_SUGGESTIONS = ["fuel", "travel", "parking_tolls", "phone", "home_office", "clothing", "accountancy", "food", "other"];
+const SEARCH_DEBOUNCE_MS = 400;
+
+type Filters = { category: string | null; from: string; to: string; minAmount: string; maxAmount: string };
+
+const EMPTY_FILTERS: Filters = { category: null, from: "", to: "", minAmount: "", maxAmount: "" };
+
 export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [pending, setPending] = useState<PendingItem[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cursor, setCursor] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setError(null);
-    // Independent try/catch per source: listPending() is purely local and
-    // must still populate while offline, when listExpenses()'s network call
-    // is exactly the thing failing — bundling them in one Promise.all meant
-    // a network failure silently hid the pending items too.
-    try {
-      const allPending = await listPending();
-      setPending(allPending.filter((item) => item.kind === "expense"));
-    } catch {
-      // pending list is local-only; a failure here isn't user-facing
-    }
-    try {
-      const taxYear = getTaxYearFromDate(new Date());
-      setExpenses(await listExpenses({ tax_year: taxYear }));
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not load expenses.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const [searchText, setSearchText] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+
+  // The request that's currently in flight — a slow earlier reset (e.g. a
+  // broad search) that resolves after a newer one would otherwise clobber
+  // fresher results with stale ones.
+  const requestIdRef = useRef(0);
+
+  const load = useCallback(
+    async (reset: boolean) => {
+      const requestId = ++requestIdRef.current;
+      setError(null);
+      // Independent try/catch per source: listPending() is purely local and
+      // must still populate while offline, when the network call below is
+      // exactly the thing failing — bundling them in one Promise.all meant
+      // a network failure silently hid the pending items too.
+      try {
+        const allPending = await listPending();
+        if (requestId === requestIdRef.current) {
+          setPending(allPending.filter((item) => item.kind === "expense"));
+        }
+      } catch {
+        // pending list is local-only; a failure here isn't user-facing
+      }
+
+      if (reset) {
+        setIsLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
+
+      try {
+        const taxYear = getTaxYearFromDate(new Date());
+        const result = await listExpenses({
+          tax_year: taxYear,
+          search: searchText.trim() || undefined,
+          category: filters.category ?? undefined,
+          from: filters.from || undefined,
+          to: filters.to || undefined,
+          min_amount: filters.minAmount ? Number(filters.minAmount) : undefined,
+          max_amount: filters.maxAmount ? Number(filters.maxAmount) : undefined,
+          cursor: reset ? undefined : (cursor ?? undefined)
+        });
+        if (requestId !== requestIdRef.current) return; // a newer request already landed
+        setExpenses((prev) => (reset ? result.expenses : [...prev, ...result.expenses]));
+        setCursor(result.next_cursor);
+      } catch (err) {
+        if (requestId !== requestIdRef.current) return;
+        setError(err instanceof ApiError ? err.message : "Could not load expenses.");
+      } finally {
+        if (requestId === requestIdRef.current) {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+        }
+      }
+    },
+    // cursor deliberately excluded — load(false) reads the latest via closure
+    // at call time, but including it here would re-trigger this callback
+    // (and anything depending on it) on every page fetched.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [searchText, filters]
+  );
 
   const handleRetry = useCallback(async () => {
     setIsSyncing(true);
     try {
-      await syncQueue(load);
-      await load();
+      await syncQueue(() => load(true));
+      await load(true);
     } finally {
       setIsSyncing(false);
     }
@@ -56,9 +107,30 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
 
   useFocusEffect(
     useCallback(() => {
-      void load();
-    }, [load])
+      void load(true);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
   );
+
+  // Search and filter changes reset to page one after a short debounce —
+  // skips its own first run so it doesn't double up with the focus-triggered
+  // load above on initial mount.
+  const hasMountedRef = useRef(false);
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+    const timer = setTimeout(() => void load(true), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchText, filters.category, filters.from, filters.to, filters.minAmount, filters.maxAmount]);
+
+  function updateFilter<K extends keyof Filters>(key: K, value: Filters[K]): void {
+    setFilters((current) => ({ ...current, [key]: value }));
+  }
+
+  const hasActiveFilters = filters.category !== null || filters.from || filters.to || filters.minAmount || filters.maxAmount;
 
   if (isLoading) {
     return (
@@ -80,15 +152,50 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
         isSyncing={isSyncing}
         onRetry={handleRetry}
         onDelete={(localId) => {
-          void removePending(localId).then(load);
+          void removePending(localId).then(() => load(true));
         }}
       />
+      <View style={styles.searchWrap}>
+        <Field label="Search" value={searchText} onChange={setSearchText} placeholder="Category or notes..." />
+        <Text style={styles.filtersToggle} onPress={() => setShowFilters((current) => !current)}>
+          {showFilters ? "Hide filters" : "Filters"}
+          {hasActiveFilters ? " •" : ""}
+        </Text>
+      </View>
+
+      {showFilters && (
+        <Card>
+          <Text style={styles.filterLabel}>Category</Text>
+          <View style={styles.categoryRow}>
+            <SmallAction label="All" active={filters.category === null} onPress={() => updateFilter("category", null)} />
+            {CATEGORY_SUGGESTIONS.map((suggestion) => (
+              <SmallAction
+                key={suggestion}
+                label={humanizeCategory(suggestion)}
+                active={filters.category === suggestion}
+                onPress={() => updateFilter("category", suggestion)}
+              />
+            ))}
+          </View>
+          <DateField label="From" value={filters.from} onChange={(value) => updateFilter("from", value)} />
+          <DateField label="To" value={filters.to} onChange={(value) => updateFilter("to", value)} />
+          <Field label="Min amount (£)" value={filters.minAmount} onChange={(value) => updateFilter("minAmount", value)} keyboardType="decimal-pad" placeholder="0.00" />
+          <Field label="Max amount (£)" value={filters.maxAmount} onChange={(value) => updateFilter("maxAmount", value)} keyboardType="decimal-pad" placeholder="0.00" />
+          {hasActiveFilters && <Text style={styles.clearFilters} onPress={() => setFilters(EMPTY_FILTERS)}>Clear filters</Text>}
+        </Card>
+      )}
+
       <FlatList
         data={expenses}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={load} />}
-        ListEmptyComponent={<Text style={styles.empty}>No expenses logged yet this tax year.</Text>}
+        refreshControl={<RefreshControl refreshing={false} onRefresh={() => load(true)} />}
+        onEndReachedThreshold={0.4}
+        onEndReached={() => {
+          if (cursor && !isLoadingMore && !isLoading) void load(false);
+        }}
+        ListEmptyComponent={<Text style={styles.empty}>No expenses match — try adjusting search or filters.</Text>}
+        ListFooterComponent={isLoadingMore ? <ActivityIndicator color={colors.accent} style={styles.footerSpinner} /> : null}
         renderItem={({ item }) => (
           <Pressable
             style={[styles.row, item.voided_at ? styles.rowVoided : null]}
@@ -118,8 +225,14 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.canvas },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.canvas },
   errorWrap: { padding: spacing.md },
+  searchWrap: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
+  filtersToggle: { color: colors.accent, fontWeight: "600", marginBottom: spacing.sm },
+  filterLabel: { fontSize: typography.body, fontWeight: "600", color: colors.textSecondary, marginBottom: spacing.xs },
+  categoryRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginBottom: spacing.md },
+  clearFilters: { color: colors.danger, fontWeight: "600", textAlign: "center", marginTop: spacing.sm },
   list: { padding: spacing.md, gap: spacing.sm },
   empty: { textAlign: "center", color: colors.textMuted, marginTop: spacing.xxl },
+  footerSpinner: { marginVertical: spacing.md },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",

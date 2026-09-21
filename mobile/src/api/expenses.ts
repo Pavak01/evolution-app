@@ -66,16 +66,33 @@ export async function attachReceipt(
   return postMultipart(`/expenses/${expenseId}/receipt`, {}, { uri, name, type, fieldName: "receipt" });
 }
 
-export async function listExpenses(params?: { tax_year?: string }): Promise<Expense[]> {
+export type ListExpensesParams = {
+  tax_year?: string;
+  search?: string;
+  category?: string;
+  from?: string;
+  to?: string;
+  min_amount?: number;
+  max_amount?: number;
+  cursor?: string;
+  limit?: number;
+};
+
+export async function listExpenses(params?: ListExpensesParams): Promise<{ expenses: Expense[]; next_cursor: string | null }> {
   // Voided entries must stay visible (audit trail — see void's design intent)
   // rather than disappearing, so History's one caller always includes them;
   // the "voided" badge in ExpenseHistoryScreen is what distinguishes them.
   const query = new URLSearchParams({ include_voided: "true" });
-  if (params?.tax_year) {
-    query.set("tax_year", params.tax_year);
-  }
-  const result = await apiJson<{ expenses: Expense[] }>(`/expenses?${query.toString()}`);
-  return result.expenses;
+  if (params?.tax_year) query.set("tax_year", params.tax_year);
+  if (params?.search) query.set("search", params.search);
+  if (params?.category) query.set("category", params.category);
+  if (params?.from) query.set("from", params.from);
+  if (params?.to) query.set("to", params.to);
+  if (params?.min_amount !== undefined) query.set("min_amount", String(params.min_amount));
+  if (params?.max_amount !== undefined) query.set("max_amount", String(params.max_amount));
+  if (params?.cursor) query.set("cursor", params.cursor);
+  if (params?.limit !== undefined) query.set("limit", String(params.limit));
+  return apiJson<{ expenses: Expense[]; next_cursor: string | null }>(`/expenses?${query.toString()}`);
 }
 
 export async function getExpense(id: string): Promise<Expense> {
