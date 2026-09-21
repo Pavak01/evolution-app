@@ -1,9 +1,11 @@
 import { Router, type Request, type Response } from "express";
+import { z } from "zod";
 import { humanizeCategory } from "../categoryDisplay.js";
 import { db } from "../db.js";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { sendError } from "../middleware/errorHandler.js";
-import { getRuleMonitoringSnapshot } from "../rulesEngine.js";
+import { deleteReceiptObjects } from "../receiptStorage.js";
+import { getRuleMonitoringSnapshot, hasFilingDeadlinePassed } from "../rulesEngine.js";
 import { recomputeTaxSummary } from "../taxSummary.js";
 
 export const taxRouter = Router();
@@ -183,6 +185,12 @@ taxRouter.get("/tax-years/:taxYear/export", requireAuth, async (req: Request, re
       expense_line_items: expenseLineItems
     };
 
+    // Records that this tax year was actually exported — the closest real
+    // signal available for POST /data-reset's safety check, given there's
+    // no HMRC/MTD integration to know whether a return was actually filed.
+    // Best-effort: never let a logging failure break the export itself.
+    db.query("INSERT INTO export_events (user_id, tax_year) VALUES ($1, $2)", [authReq.userId, taxYear]).catch(() => {});
+
     if (format === "csv") {
       // Every header and value here is something a person reads directly —
       // never the app's own snake_case identifiers (those stay internal to
@@ -243,5 +251,87 @@ taxRouter.get("/tax-years/:taxYear/export", requireAuth, async (req: Request, re
     return res.json(payload);
   } catch (error) {
     return sendError(res, 500, "Export failed", error);
+  }
+});
+
+const dataResetSchema = z.object({ force: z.boolean().optional() });
+
+// Wipes every expense, income record, and receipt for this account — not
+// the account itself (see accountDeletion.ts for that). Guarded, not
+// blocked: a tax year that's both past its filing deadline and has been
+// exported at least once gets a warning on the first call; force: true
+// (a deliberate second confirmation on the client) proceeds anyway. This
+// is intentionally an AND, not a date check alone — a blanket "any old
+// tax year blocks this" rule would trap stray/never-exported test data
+// forever, with no way to ever use the feature again.
+taxRouter.post("/data-reset", requireAuth, async (req: Request, res: Response) => {
+  const authReq = req as AuthenticatedRequest;
+  const parsed = dataResetSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid payload", details: parsed.error.flatten() });
+  }
+  const force = parsed.data.force ?? false;
+
+  try {
+    const taxYearRows = await db.query<{ tax_year: string }>(
+      `SELECT tax_year FROM expenses WHERE user_id = $1
+       UNION
+       SELECT tax_year FROM income_invoices WHERE user_id = $1`,
+      [authReq.userId]
+    );
+
+    if (!force) {
+      const flaggedYears: string[] = [];
+      for (const row of taxYearRows.rows) {
+        if (!hasFilingDeadlinePassed(row.tax_year)) continue;
+        const exported = await db.query(
+          "SELECT 1 FROM export_events WHERE user_id = $1 AND tax_year = $2 LIMIT 1",
+          [authReq.userId, row.tax_year]
+        );
+        if (exported.rows.length > 0) {
+          flaggedYears.push(row.tax_year);
+        }
+      }
+
+      if (flaggedYears.length > 0) {
+        const years = flaggedYears.sort().join(", ");
+        return res.status(409).json({
+          error: `${years} ${flaggedYears.length === 1 ? "has" : "have"} already been exported and ${flaggedYears.length === 1 ? "is" : "are"} past HMRC's filing deadline — resetting will delete the records behind it. Export a backup first if you need one, or confirm again to reset anyway.`
+        });
+      }
+    }
+
+    const receiptFiles = await db.query<{ storage_path: string }>("SELECT storage_path FROM receipts WHERE user_id = $1", [authReq.userId]);
+    const invoiceFiles = await db.query<{ invoice_storage_path: string | null }>(
+      "SELECT invoice_storage_path FROM income_invoices WHERE user_id = $1 AND invoice_storage_path IS NOT NULL",
+      [authReq.userId]
+    );
+    const storageKeys = [
+      ...receiptFiles.rows.map((row) => row.storage_path),
+      ...invoiceFiles.rows.map((row) => row.invoice_storage_path as string)
+    ];
+
+    const client = await db.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("DELETE FROM receipts WHERE user_id = $1", [authReq.userId]);
+      await client.query("DELETE FROM expenses WHERE user_id = $1", [authReq.userId]);
+      await client.query("DELETE FROM income_invoices WHERE user_id = $1", [authReq.userId]);
+      await client.query("DELETE FROM tax_summaries WHERE user_id = $1", [authReq.userId]);
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+
+    if (storageKeys.length > 0) {
+      await deleteReceiptObjects(storageKeys).catch(() => {});
+    }
+
+    return res.json({ success: true });
+  } catch (error) {
+    return sendError(res, 500, "Failed to reset data", error);
   }
 });

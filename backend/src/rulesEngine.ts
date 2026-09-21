@@ -98,6 +98,18 @@ export function getTaxYearFromDate(input: string): string {
   return `${startYear}-${endYearShort}`;
 }
 
+// A UK tax year's Self Assessment return is due 31 January following its
+// end (e.g. "2025-26", ending 5 April 2026, is due 31 Jan 2027) — mirrors
+// mobile/src/utils/taxYear.ts's isTaxYearStillClaimable, which uses the
+// later *amendment* deadline (12 months further out); this one is the
+// earlier *filing* deadline itself, used as one half of the data-reset
+// safety check (see POST /data-reset in tax.routes.ts).
+export function hasFilingDeadlinePassed(taxYear: string, asOf: Date = new Date()): boolean {
+  const startYear = Number(taxYear.slice(0, 4));
+  const filingDeadline = new Date(Date.UTC(startYear + 2, 0, 31, 23, 59, 59));
+  return asOf.getTime() > filingDeadline.getTime();
+}
+
 async function createDefaultRuleSet(taxYear: string): Promise<TaxRuleSet> {
   const effectiveFrom = getExpectedTaxYearStartDate(taxYear);
   const client = await db.connect();

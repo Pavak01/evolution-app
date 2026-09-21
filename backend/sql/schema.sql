@@ -175,6 +175,17 @@ CREATE TABLE IF NOT EXISTS evolution.entitlements (
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- Records every time a user exports a tax year — the closest real signal
+-- available (no HMRC/MTD integration exists) for "this data may have been
+-- relied on for a filed return", used by POST /data-reset's safety check.
+CREATE TABLE IF NOT EXISTS evolution.export_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id),
+  tax_year TEXT NOT NULL,
+  exported_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_export_events_user_tax_year ON evolution.export_events(user_id, tax_year);
+
 -- Optional client-supplied idempotency key: guards against a retry after a
 -- lost response (e.g. a transient gateway error) creating a real duplicate.
 -- Nullable and partial-indexed so requests that don't supply one behave
