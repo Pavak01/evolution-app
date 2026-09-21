@@ -127,11 +127,16 @@ export function useReceiptCapture() {
     return false;
   }
 
+  // Scoped to PDF only, deliberately — images already go through
+  // pickFromFiles' proven expo-image-picker path above; keeping this one
+  // narrow means if the content:// fix below still doesn't hold up on a
+  // real build, only the new PDF button breaks, not the already-reliable
+  // photo picker too.
   async function pickDocument(): Promise<PickedFile | null> {
     const selected = await DocumentPicker.getDocumentAsync({
       copyToCacheDirectory: true,
       multiple: false,
-      type: ["image/*", "application/pdf"]
+      type: "application/pdf"
     });
 
     if (selected.canceled || selected.assets.length === 0) {

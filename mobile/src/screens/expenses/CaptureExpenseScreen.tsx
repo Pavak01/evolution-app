@@ -22,7 +22,7 @@ type Props = NativeStackScreenProps<CaptureStackParamList, "CaptureForm">;
 
 export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
   const { user } = useAuth();
-  const { captureFromCamera, pickFromFiles } = useReceiptCapture();
+  const { captureFromCamera, pickFromFiles, pickDocument } = useReceiptCapture();
   const hasOcrUpgrade = user?.entitlements.ocr_upgrade_active ?? false;
 
   const [category, setCategory] = useState("");
@@ -219,6 +219,9 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
             <PrimaryButton label="Choose photo" onPress={async () => setReceipt((await pickFromFiles()) ?? receipt)} />
           </View>
         </View>
+        <Text style={{ color: colors.accent, textAlign: "center", marginBottom: spacing.md }} onPress={async () => setReceipt((await pickDocument()) ?? receipt)}>
+          Attach a PDF instead
+        </Text>
         {receipt ? (
           <>
             <ReceiptThumbnail uri={receipt.uri} isPdf={receipt.mimeType === "application/pdf"} filename={receipt.name} />
