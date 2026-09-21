@@ -14,7 +14,7 @@ Contact support (see [Privacy Policy](PRIVACY-POLICY.md) for the contact email) 
 In-app: Settings → Delete account (type `DELETE` to confirm). Without the app installed: use the [public account deletion page](ACCOUNT-DELETION.html), which asks for your email and password to confirm it's really you. Either way, processing completes within 30 days. Full details in the [Privacy Policy](PRIVACY-POLICY.md).
 
 **Can I clear my data and start over without deleting my account?**
-Yes — Settings → Reset all data (type `RESET` to confirm). It clears every expense, income record, and receipt immediately; your account and login are untouched. If any of that data is from a tax year that's both past HMRC's filing deadline and has been exported before — meaning it may have already been used for a submitted return — you'll see a warning naming that year instead of an immediate reset. It's not a hard block: export a backup first if you want one, or confirm again to reset anyway. Either way, this can't be undone.
+Yes — Settings → Reset all data (type `RESET` to confirm). It clears every expense, income record, and receipt immediately; your account and login are untouched. If any of that data is from a tax year that's both past HMRC's filing deadline and has been exported before — meaning it may have already been used for a submitted return — you'll see a warning naming that year instead of an immediate reset; it's not a hard block, so export a backup first if you want one, or confirm again to reset anyway. The one exception is a tax year you've explicitly **locked** (see below) — that's always fully protected, with no "reset anyway" option, until you unlock it. Either way, this can't be undone.
 
 ## Logging expenses
 
@@ -103,3 +103,6 @@ Yes, so nothing is silently missing from your records, but it's excluded from th
 
 **Where does the exported file go?**
 It's handed to your device's share sheet, so you choose where it goes — save it, email it, or open it in another app.
+
+**What does "Lock this tax year" do?**
+Once you've actually filed a Self Assessment return using a tax year's figures, lock it (on the Export screen, after entering that tax year). This archives a permanent copy of the export as it looked at that moment and protects the year — Reset all data can never touch a locked year's records, even if you choose "reset anyway." Unlock it later if you need to (Export screen again), which makes it resettable like any other year — the archived copy stays either way.
