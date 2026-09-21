@@ -92,4 +92,5 @@ The file has three parts: your totals, category totals grouped into HMRC's SA103
 - See which account you're signed in as.
 - **Log out**.
 - **Help** — links to this User Guide, the FAQ, and the Privacy Policy, opened in your browser.
+- **Reset all data** — clears every expense, income record, and receipt, immediately, without touching your account or login. Type `RESET` to confirm. If some of that data is from a tax year that's both past HMRC's filing deadline and has already been exported once — a sign it may have been used for a submitted return — you'll see a warning instead of an instant reset, naming the year in question; confirm again ("Reset anyway") if you want to proceed regardless. This can't be undone.
 - **Delete account** — permanently deletes your account and all your data: expenses, receipts, income records, and tax summaries. Type `DELETE` to confirm. This can't be undone, and processing completes within 30 days. See [Account deletion](ACCOUNT-DELETION.html) for the version of this you can use without the app installed, and the [Privacy Policy](PRIVACY-POLICY.md) for exactly what is removed.

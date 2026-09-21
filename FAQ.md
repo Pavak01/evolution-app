@@ -13,6 +13,9 @@ Contact support (see [Privacy Policy](PRIVACY-POLICY.md) for the contact email) 
 **How do I delete my account?**
 In-app: Settings → Delete account (type `DELETE` to confirm). Without the app installed: use the [public account deletion page](ACCOUNT-DELETION.html), which asks for your email and password to confirm it's really you. Either way, processing completes within 30 days. Full details in the [Privacy Policy](PRIVACY-POLICY.md).
 
+**Can I clear my data and start over without deleting my account?**
+Yes — Settings → Reset all data (type `RESET` to confirm). It clears every expense, income record, and receipt immediately; your account and login are untouched. If any of that data is from a tax year that's both past HMRC's filing deadline and has been exported before — meaning it may have already been used for a submitted return — you'll see a warning naming that year instead of an immediate reset. It's not a hard block: export a backup first if you want one, or confirm again to reset anyway. Either way, this can't be undone.
+
 ## Logging expenses
 
 **Why do I have to attach a receipt to log an expense?**
