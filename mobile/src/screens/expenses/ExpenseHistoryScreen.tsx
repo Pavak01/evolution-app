@@ -39,6 +39,12 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
   // broad search) that resolves after a newer one would otherwise clobber
   // fresher results with stale ones.
   const requestIdRef = useRef(0);
+  // Once true, a reset load (search, filters, pull-to-refresh, refocus)
+  // never again triggers the full-screen spinner below — only isLoading's
+  // RefreshControl reflects it. Without this, every debounced search
+  // keystroke unmounted the whole tree (including the focused search box
+  // itself) via the early return, closing the keyboard after the first letter.
+  const hasLoadedOnceRef = useRef(false);
 
   const load = useCallback(
     async (reset: boolean) => {
@@ -85,6 +91,7 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
         if (requestId === requestIdRef.current) {
           setIsLoading(false);
           setIsLoadingMore(false);
+          hasLoadedOnceRef.current = true;
         }
       }
     },
@@ -132,7 +139,7 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
 
   const hasActiveFilters = filters.category !== null || filters.from || filters.to || filters.minAmount || filters.maxAmount;
 
-  if (isLoading) {
+  if (isLoading && !hasLoadedOnceRef.current) {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={colors.accent} />
@@ -189,7 +196,7 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
         data={expenses}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={() => load(true)} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => load(true)} />}
         onEndReachedThreshold={0.4}
         onEndReached={() => {
           if (cursor && !isLoadingMore && !isLoading) void load(false);
