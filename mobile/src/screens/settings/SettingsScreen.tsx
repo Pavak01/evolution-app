@@ -52,10 +52,13 @@ export function SettingsScreen(): React.JSX.Element {
     setResetStatus(null);
     setIsResetting(true);
     try {
-      await resetAllData(force);
+      const result = await resetAllData(force);
       setResetWarning(null);
       setResetConfirmText("");
-      setResetStatus({ kind: "info", text: "All your data has been cleared. Your account is still signed in." });
+      const skipped = result.skipped_locked_years;
+      const skippedNote =
+        skipped.length > 0 ? ` ${skipped.sort().join(", ")} ${skipped.length === 1 ? "was" : "were"} kept because it's locked.` : "";
+      setResetStatus({ kind: "info", text: `All eligible data has been cleared. Your account is still signed in.${skippedNote}` });
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
         setResetWarning(error.message);

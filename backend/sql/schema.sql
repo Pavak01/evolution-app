@@ -186,6 +186,22 @@ CREATE TABLE IF NOT EXISTS evolution.export_events (
 );
 CREATE INDEX IF NOT EXISTS idx_export_events_user_tax_year ON evolution.export_events(user_id, tax_year);
 
+-- An explicit, user-confirmed "I've filed this" — stronger than the
+-- passive export_events signal above. A locked tax year is archived
+-- (archive_storage_path, a CSV snapshot at lock time) and POST
+-- /data-reset never touches it, force included, until unlocked.
+-- unlocked_at is nullable/soft rather than deleting the row on unlock,
+-- mirroring voided_at elsewhere — a lock/unlock cycle stays visible.
+CREATE TABLE IF NOT EXISTS evolution.filed_tax_years (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id),
+  tax_year TEXT NOT NULL,
+  archive_storage_path TEXT NOT NULL,
+  locked_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  unlocked_at TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_filed_tax_years_user_tax_year ON evolution.filed_tax_years(user_id, tax_year) WHERE unlocked_at IS NULL;
+
 -- Optional client-supplied idempotency key: guards against a retry after a
 -- lost response (e.g. a transient gateway error) creating a real duplicate.
 -- Nullable and partial-indexed so requests that don't supply one behave
