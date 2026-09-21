@@ -5,16 +5,14 @@ import { createExpense } from "../../api/expenses";
 import { extractReceiptFields } from "../../api/receiptExtraction";
 import { getTaxSummary } from "../../api/tax";
 import type { TaxSummary } from "../../api/types";
+import { CategoryPickerModal } from "../../components/CategoryPickerModal";
 import { Card, DateField, Field, PrimaryButton, SmallAction, SnapshotTile, StatusBanner } from "../../components/Controls";
 import { ReceiptThumbnail } from "../../components/ReceiptThumbnail";
 import { Screen } from "../../components/Screen";
 import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCapture";
 import { enqueueExpense, generateLocalId, syncQueue } from "../../offlineQueue";
 import { colors, spacing, typography } from "../../theme/tokens";
-import { humanizeCategory } from "../../utils/category";
 import { getTaxYearFromDate, isTaxYearStillClaimable } from "../../utils/taxYear";
-
-const CATEGORY_SUGGESTIONS = ["fuel", "travel", "parking_tolls", "phone", "home_office", "clothing", "accountancy", "food", "other"];
 
 type ImportRow = {
   key: string;
@@ -226,17 +224,7 @@ export function ImportReceiptsScreen(): React.JSX.Element {
                   Couldn't read this one automatically — fill in the details or leave it unchecked to skip.
                 </Text>
               )}
-              <Field label="Category" value={row.category} onChange={(value) => updateRow(row.key, { category: value })} placeholder="fuel, food, phone..." />
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginBottom: spacing.md }}>
-                {CATEGORY_SUGGESTIONS.map((suggestion) => (
-                  <SmallAction
-                    key={suggestion}
-                    label={humanizeCategory(suggestion)}
-                    active={row.category === suggestion}
-                    onPress={() => updateRow(row.key, { category: suggestion })}
-                  />
-                ))}
-              </View>
+              <CategoryPickerModal label="Category" value={row.category} onChange={(value) => updateRow(row.key, { category: value })} />
               <DateField
                 label="Date"
                 value={row.occurredAt}

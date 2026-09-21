@@ -95,6 +95,14 @@ export async function listExpenses(params?: ListExpensesParams): Promise<{ expen
   return apiJson<{ expenses: Expense[]; next_cursor: string | null }>(`/expenses?${query.toString()}`);
 }
 
+// Every category the user has actually used, including a custom one they
+// typed themselves — not just the fixed suggestion list. Backs
+// CategoryPickerModal's dropdown.
+export async function listUsedCategories(): Promise<string[]> {
+  const result = await apiJson<{ categories: string[] }>("/expense-categories");
+  return result.categories;
+}
+
 export async function getExpense(id: string): Promise<Expense> {
   const result = await apiJson<{ expense: Expense }>(`/expenses/${id}`);
   return result.expense;

@@ -503,6 +503,26 @@ function decodeExpenseCursor(cursor: string): { occurredAt: string; createdAt: s
 
 const DEFAULT_EXPENSE_PAGE_SIZE = 50;
 
+// A separate top-level path (not nested under /expenses/:id) so there's no
+// Express route-ordering collision with the :id param route below. Backs
+// the category picker on Capture/Import/History's filter — every category
+// the user has actually used, including a custom one they typed
+// themselves, not just the fixed suggestion list. Includes voided
+// expenses' categories too: the category name is still a real one they
+// might use again, independent of that one entry later being voided.
+expensesRouter.get("/expense-categories", requireAuth, async (req: Request, res: Response) => {
+  const authReq = req as AuthenticatedRequest;
+  try {
+    const result = await db.query<{ category: string }>(
+      "SELECT DISTINCT category FROM expenses WHERE user_id = $1 ORDER BY category ASC",
+      [authReq.userId]
+    );
+    return res.json({ categories: result.rows.map((row) => row.category) });
+  } catch (error) {
+    return sendError(res, 500, "Failed to load categories", error);
+  }
+});
+
 expensesRouter.get("/expenses", requireAuth, async (req: Request, res: Response) => {
   const authReq = req as AuthenticatedRequest;
   const parsed = expenseListQuerySchema.safeParse(req.query);

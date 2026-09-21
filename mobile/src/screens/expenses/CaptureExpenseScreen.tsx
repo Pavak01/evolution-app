@@ -8,6 +8,7 @@ import { getTaxSummary } from "../../api/tax";
 import { ApiError } from "../../api/client";
 import { extractReceiptFields } from "../../api/receiptExtraction";
 import type { PaymentMethod, ReimbursementStatus, TaxSummary } from "../../api/types";
+import { CategoryPickerModal } from "../../components/CategoryPickerModal";
 import { Card, DateField, Field, PrimaryButton, SmallAction, SnapshotTile, StatusBanner } from "../../components/Controls";
 import { ReceiptThumbnail } from "../../components/ReceiptThumbnail";
 import { Screen } from "../../components/Screen";
@@ -15,10 +16,7 @@ import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCaptur
 import { enqueueExpense, generateLocalId, syncQueue } from "../../offlineQueue";
 import type { CaptureStackParamList } from "../../navigation/types";
 import { colors, spacing, typography } from "../../theme/tokens";
-import { humanizeCategory } from "../../utils/category";
 import { getTaxYearFromDate, getTodayIso } from "../../utils/taxYear";
-
-const CATEGORY_SUGGESTIONS = ["fuel", "travel", "parking_tolls", "phone", "home_office", "clothing", "accountancy", "food", "other"];
 
 type Props = NativeStackScreenProps<CaptureStackParamList, "CaptureForm">;
 
@@ -244,17 +242,7 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
       </Card>
 
       <Card>
-        <Field label="Category" value={category} onChange={setCategory} placeholder="fuel, food, phone..." />
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginBottom: spacing.md }}>
-          {CATEGORY_SUGGESTIONS.map((suggestion) => (
-            <SmallAction
-              key={suggestion}
-              label={humanizeCategory(suggestion)}
-              active={category === suggestion}
-              onPress={() => setCategory(suggestion)}
-            />
-          ))}
-        </View>
+        <CategoryPickerModal label="Category" value={category} onChange={setCategory} />
 
         <DateField label="Date" value={occurredAt} onChange={setOccurredAt} maximumDate={new Date()} />
         <Field label="Amount (£)" value={totalAmount} onChange={setTotalAmount} keyboardType="decimal-pad" placeholder="0.00" />

@@ -6,7 +6,8 @@ import { listExpenses } from "../../api/expenses";
 import { ApiError } from "../../api/client";
 import type { Expense } from "../../api/types";
 import { PendingUploads } from "../../components/PendingUploads";
-import { Card, DateField, Field, SmallAction, StatusBanner } from "../../components/Controls";
+import { CategoryPickerModal } from "../../components/CategoryPickerModal";
+import { Card, DateField, Field, StatusBanner } from "../../components/Controls";
 import { listPending, removePending, syncQueue, type PendingItem } from "../../offlineQueue";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { humanizeCategory } from "../../utils/category";
@@ -15,7 +16,6 @@ import type { ExpensesStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<ExpensesStackParamList, "ExpenseHistory">;
 
-const CATEGORY_SUGGESTIONS = ["fuel", "travel", "parking_tolls", "phone", "home_office", "clothing", "accountancy", "food", "other"];
 const SEARCH_DEBOUNCE_MS = 400;
 
 type Filters = { category: string | null; from: string; to: string; minAmount: string; maxAmount: string };
@@ -172,18 +172,12 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
 
       {showFilters && (
         <Card>
-          <Text style={styles.filterLabel}>Category</Text>
-          <View style={styles.categoryRow}>
-            <SmallAction label="All" active={filters.category === null} onPress={() => updateFilter("category", null)} />
-            {CATEGORY_SUGGESTIONS.map((suggestion) => (
-              <SmallAction
-                key={suggestion}
-                label={humanizeCategory(suggestion)}
-                active={filters.category === suggestion}
-                onPress={() => updateFilter("category", suggestion)}
-              />
-            ))}
-          </View>
+          <CategoryPickerModal
+            label="Category"
+            value={filters.category ?? ""}
+            onChange={(value) => updateFilter("category", value || null)}
+            allowClear
+          />
           <DateField label="From" value={filters.from} onChange={(value) => updateFilter("from", value)} />
           <DateField label="To" value={filters.to} onChange={(value) => updateFilter("to", value)} />
           <Field label="Min amount (£)" value={filters.minAmount} onChange={(value) => updateFilter("minAmount", value)} keyboardType="decimal-pad" placeholder="0.00" />
@@ -234,8 +228,6 @@ const styles = StyleSheet.create({
   errorWrap: { padding: spacing.md },
   searchWrap: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
   filtersToggle: { color: colors.accent, fontWeight: "600", marginBottom: spacing.sm },
-  filterLabel: { fontSize: typography.body, fontWeight: "600", color: colors.textSecondary, marginBottom: spacing.xs },
-  categoryRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginBottom: spacing.md },
   clearFilters: { color: colors.danger, fontWeight: "600", textAlign: "center", marginTop: spacing.sm },
   list: { padding: spacing.md, gap: spacing.sm },
   empty: { textAlign: "center", color: colors.textMuted, marginTop: spacing.xxl },
