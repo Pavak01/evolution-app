@@ -89,6 +89,8 @@ We do not sell personal information.
 
 We may share data with infrastructure providers that run core app infrastructure (hosting, database, and object storage) only as needed to provide the service.
 
+If you use the optional "Auto-fill from receipt" or "Import past receipts" features (a paid upgrade), the receipt photo you pick is sent to Anthropic (the provider of the underlying AI model) to extract the category, amount, date, and merchant. This only happens when you actively use these features on a receipt you choose — it is not automatic for every receipt you save. This use is governed by Anthropic's own commercial API terms, under which API data is not used to train their models (see Anthropic's published privacy and terms documentation for their current policy).
+
 We may disclose data if required by law or valid legal process.
 
 ## 6. Data retention
