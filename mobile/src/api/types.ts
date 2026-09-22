@@ -38,6 +38,9 @@ export type IncomeInvoice = {
   void_reason: string | null;
   created_at: string;
   file_download_url: string | null;
+  // Lets the client decide how to open an attached file: the OS share
+  // sheet for a PDF, the in-app image viewer for anything else.
+  invoice_mime_type: string | null;
 };
 
 // Surfaced after a successful save — informational only, never blocks or

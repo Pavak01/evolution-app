@@ -3,6 +3,8 @@ import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import { getInvoiceDownloadUrl, getJwtSecret } from "../auth/tokens.js";
 import { db } from "../db.js";
+import { isOcrUpgradeActive } from "../entitlements.js";
+import { extractInvoiceFields } from "../invoiceExtraction.js";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { sendError } from "../middleware/errorHandler.js";
 import { uploadRateLimit } from "../middleware/rateLimit.js";
@@ -25,6 +27,7 @@ type InvoiceRow = {
   tax_year: string;
   invoice_storage_path: string | null;
   invoice_original_filename: string | null;
+  invoice_mime_type: string | null;
   notes: string | null;
   voided_at: string | null;
   void_reason: string | null;
@@ -44,12 +47,13 @@ function serializeInvoice(req: Request, authReq: AuthenticatedRequest, row: Invo
     voided_at: row.voided_at,
     void_reason: row.void_reason,
     created_at: row.created_at,
-    file_download_url: row.invoice_storage_path ? getInvoiceDownloadUrl(req, authReq.userId, row.id) : null
+    file_download_url: row.invoice_storage_path ? getInvoiceDownloadUrl(req, authReq.userId, row.id) : null,
+    invoice_mime_type: row.invoice_mime_type
   };
 }
 
 const invoiceColumns = `id, period_start::text, period_end::text, source, total_amount::text, received_date::text,
-  tax_year, invoice_storage_path, invoice_original_filename, notes, voided_at::text, void_reason, created_at::text`;
+  tax_year, invoice_storage_path, invoice_original_filename, invoice_mime_type, notes, voided_at::text, void_reason, created_at::text`;
 
 // File is optional here, unlike expense capture — an invoice can be logged
 // from the total alone, with the file attached later isn't supported in v1
@@ -105,9 +109,9 @@ incomeRouter.post(
       const inserted = await db.query<InvoiceRow>(
         `INSERT INTO income_invoices (
            user_id, period_start, period_end, source, total_amount, received_date, tax_year,
-           invoice_storage_path, invoice_original_filename, notes, idempotency_key, created_at
+           invoice_storage_path, invoice_original_filename, invoice_mime_type, notes, idempotency_key, created_at
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
          ON CONFLICT (user_id, idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING
          RETURNING ${invoiceColumns}`,
         [
@@ -120,6 +124,7 @@ incomeRouter.post(
           taxYear,
           storageKey,
           file?.originalname ?? null,
+          file?.mimetype ?? null,
           data.notes ?? null,
           data.idempotency_key ?? null
         ]
@@ -145,6 +150,41 @@ incomeRouter.post(
         await deleteReceiptObject(storageKey).catch(() => {});
       }
       return sendError(res, 500, "Failed to save income invoice", error);
+    }
+  }
+);
+
+// Paid-upgrade feature, same entitlement as expenses.routes.ts's
+// /expenses/extract-receipt — one unified OCR upgrade, not a separate one
+// for invoices. Never persists anything, never errors out on a bad/unclear
+// file (see invoiceExtraction.ts). The user still reviews/edits and
+// submits through POST /income-invoices as normal.
+incomeRouter.post(
+  "/income-invoices/extract",
+  requireAuth,
+  uploadRateLimit,
+  upload.single("invoice_file"),
+  async (req: Request, res: Response) => {
+    const authReq = req as AuthenticatedRequest;
+
+    if (!req.file) {
+      return res.status(400).json({ error: "invoice_file file is required" });
+    }
+
+    try {
+      const entitled = await isOcrUpgradeActive(authReq.userId);
+      if (!entitled) {
+        return res.status(403).json({ error: "Auto-fill is a paid upgrade and isn't enabled on this account." });
+      }
+
+      if (!receiptContentMatchesDeclaredType(req.file.buffer, req.file.mimetype)) {
+        return res.status(400).json({ error: "File content does not match its declared type" });
+      }
+
+      const result = await extractInvoiceFields(req.file.buffer, req.file.mimetype);
+      return res.json(result);
+    } catch (error) {
+      return sendError(res, 500, "Failed to extract invoice fields", error);
     }
   }
 );

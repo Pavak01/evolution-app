@@ -5,16 +5,24 @@ import { listIncomeInvoices, voidIncomeInvoice } from "../../api/income";
 import { ApiError } from "../../api/client";
 import type { IncomeInvoice } from "../../api/types";
 import { DangerAction, Field, SmallAction, StatusBanner } from "../../components/Controls";
+import { ImageViewerModal } from "../../components/ImageViewerModal";
 import { PendingUploads } from "../../components/PendingUploads";
+import { useReceiptCapture } from "../../hooks/useReceiptCapture";
 import { listPending, removePending, syncQueue, type PendingItem } from "../../offlineQueue";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { getTaxYearFromDate } from "../../utils/taxYear";
 
 function InvoiceRow({ invoice, onVoided }: { invoice: IncomeInvoice; onVoided: () => void }): React.JSX.Element {
+  const { downloadToLocalUri, shareLocalUri } = useReceiptCapture();
   const [isExpanded, setIsExpanded] = useState(false);
   const [reason, setReason] = useState("");
   const [isVoiding, setIsVoiding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [isOpeningFile, setIsOpeningFile] = useState(false);
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [viewerLoading, setViewerLoading] = useState(false);
+  const [viewerUri, setViewerUri] = useState<string | null>(null);
 
   async function handleVoid(): Promise<void> {
     if (!reason.trim()) {
@@ -33,6 +41,33 @@ function InvoiceRow({ invoice, onVoided }: { invoice: IncomeInvoice; onVoided: (
     }
   }
 
+  // A PDF can't be shown in ImageViewerModal (it only renders <Image>), and
+  // the download URL itself can't be opened externally either — it's a
+  // requireAuth-protected backend route, not a public link. So a PDF goes
+  // through the same authenticated download as an image, then hands off to
+  // the OS share sheet (the same content-URI-safe path already proven for
+  // CSV export) instead of the in-app viewer.
+  async function handleViewInvoice(): Promise<void> {
+    if (!invoice.file_download_url) return;
+
+    if (invoice.invoice_mime_type === "application/pdf") {
+      setIsOpeningFile(true);
+      const localUri = await downloadToLocalUri(invoice.file_download_url, `${invoice.source}-invoice.pdf`);
+      setIsOpeningFile(false);
+      if (localUri) {
+        await shareLocalUri(localUri);
+      }
+      return;
+    }
+
+    setViewerVisible(true);
+    setViewerLoading(true);
+    setViewerUri(null);
+    const localUri = await downloadToLocalUri(invoice.file_download_url, `${invoice.source}-invoice`);
+    setViewerUri(localUri);
+    setViewerLoading(false);
+  }
+
   return (
     <View style={styles.row}>
       <View style={styles.rowMain}>
@@ -49,6 +84,11 @@ function InvoiceRow({ invoice, onVoided }: { invoice: IncomeInvoice; onVoided: (
           <SmallAction label="Void" onPress={() => setIsExpanded((v) => !v)} />
         )}
       </View>
+      {invoice.file_download_url && (
+        <Text style={styles.viewLink} onPress={handleViewInvoice}>
+          {isOpeningFile ? "Opening…" : "View invoice"}
+        </Text>
+      )}
       {isExpanded && !invoice.voided_at && (
         <View style={styles.expandWrap}>
           <Field label="Reason" value={reason} onChange={setReason} placeholder="Duplicate, wrong amount..." />
@@ -56,6 +96,13 @@ function InvoiceRow({ invoice, onVoided }: { invoice: IncomeInvoice; onVoided: (
           <DangerAction label="Confirm void" onPress={handleVoid} isLoading={isVoiding} disabled={!reason.trim()} />
         </View>
       )}
+      <ImageViewerModal
+        visible={viewerVisible}
+        uri={viewerUri}
+        isLoading={viewerLoading}
+        onClose={() => setViewerVisible(false)}
+        onShare={viewerUri ? () => shareLocalUri(viewerUri) : undefined}
+      />
     </View>
   );
 }
@@ -160,5 +207,6 @@ const styles = StyleSheet.create({
   rowEnd: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   amount: { fontSize: typography.body, fontWeight: "700", color: colors.snapshotValue },
   voided: { fontSize: typography.micro, color: colors.danger, textTransform: "uppercase" },
-  expandWrap: { marginTop: spacing.sm, gap: spacing.sm }
+  expandWrap: { marginTop: spacing.sm, gap: spacing.sm },
+  viewLink: { color: colors.accent, fontWeight: "600", fontSize: typography.small }
 });

@@ -118,6 +118,12 @@ CREATE TABLE IF NOT EXISTS evolution.income_invoices (
   -- in incomeAggregation.ts, not rejected at write time.
 );
 
+-- Lets the client know whether an attached invoice file is a PDF (opens via
+-- the OS share sheet) or an image (in-app viewer) — mirrors receipts.mime_type,
+-- which income_invoices never had. Nullable, no backfill: existing rows just
+-- have an unknown type going forward.
+ALTER TABLE evolution.income_invoices ADD COLUMN IF NOT EXISTS invoice_mime_type TEXT;
+
 CREATE TABLE IF NOT EXISTS evolution.tax_rule_sets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tax_year TEXT NOT NULL,

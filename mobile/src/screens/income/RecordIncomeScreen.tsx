@@ -1,7 +1,9 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React, { useRef, useState } from "react";
 import { Text, View, type ScrollView } from "react-native";
+import { useAuth } from "../../auth/AuthContext";
 import { createIncomeInvoice } from "../../api/income";
+import { extractInvoiceFields } from "../../api/invoiceExtraction";
 import { ApiError } from "../../api/client";
 import type { TaxSummary } from "../../api/types";
 import { Card, DateField, Field, PrimaryButton, SmallAction, SnapshotTile, StatusBanner } from "../../components/Controls";
@@ -16,7 +18,10 @@ import type { IncomeStackParamList } from "../../navigation/types";
 type Props = NativeStackScreenProps<IncomeStackParamList, "RecordIncome">;
 
 export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
+  const { user } = useAuth();
   const { pickFromFiles, pickDocument } = useReceiptCapture();
+  const hasOcrUpgrade = user?.entitlements.ocr_upgrade_active ?? false;
+  const [isExtracting, setIsExtracting] = useState(false);
 
   const [periodStart, setPeriodStart] = useState(getTodayIso());
   const [periodEnd, setPeriodEnd] = useState(getTodayIso());
@@ -42,6 +47,42 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
     if (!Number.isFinite(amount) || amount <= 0) return "Enter a valid amount.";
     if (periodEnd < periodStart) return "Period end must be on or after period start.";
     return null;
+  }
+
+  // Only ever fills source/total amount/received date — never touches
+  // period start/end, since most real invoices don't state an explicit
+  // period and guessing one from a single extracted date would be dishonest.
+  async function handleAutoFillInvoice(): Promise<void> {
+    if (!file) return;
+
+    setStatus(null);
+    setIsExtracting(true);
+    try {
+      const result = await extractInvoiceFields(file.uri, file.name, file.mimeType);
+      if (!result.extraction_succeeded) {
+        showStatus({ kind: "error", text: "Couldn't read this invoice clearly — enter the details manually." });
+        return;
+      }
+
+      if (result.source) setSource(result.source);
+      if (result.total_amount !== null) setTotalAmount(String(result.total_amount));
+      if (result.date) setReceivedDate(result.date);
+      showStatus({ kind: "info", text: "Auto-filled from the invoice — review before saving." });
+    } catch (error) {
+      // A 502/503/504 here is a gateway/timeout-style failure (large file,
+      // slow connection, a transient hiccup) — not a real answer from the
+      // extraction call. Auto-fill is always optional, so this only ever
+      // needs to point back at manual entry, never block it.
+      const isGatewayError = error instanceof ApiError && [502, 503, 504].includes(error.status);
+      const message = isGatewayError
+        ? "Auto-fill timed out — try again, or enter the details manually."
+        : error instanceof ApiError
+          ? error.message
+          : "Auto-fill failed — enter the details manually.";
+      showStatus({ kind: "error", text: message });
+    } finally {
+      setIsExtracting(false);
+    }
   }
 
   async function handleSubmit(): Promise<void> {
@@ -114,7 +155,19 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
         <Text style={{ color: colors.accent, textAlign: "center", marginTop: spacing.sm }} onPress={async () => setFile((await pickDocument()) ?? file)}>
           Attach a PDF instead
         </Text>
-        {file && <ReceiptThumbnail uri={file.uri} isPdf={file.mimeType === "application/pdf"} filename={file.name} />}
+        {file && (
+          <>
+            <ReceiptThumbnail uri={file.uri} isPdf={file.mimeType === "application/pdf"} filename={file.name} />
+            <View style={{ height: spacing.sm }} />
+            {hasOcrUpgrade ? (
+              <PrimaryButton label="Auto-fill from invoice ✨" onPress={handleAutoFillInvoice} isLoading={isExtracting} />
+            ) : (
+              <Text style={{ color: colors.textMuted, fontSize: typography.small, textAlign: "center" }}>
+                ✨ Auto-fill from invoice — paid upgrade, coming soon
+              </Text>
+            )}
+          </>
+        )}
 
         <View style={{ height: spacing.sm }} />
         <PrimaryButton label="Save income" onPress={handleSubmit} isLoading={isSubmitting} />

@@ -17,7 +17,7 @@ type Props = NativeStackScreenProps<ExpensesStackParamList, "ExpenseDetail">;
 
 export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Element {
   const { expenseId } = route.params;
-  const { captureFromCamera, downloadToLocalUri, pickDocument, pickFromFiles, shareLocalUri } = useReceiptCapture();
+  const { captureFromCamera, downloadToLocalUri, pickFromFiles, shareLocalUri } = useReceiptCapture();
 
   const [expense, setExpense] = useState<Expense | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -157,9 +157,6 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
               <PrimaryButton label="Choose photo" onPress={() => handleAttachReceipt(pickFromFiles)} isLoading={isAttaching} />
             </View>
           </View>
-          <Text style={{ color: colors.accent, textAlign: "center", marginTop: spacing.sm }} onPress={() => handleAttachReceipt(pickDocument)}>
-            Attach a PDF instead
-          </Text>
         </Card>
       )}
       <ImageViewerModal
