@@ -109,10 +109,9 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
 
       <Card>
         <SummaryRow label="Total" value={expense.total_amount} />
-        <SummaryRow label="Reimbursed" value={expense.reimbursed_amount} />
         <SummaryRow label="Net deductible" value={expense.net_deductible_amount} />
         <Text style={{ color: colors.textMuted, marginTop: spacing.sm }}>
-          {expense.occurred_at} · {expense.payment_method} · {expense.reimbursement_status}
+          {expense.occurred_at} · {expense.payment_method}
           {expense.business_use_percent !== 100 ? ` · ${expense.business_use_percent}% business use` : ""}
         </Text>
         {expense.notes && <Text style={{ color: colors.textSecondary, marginTop: spacing.sm }}>{expense.notes}</Text>}

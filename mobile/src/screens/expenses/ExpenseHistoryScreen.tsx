@@ -211,9 +211,6 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
               {item.voided_at && <Text style={styles.voided}>voided</Text>}
               {!item.voided_at && !item.receipt_download_url && <Text style={styles.voided}>missing receipt</Text>}
               {!item.voided_at && item.possible_duplicate && <Text style={styles.voided}>possible duplicate</Text>}
-              {!item.voided_at && item.reimbursement_status !== "none" && (
-                <Text style={styles.badge}>{item.reimbursement_status}</Text>
-              )}
             </View>
           </Pressable>
         )}
@@ -250,6 +247,5 @@ const styles = StyleSheet.create({
   date: { fontSize: typography.small, color: colors.textMuted },
   rowEnd: { alignItems: "flex-end", gap: spacing.xs },
   amount: { fontSize: typography.body, fontWeight: "700", color: colors.snapshotValue },
-  badge: { fontSize: typography.micro, color: colors.sectionHint, textTransform: "uppercase" },
   voided: { fontSize: typography.micro, color: colors.danger, textTransform: "uppercase" }
 });

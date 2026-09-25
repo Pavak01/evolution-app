@@ -56,21 +56,19 @@ const round2 = (value: number): number => Math.round(value * 100) / 100;
 
 // The server, never the client, is the source of truth for these derived
 // amounts — mirrors the expenses_net_deductible_matches CHECK constraint.
+//
+// Parked, not removed — reimbursement_status/reimbursed_amount are ignored
+// here deliberately. Every income model this app is actually used for
+// (self-billed invoices) already includes any reimbursed cost in the
+// invoice's full total_amount, so subtracting it again here would double-tax
+// it. Restore the previous (total_amount - reimbursed_amount)-based formula
+// if this is ever revived for an income model with a genuine separate
+// non-taxable reimbursement.
 export function deriveExpenseAmounts(data: ExpenseWriteInput): {
   reimbursed_amount: number;
   net_deductible_amount: number;
 } {
-  const reimbursedAmount =
-    data.reimbursement_status === "full"
-      ? data.total_amount
-      : data.reimbursement_status === "partial"
-        ? (data.reimbursed_amount as number)
-        : 0;
-
-  const preApportioned = data.reimbursement_status === "full" ? 0 : data.total_amount - reimbursedAmount;
-  const netDeductibleAmount = round2((preApportioned * data.business_use_percent) / 100);
-
-  return { reimbursed_amount: reimbursedAmount, net_deductible_amount: netDeductibleAmount };
+  return { reimbursed_amount: 0, net_deductible_amount: round2((data.total_amount * data.business_use_percent) / 100) };
 }
 
 export const voidSchema = z.object({

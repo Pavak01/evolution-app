@@ -253,3 +253,20 @@ CREATE INDEX IF NOT EXISTS idx_income_invoices_user_tax_year ON evolution.income
 CREATE INDEX IF NOT EXISTS idx_tax_rule_sets_tax_year ON evolution.tax_rule_sets(tax_year);
 CREATE INDEX IF NOT EXISTS idx_tax_rule_sets_year_version ON evolution.tax_rule_sets(tax_year, version DESC);
 CREATE INDEX IF NOT EXISTS idx_tax_rule_audit_tax_year ON evolution.tax_rule_audit_events(tax_year, performed_at DESC);
+
+-- Reimbursement tracking is parked (see deriveExpenseAmounts in
+-- validation/expenses.schema.ts) — every income model this app is actually
+-- used for already includes any reimbursed cost in the invoice's full
+-- total_amount, so reimbursement no longer affects reimbursed_amount or
+-- net_deductible_amount, at the app layer or here. These two CHECK
+-- constraints still enforced the old reimbursement-aware formula, which
+-- would reject every insert the app now makes if reimbursement_status is
+-- ever anything but 'none' — relaxed to match. reimbursement_status itself
+-- is left alone (still stored, still dormant) so it can be revived later.
+ALTER TABLE evolution.expenses DROP CONSTRAINT IF EXISTS expenses_reimbursement_consistency;
+ALTER TABLE evolution.expenses ADD CONSTRAINT expenses_reimbursement_consistency CHECK (reimbursed_amount = 0);
+
+ALTER TABLE evolution.expenses DROP CONSTRAINT IF EXISTS expenses_net_deductible_matches;
+ALTER TABLE evolution.expenses ADD CONSTRAINT expenses_net_deductible_matches CHECK (
+  net_deductible_amount = ROUND(total_amount * business_use_percent / 100, 2)
+);

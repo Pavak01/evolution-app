@@ -7,7 +7,7 @@ import { createExpense } from "../../api/expenses";
 import { getTaxSummary } from "../../api/tax";
 import { ApiError } from "../../api/client";
 import { extractReceiptFields } from "../../api/receiptExtraction";
-import type { PaymentMethod, ReimbursementStatus, TaxSummary } from "../../api/types";
+import type { PaymentMethod, TaxSummary } from "../../api/types";
 import { CategoryPickerModal } from "../../components/CategoryPickerModal";
 import { Card, DateField, Field, PrimaryButton, SmallAction, SnapshotTile, StatusBanner } from "../../components/Controls";
 import { ReceiptThumbnail } from "../../components/ReceiptThumbnail";
@@ -29,8 +29,6 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
   const [occurredAt, setOccurredAt] = useState(getTodayIso());
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
   const [totalAmount, setTotalAmount] = useState("");
-  const [reimbursementStatus, setReimbursementStatus] = useState<ReimbursementStatus>("none");
-  const [reimbursedAmount, setReimbursedAmount] = useState("");
   const [businessUsePercent, setBusinessUsePercent] = useState("100");
   const [isAdjustingBusinessUse, setIsAdjustingBusinessUse] = useState(false);
   const [notes, setNotes] = useState("");
@@ -80,8 +78,6 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
   function resetForm(): void {
     setCategory("");
     setTotalAmount("");
-    setReimbursementStatus("none");
-    setReimbursedAmount("");
     setBusinessUsePercent("100");
     setIsAdjustingBusinessUse(false);
     setNotes("");
@@ -95,12 +91,6 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
     if (!receipt && !isTravel) return "Add a receipt photo or file.";
     const amount = Number(totalAmount);
     if (!Number.isFinite(amount) || amount <= 0) return "Enter a valid amount.";
-    if (reimbursementStatus === "partial") {
-      const reimbursed = Number(reimbursedAmount);
-      if (!Number.isFinite(reimbursed) || reimbursed <= 0 || reimbursed >= amount) {
-        return "Enter a partial reimbursement amount less than the total.";
-      }
-    }
     const businessUse = Number(businessUsePercent);
     if (!Number.isFinite(businessUse) || businessUse <= 0 || businessUse > 100) {
       return "Business use % must be between 1 and 100.";
@@ -162,8 +152,10 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
       occurred_at: occurredAt,
       payment_method: paymentMethod,
       total_amount: Number(totalAmount),
-      reimbursement_status: reimbursementStatus,
-      reimbursed_amount: reimbursementStatus === "partial" ? Number(reimbursedAmount) : undefined,
+      // Reimbursement tracking is parked, not removed — see
+      // deriveExpenseAmounts in the backend for why. Always "none" here,
+      // matching ImportReceiptsScreen's same default.
+      reimbursement_status: "none" as const,
       business_use_percent: Number(businessUsePercent),
       notes: notes.trim() || undefined,
       idempotencyKey,
@@ -254,18 +246,6 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
           <SmallAction label="Card" active={paymentMethod === "card"} onPress={() => setPaymentMethod("card")} />
           <SmallAction label="Cash" active={paymentMethod === "cash"} onPress={() => setPaymentMethod("cash")} />
         </View>
-
-        <Text style={{ fontSize: typography.body, fontWeight: "600", color: colors.textSecondary, marginBottom: spacing.xs }}>
-          Reimbursed?
-        </Text>
-        <View style={{ flexDirection: "row", gap: spacing.xs, marginBottom: spacing.md }}>
-          <SmallAction label="No" active={reimbursementStatus === "none"} onPress={() => setReimbursementStatus("none")} />
-          <SmallAction label="Partially" active={reimbursementStatus === "partial"} onPress={() => setReimbursementStatus("partial")} />
-          <SmallAction label="Fully" active={reimbursementStatus === "full"} onPress={() => setReimbursementStatus("full")} />
-        </View>
-        {reimbursementStatus === "partial" && (
-          <Field label="Reimbursed amount (£)" value={reimbursedAmount} onChange={setReimbursedAmount} keyboardType="decimal-pad" placeholder="0.00" />
-        )}
 
         {isAdjustingBusinessUse ? (
           <Field
