@@ -33,11 +33,8 @@ Not currently — a photo or screenshot of the PDF works as a substitute.
 **What categories are available?**
 Quick-pick suggestions are: fuel, travel, parking & tolls, phone, home office, clothing, accountancy, food, and other. You can also type any category name of your own — the suggestions are shortcuts, not a fixed list.
 
-**What's the difference between "Partially" and "Fully" reimbursed?**
-Fully reimbursed means someone paid you back the entire amount — it's not a deductible cost to you, so it won't reduce your taxable profit. Partially reimbursed means only part of it was paid back; the unreimbursed remainder is what counts as your deductible expense. If nothing was reimbursed, the full amount counts.
-
 **What's "Business use %" for?**
-Some expenses are only partly for work — a phone bill, home office costs. It defaults to 100%; lower it and only that portion counts toward what you can deduct, instead of the whole amount. This is separate from reimbursement: reimbursement is about being paid back, business use % is about how much of the cost was genuinely for the business in the first place.
+Some expenses are only partly for work — a phone bill, home office costs. It defaults to 100%; lower it and only that portion counts toward what you can deduct, instead of the whole amount.
 
 **I made a mistake on an expense — how do I fix it?**
 There's no edit button by design. Open the expense in History and **void** it with a reason, then log a fresh correct entry. This keeps a clean audit trail — nothing is silently changed after the fact, which matters if your records are ever checked by HMRC.
@@ -66,7 +63,19 @@ Because the two things happen at genuinely different times. An expense happens t
 No. Overlapping income periods are legitimate (two clients paying you for the same week is normal) and Evolution merges the overlap when calculating your "weeks logged" figure for National Insurance, so you won't be double-counted.
 
 **Is attaching an invoice file required, like it is for expense receipts?**
-No — the invoice photo on an income record is optional.
+No — attaching a file to an income record is optional.
+
+**Can I attach a PDF invoice, unlike an expense receipt?**
+Yes. Real invoices routinely arrive as PDFs, unlike point-of-sale receipts, so income invoices support both — tap the attach button on Record income and choose **Photo** or **PDF** from the dropdown.
+
+**What is "Auto-fill from invoice"?**
+A paid upgrade, currently in preview, that reads an attached invoice (photo or PDF) and fills in who paid you, the total amount, and the received date automatically — you still review and can edit everything before saving. It never fills in the period dates, since most real invoices don't state an explicit period. It's not purchasable yet; manual entry is always free and always works.
+
+**How do I view an invoice file I've attached?**
+Open the record in Income history and tap **View invoice**. A photo opens in an in-app viewer; a PDF or CSV is handed to your device's share sheet instead, so you can open it in whatever app makes sense (a PDF viewer, a spreadsheet app).
+
+**What is "Import income from CSV"?**
+For a report covering several invoices at once — for example, an earnings export from a platform you work through — rather than one invoice at a time. From Record income, tap **Import income from CSV**, pick the file, enter who paid you once (it applies to every row), review the parsed list, untick anything you don't want, and import. Each row becomes its own income record, with the original file attached to each so you can always refer back to it. This currently expects a specific report layout (supplier, invoice date, invoice number, total); a differently-shaped CSV won't be recognized.
 
 ## Summary and tax figures
 

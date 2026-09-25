@@ -28,11 +28,8 @@ This is the home screen — the action you'll use most, right after you pay for 
 2. Enter a **category**. Tap one of the quick suggestions — Fuel, Travel, Parking & tolls, Phone, Home office, Clothing, Accountancy, Food, Other — or type your own.
 3. Confirm the **date** (defaults to today) and enter the **amount**.
 4. Choose **payment method**: Card or Cash.
-5. Choose whether it was **reimbursed**: No, Partially, or Fully.
-   - If Partially, enter how much was reimbursed — this must be less than the total.
-   - A fully reimbursed expense isn't a deductible loss to you, so it won't count toward your deductions.
-6. Add an optional note.
-7. Tap **Save expense**.
+5. Add an optional note.
+6. Tap **Save expense**.
 
 After saving, you'll see your running total for the current tax year (net profit and how much to set aside for tax), and the form resets — ready for the next receipt. The date field is left as-is between saves, since logging several receipts from the same day back-to-back is the common case. This total always reflects your current figures — it refreshes whenever you return to this screen, not just right after a save, so voiding something in History is reflected here too.
 
@@ -58,12 +55,18 @@ Unlike expenses, income is entered periodically — whenever a payment or invoic
 2. Enter the **period** the payment covers (start and end date).
 3. Enter the **total amount**.
 4. Confirm the **received date** (defaults to today).
-5. Optionally attach a photo of the invoice.
+5. Optionally attach the invoice: tap **Attach invoice**, then choose **Photo** or **PDF** from the dropdown — unlike an expense receipt, an invoice can be either, since real invoices routinely arrive as PDFs.
 6. Tap **Save income**.
 
 You'll see the updated running total for total income and net profit. Tap **View income history** to see everything you've recorded.
 
 Income periods can overlap between different clients (two people paying you for the same week is normal) — the app deduplicates the overlap automatically when calculating your weeks-logged figure for National Insurance, so you don't need to worry about double-counting.
+
+**Auto-fill from invoice**: a paid upgrade, currently in preview, that reads an attached invoice (photo or PDF) and fills in who paid you, the total amount, and the received date — still fully editable before you save. It never fills in the period dates. Accounts with early access see an **Auto-fill from invoice** button once a file is attached; everyone else sees a "coming soon" note in its place.
+
+**Viewing an attached invoice**: from Income history, tap **View invoice** on any entry that has one. A photo opens in an in-app viewer; a PDF or CSV is handed to your device's share sheet instead, since those can't be shown in-app the same way.
+
+**Import income from CSV**: for a report covering several invoices at once — an earnings export from a platform you work through, for example — rather than logging them one by one. Tap **Import income from CSV** below the form, pick the file, enter who paid you once (it applies to every row parsed from the file), then review the list and untick anything you don't want before importing. Each row becomes its own income record, with the original CSV attached to each one so you can always refer back to it. This expects a specific report layout (supplier, invoice date, invoice number, total) — a differently-shaped CSV won't be recognized.
 
 ## Summary
 
@@ -73,7 +76,7 @@ Switch between the current and previous tax year using the buttons at the top. I
 
 ## History
 
-Browse everything you've logged for the current tax year, newest first. Tap any entry to see the full detail: amounts, payment method, reimbursement status, and the receipt itself (**View receipt** opens it in an in-app viewer, with an option to share it). An entry showing **"missing receipt"** is a travel expense saved without one yet — open it and tap **Attach receipt** once you have proof. An entry showing **"possible duplicate"** matched another one you've logged — open it for the full detail and a link to the other entry.
+Browse everything you've logged for the current tax year, newest first. Tap any entry to see the full detail: amounts, payment method, and the receipt itself (**View receipt** opens it in an in-app viewer, with an option to share it). An entry showing **"missing receipt"** is a travel expense saved without one yet — open it and tap **Attach receipt** once you have proof. An entry showing **"possible duplicate"** matched another one you've logged — open it for the full detail and a link to the other entry.
 
 **Voiding an entry**: there's no edit-in-place. If you made a mistake, open the entry and **void** it with a reason (for example, "duplicate entry" or "wrong amount"). Voided entries stay visible for your records but no longer count toward your totals — this keeps an accurate audit trail rather than silently overwriting history, which matters for tax compliance.
 
