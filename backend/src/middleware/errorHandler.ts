@@ -32,7 +32,7 @@ export function finalErrorHandler(err: unknown, _req: Request, res: Response, _n
 
   if (err instanceof Error && err.message === "Unsupported receipt file type") {
     return res.status(400).json({
-      error: "Unsupported file type. Allowed types: PDF, JPEG, PNG, WEBP, plain text."
+      error: "Unsupported file type. Allowed types: PDF, JPEG, PNG, WEBP, plain text, CSV."
     });
   }
 

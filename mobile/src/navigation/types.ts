@@ -19,6 +19,7 @@ export type CaptureStackParamList = {
 export type IncomeStackParamList = {
   RecordIncome: undefined;
   IncomeHistory: undefined;
+  ImportIncomeCsv: undefined;
 };
 
 export type MainTabParamList = {

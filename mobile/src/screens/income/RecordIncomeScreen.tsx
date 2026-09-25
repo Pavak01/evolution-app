@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React, { useRef, useState } from "react";
-import { Text, View, type ScrollView } from "react-native";
+import { Alert, Modal, Pressable, StyleSheet, Text, View, type ScrollView } from "react-native";
 import { useAuth } from "../../auth/AuthContext";
 import { createIncomeInvoice } from "../../api/income";
 import { extractInvoiceFields } from "../../api/invoiceExtraction";
@@ -11,7 +11,7 @@ import { ReceiptThumbnail } from "../../components/ReceiptThumbnail";
 import { Screen } from "../../components/Screen";
 import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCapture";
 import { enqueueIncome, generateLocalId, syncQueue } from "../../offlineQueue";
-import { colors, spacing, typography } from "../../theme/tokens";
+import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { getTodayIso } from "../../utils/taxYear";
 import type { IncomeStackParamList } from "../../navigation/types";
 
@@ -30,6 +30,7 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
   const [receivedDate, setReceivedDate] = useState(getTodayIso());
   const [notes, setNotes] = useState("");
   const [file, setFile] = useState<PickedFile | null>(null);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<{ kind: "info" | "error"; text: string } | null>(null);
@@ -47,6 +48,22 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
     if (!Number.isFinite(amount) || amount <= 0) return "Enter a valid amount.";
     if (periodEnd < periodStart) return "Period end must be on or after period start.";
     return null;
+  }
+
+  async function handleAttachPhoto(): Promise<void> {
+    setShowAttachMenu(false);
+    setFile((await pickFromFiles()) ?? file);
+  }
+
+  async function handleAttachPdf(): Promise<void> {
+    setShowAttachMenu(false);
+    const picked = await pickDocument("pdf");
+    if (!picked) return;
+    if (picked.mimeType !== "application/pdf") {
+      Alert.alert("Not a PDF", "Please pick a PDF file, or use Photo instead.");
+      return;
+    }
+    setFile(picked);
   }
 
   // Only ever fills source/total amount/received date — never touches
@@ -151,10 +168,22 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
         <DateField label="Received date" value={receivedDate} onChange={setReceivedDate} maximumDate={new Date()} />
         <Field label="Notes (optional)" value={notes} onChange={setNotes} placeholder="" />
 
-        <PrimaryButton label={file ? "Change invoice photo" : "Attach invoice photo (optional)"} onPress={async () => setFile((await pickFromFiles()) ?? file)} />
-        <Text style={{ color: colors.accent, textAlign: "center", marginTop: spacing.sm }} onPress={async () => setFile((await pickDocument()) ?? file)}>
-          Attach a PDF instead
-        </Text>
+        <PrimaryButton label={file ? "Change invoice ▾" : "Attach invoice (optional) ▾"} onPress={() => setShowAttachMenu(true)} />
+        <Modal visible={showAttachMenu} transparent animationType="fade" onRequestClose={() => setShowAttachMenu(false)}>
+          <Pressable style={styles.menuBackdrop} onPress={() => setShowAttachMenu(false)}>
+            <View style={styles.menuSheet}>
+              <Pressable style={styles.menuRow} onPress={handleAttachPhoto}>
+                <Text style={styles.menuRowText}>Photo</Text>
+              </Pressable>
+              <Pressable style={styles.menuRow} onPress={handleAttachPdf}>
+                <Text style={styles.menuRowText}>PDF</Text>
+              </Pressable>
+              <Pressable style={[styles.menuRow, styles.menuCancelRow]} onPress={() => setShowAttachMenu(false)}>
+                <Text style={styles.menuCancelText}>Cancel</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Modal>
         {file && (
           <>
             <ReceiptThumbnail uri={file.uri} isPdf={file.mimeType === "application/pdf"} filename={file.name} />
@@ -188,6 +217,18 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
       <Text style={{ color: colors.textMuted, textAlign: "center" }} onPress={() => navigation.navigate("IncomeHistory")}>
         View income history
       </Text>
+      <Text style={{ color: colors.textMuted, textAlign: "center" }} onPress={() => navigation.navigate("ImportIncomeCsv")}>
+        Import income from CSV
+      </Text>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  menuBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
+  menuSheet: { backgroundColor: colors.card, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, paddingBottom: spacing.xl },
+  menuRow: { paddingVertical: spacing.md, paddingHorizontal: spacing.xl, borderBottomWidth: 1, borderBottomColor: colors.cardBorder },
+  menuRowText: { fontSize: typography.body, fontWeight: "600", color: colors.textMain, textAlign: "center" },
+  menuCancelRow: { borderBottomWidth: 0 },
+  menuCancelText: { fontSize: typography.body, fontWeight: "600", color: colors.textMuted, textAlign: "center" }
+});

@@ -41,18 +41,19 @@ function InvoiceRow({ invoice, onVoided }: { invoice: IncomeInvoice; onVoided: (
     }
   }
 
-  // A PDF can't be shown in ImageViewerModal (it only renders <Image>), and
-  // the download URL itself can't be opened externally either — it's a
-  // requireAuth-protected backend route, not a public link. So a PDF goes
-  // through the same authenticated download as an image, then hands off to
-  // the OS share sheet (the same content-URI-safe path already proven for
-  // CSV export) instead of the in-app viewer.
+  // A PDF or CSV can't be shown in ImageViewerModal (it only renders
+  // <Image>), and the download URL itself can't be opened externally either
+  // — it's a requireAuth-protected backend route, not a public link. So
+  // either goes through the same authenticated download as an image, then
+  // hands off to the OS share sheet (the same content-URI-safe path already
+  // proven for CSV export) instead of the in-app viewer.
   async function handleViewInvoice(): Promise<void> {
     if (!invoice.file_download_url) return;
 
-    if (invoice.invoice_mime_type === "application/pdf") {
+    if (invoice.invoice_mime_type === "application/pdf" || invoice.invoice_mime_type === "text/csv") {
+      const extension = invoice.invoice_mime_type === "text/csv" ? "csv" : "pdf";
       setIsOpeningFile(true);
-      const localUri = await downloadToLocalUri(invoice.file_download_url, `${invoice.source}-invoice.pdf`);
+      const localUri = await downloadToLocalUri(invoice.file_download_url, `${invoice.source}-invoice.${extension}`);
       setIsOpeningFile(false);
       if (localUri) {
         await shareLocalUri(localUri);

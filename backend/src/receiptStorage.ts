@@ -144,7 +144,7 @@ export function receiptContentMatchesDeclaredType(buffer: Buffer, declaredMimeTy
     return isWebp(buffer);
   }
 
-  if (declaredMimeType === "text/plain") {
+  if (declaredMimeType === "text/plain" || declaredMimeType === "text/csv") {
     return !buffer.subarray(0, Math.min(buffer.length, 8000)).includes(0);
   }
 

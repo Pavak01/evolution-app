@@ -11,6 +11,7 @@ import { ExpenseDetailScreen } from "../screens/expenses/ExpenseDetailScreen";
 import { ExpenseHistoryScreen } from "../screens/expenses/ExpenseHistoryScreen";
 import { ImportReceiptsScreen } from "../screens/expenses/ImportReceiptsScreen";
 import { ExportScreen } from "../screens/export/ExportScreen";
+import { ImportIncomeCsvScreen } from "../screens/income/ImportIncomeCsvScreen";
 import { IncomeHistoryScreen } from "../screens/income/IncomeHistoryScreen";
 import { RecordIncomeScreen } from "../screens/income/RecordIncomeScreen";
 import { SummaryScreen } from "../screens/summary/SummaryScreen";
@@ -50,6 +51,7 @@ function IncomeStackScreen(): React.JSX.Element {
     <IncomeStack.Navigator screenOptions={headerOptions}>
       <IncomeStack.Screen name="RecordIncome" component={RecordIncomeScreen} options={{ title: "Record Income" }} />
       <IncomeStack.Screen name="IncomeHistory" component={IncomeHistoryScreen} options={{ title: "Income History" }} />
+      <IncomeStack.Screen name="ImportIncomeCsv" component={ImportIncomeCsvScreen} options={{ title: "Import CSV" }} />
     </IncomeStack.Navigator>
   );
 }

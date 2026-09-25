@@ -23,5 +23,6 @@ export const allowedReceiptMimeTypes = new Set([
   "image/jpeg",
   "image/png",
   "image/webp",
-  "text/plain"
+  "text/plain",
+  "text/csv"
 ]);

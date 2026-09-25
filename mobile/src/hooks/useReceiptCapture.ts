@@ -127,16 +127,22 @@ export function useReceiptCapture() {
     return false;
   }
 
-  // Scoped to PDF only, deliberately — images already go through
+  // Scoped to PDF and CSV, deliberately — images already go through
   // pickFromFiles' proven expo-image-picker path above; keeping this one
   // narrow means if the content:// fix below still doesn't hold up on a
-  // real build, only the new PDF button breaks, not the already-reliable
+  // real build, only these two file types break, not the already-reliable
   // photo picker too.
-  async function pickDocument(): Promise<PickedFile | null> {
+  const CSV_LOOKALIKE_MIME_TYPES = new Set(["text/csv", "text/comma-separated-values", "application/vnd.ms-excel", "text/plain"]);
+
+  // kind restricts the OS picker itself to the relevant type (a "PDF"
+  // choice shouldn't even offer a CSV to select) — a caller that already
+  // knows which one it wants gets a tighter picker, not just a filtered
+  // result checked after the fact.
+  async function pickDocument(kind: "pdf" | "csv"): Promise<PickedFile | null> {
     const selected = await DocumentPicker.getDocumentAsync({
       copyToCacheDirectory: true,
       multiple: false,
-      type: "application/pdf"
+      type: kind === "pdf" ? "application/pdf" : ["application/pdf", ...CSV_LOOKALIKE_MIME_TYPES]
     });
 
     if (selected.canceled || selected.assets.length === 0) {
@@ -153,7 +159,23 @@ export function useReceiptCapture() {
       return null;
     }
 
-    return { uri: asset.uri, name: asset.name ?? "invoice", mimeType: asset.mimeType ?? "application/octet-stream" };
+    // Real-world CSV mimetype reporting is inconsistent across OSes/apps
+    // (and sometimes absent entirely), so the file extension is the more
+    // reliable signal — normalized here to the one canonical value the
+    // backend actually recognizes, rather than teaching it every lookalike.
+    const name = asset.name ?? "file";
+    const isCsvByName = name.toLowerCase().endsWith(".csv");
+    const isCsvByMimeType = !!asset.mimeType && CSV_LOOKALIKE_MIME_TYPES.has(asset.mimeType);
+    const mimeType =
+      asset.mimeType === "application/pdf" ? "application/pdf" : isCsvByName || isCsvByMimeType ? "text/csv" : (asset.mimeType ?? "application/octet-stream");
+
+    return { uri: asset.uri, name, mimeType };
+  }
+
+  // Used to read a picked CSV's text for client-side parsing (deterministic,
+  // structured-data parsing — no OCR/AI needed, unlike photo/PDF invoices).
+  async function readLocalTextFile(uri: string): Promise<string> {
+    return FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.UTF8 });
   }
 
   // Downloads to a local file and returns its uri, without doing anything
@@ -195,5 +217,5 @@ export function useReceiptCapture() {
     }
   }
 
-  return { captureFromCamera, pickFromFiles, pickMultipleFromFiles, pickDocument, downloadToLocalUri, shareLocalUri };
+  return { captureFromCamera, pickFromFiles, pickMultipleFromFiles, pickDocument, readLocalTextFile, downloadToLocalUri, shareLocalUri };
 }

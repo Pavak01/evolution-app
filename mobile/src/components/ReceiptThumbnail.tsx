@@ -7,10 +7,12 @@ import { colors, radius, typography } from "../theme/tokens";
 export function ReceiptThumbnail({
   uri,
   isPdf,
+  isCsv,
   filename
 }: {
   uri: string;
   isPdf: boolean;
+  isCsv?: boolean;
   filename: string;
 }): React.JSX.Element {
   return (
@@ -18,6 +20,10 @@ export function ReceiptThumbnail({
       {isPdf ? (
         <View style={styles.pdfBadge}>
           <Text style={styles.pdfBadgeText}>PDF</Text>
+        </View>
+      ) : isCsv ? (
+        <View style={styles.pdfBadge}>
+          <Text style={styles.pdfBadgeText}>CSV</Text>
         </View>
       ) : (
         <Image source={{ uri }} style={styles.image} resizeMode="cover" />
