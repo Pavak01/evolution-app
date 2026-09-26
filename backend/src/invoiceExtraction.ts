@@ -80,10 +80,13 @@ export async function extractInvoiceFields(buffer: Buffer, mimeType: string): Pr
             {
               type: "text",
               text:
-                "This is an invoice or income document — a self-employed person's record of being paid for work. " +
+                "This is a UK invoice or income document — a self-employed person's record of being paid for work. " +
+                "UK date rule: any numeric-only date in this document is DD/MM/YYYY or DD/MM/YY — the day comes " +
+                "first, then the month. For example, 03/04/2026 means 3 April 2026, never March 4. This is the " +
+                "opposite of the US MM/DD convention — do not use MM/DD. " +
                 "Extract who paid them (the client or company name), the total amount, and the invoice or payment " +
-                "date (a single date — if the document states a period instead of one date, use the later/end date " +
-                "of that period). " +
+                "date (a single date, converted using the UK rule above — if the document states a period instead " +
+                "of one date, use the later/end date of that period). " +
                 "Reply with ONLY a single JSON object, no other text, in this exact shape: " +
                 '{"source": string or null, "total_amount": number or null, "date": "YYYY-MM-DD" or null}. ' +
                 "Use null for any field you cannot determine confidently."

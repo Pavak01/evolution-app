@@ -96,7 +96,10 @@ export async function extractReceiptFields(buffer: Buffer, mimeType: string): Pr
             {
               type: "text",
               text:
-                "This is a photo of a receipt. Extract the total amount paid, the date of the transaction, " +
+                "This is a photo of a UK receipt. UK date rule: any numeric-only date on this receipt is DD/MM/YYYY " +
+                "or DD/MM/YY — the day comes first, then the month. For example, 03/04/2026 on this receipt means " +
+                "3 April 2026, never March 4. This is the opposite of the US MM/DD convention — do not use MM/DD. " +
+                "Extract the total amount paid, the date of the transaction (converting it using the UK rule above), " +
                 `a best-guess expense category from exactly this list: ${CATEGORY_SUGGESTIONS.join(", ")}, ` +
                 "the merchant/vendor name, and the transaction time if the receipt prints one. " +
                 "Reply with ONLY a single JSON object, no other text, in this exact shape: " +
