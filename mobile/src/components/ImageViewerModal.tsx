@@ -131,7 +131,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md
   },
   headerAction: { color: colors.accentText, fontSize: typography.body, fontWeight: "700" },
-  body: { flex: 1, alignItems: "center", justifyContent: "center" },
+  // overflow: hidden clips the zoomed/panned image (and its gesture
+  // detector's touch area) to this box — without it, a scaled-up image can
+  // visually and interactively extend into the header above, so a tap that
+  // looks like it's hitting "Close" gets captured by the image underneath
+  // instead. Keeps Close/Share reliably tappable no matter how zoomed in.
+  body: { flex: 1, alignItems: "center", justifyContent: "center", overflow: "hidden" },
   image: { width: "100%", height: "100%" },
   errorText: { color: colors.accentText, fontSize: typography.body }
 });
