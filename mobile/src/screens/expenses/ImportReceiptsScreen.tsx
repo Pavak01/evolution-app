@@ -256,9 +256,11 @@ export function ImportReceiptsScreen(): React.JSX.Element {
                   />
                   {row.occurredAt && !isTaxYearStillClaimable(getTaxYearFromDate(new Date(row.occurredAt))) && (
                     <Text style={{ color: colors.danger, fontSize: typography.small, marginBottom: spacing.sm }}>
-                      This falls in tax year {getTaxYearFromDate(new Date(row.occurredAt))}, which is likely past
-                      HMRC's amendment deadline — it can probably no longer be claimed. Still your call whether to
-                      include it.
+                      Based on the date above, this falls in tax year {getTaxYearFromDate(new Date(row.occurredAt))},
+                      which is likely past HMRC's amendment deadline — it can probably no longer be claimed. This
+                      date came from auto-read text, which can misread an old or hard-to-read receipt — tap the
+                      photo to check it against the original and correct the date manually if it's wrong. Still
+                      your call whether to include it.
                     </Text>
                   )}
                   <Field
