@@ -106,6 +106,26 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
     return null;
   }
 
+  // Replacing the photo — not just the very first pick — has to clear
+  // every auto-fillable field first. Without this, a field the new photo's
+  // OCR pass can't confidently read (handleAutoFill only ever sets a field
+  // when the result has a value) would keep showing whatever an earlier
+  // photo filled in, looking like it came from the new receipt when it
+  // didn't. A cancelled pick changes nothing, including the existing photo.
+  async function handleAttachReceipt(pick: () => Promise<PickedFile | null>): Promise<void> {
+    const picked = await pick();
+    if (!picked) return;
+
+    setCategory("");
+    setTotalAmount("");
+    setOccurredAt(getTodayIso());
+    setNotes("");
+    setTransactionTime(undefined);
+    setFuelCardHint(null);
+    setViewerUri(null);
+    setReceipt(picked);
+  }
+
   async function handleAutoFill(): Promise<void> {
     if (!receipt) return;
 
@@ -215,10 +235,10 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
       <Card>
         <View style={{ flexDirection: "row", gap: spacing.sm, marginBottom: spacing.md }}>
           <View style={{ flex: 1 }}>
-            <PrimaryButton label="Take photo" onPress={async () => setReceipt((await captureFromCamera()) ?? receipt)} />
+            <PrimaryButton label="Take photo" onPress={() => handleAttachReceipt(captureFromCamera)} />
           </View>
           <View style={{ flex: 1 }}>
-            <PrimaryButton label="Choose photo" onPress={async () => setReceipt((await pickFromFiles()) ?? receipt)} />
+            <PrimaryButton label="Choose photo" onPress={() => handleAttachReceipt(pickFromFiles)} />
           </View>
         </View>
         {receipt ? (
