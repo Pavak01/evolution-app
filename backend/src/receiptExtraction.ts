@@ -49,7 +49,8 @@ const extractionResultSchema = z.object({
   transaction_time: z
     .string()
     .regex(/^\d{2}:\d{2}$/)
-    .nullable()
+    .nullable(),
+  fuel_card_hint: z.string().trim().min(1).max(100).nullable()
 });
 
 export type ReceiptExtractionResult = {
@@ -60,6 +61,11 @@ export type ReceiptExtractionResult = {
   // "HH:MM" printed on the receipt, when legible — used as a duplicate-
   // matching signal, never shown as a manual-entry field.
   transaction_time: string | null;
+  // A short description (e.g. "Allstar fuel card") only when the receipt
+  // shows clear textual evidence of a commercial/fleet fuel card — never a
+  // guess. Surfaced as a non-blocking warning: that fuel was very possibly
+  // paid for by the company, not the driver, so it shouldn't be claimed.
+  fuel_card_hint: string | null;
   extraction_succeeded: boolean;
 };
 
@@ -69,6 +75,7 @@ const EMPTY_RESULT: ReceiptExtractionResult = {
   category: null,
   merchant: null,
   transaction_time: null,
+  fuel_card_hint: null,
   extraction_succeeded: false
 };
 
@@ -102,8 +109,13 @@ export async function extractReceiptFields(buffer: Buffer, mimeType: string): Pr
                 "Extract the total amount paid, the date of the transaction (converting it using the UK rule above), " +
                 `a best-guess expense category from exactly this list: ${CATEGORY_SUGGESTIONS.join(", ")}, ` +
                 "the merchant/vendor name, and the transaction time if the receipt prints one. " +
+                "Also check specifically for signs this was paid with a commercial/fleet fuel card rather than a " +
+                "personal card — named UK schemes like Allstar, UK Fuels, Keyfuels, Fuelgenie, BP Plus, Shell Fleet, " +
+                "Esso Fleet, FleetCor, Radius, or WEX, or literal text like \"FUEL CARD\", \"FLEET CARD\", or " +
+                "\"Card Type: FLEET\". Only report this if you see clear textual evidence of it, giving a short " +
+                "description of what you saw (e.g. \"Allstar fuel card\"); otherwise use null — do not guess. " +
                 "Reply with ONLY a single JSON object, no other text, in this exact shape: " +
-                '{"total_amount": number or null, "occurred_at": "YYYY-MM-DD" or null, "category": one of the list above or null, "merchant": string or null, "transaction_time": "HH:MM" (24-hour) or null}. ' +
+                '{"total_amount": number or null, "occurred_at": "YYYY-MM-DD" or null, "category": one of the list above or null, "merchant": string or null, "transaction_time": "HH:MM" (24-hour) or null, "fuel_card_hint": string or null}. ' +
                 "Use null for any field you cannot determine confidently. Do not guess a category unless the receipt content clearly matches it."
             }
           ]

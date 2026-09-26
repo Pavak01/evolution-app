@@ -36,6 +36,8 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
   // OCR-only enrichment, never a manual-entry field — used server-side as a
   // duplicate-matching signal only.
   const [transactionTime, setTransactionTime] = useState<string | undefined>(undefined);
+  // OCR-only, informational — never blocks or excludes anything, just warns.
+  const [fuelCardHint, setFuelCardHint] = useState<string | null>(null);
 
   // travel is the one category where a receipt genuinely may not exist yet
   // at capture time (see api/expenses.ts / offlineQueue.ts) — it can still
@@ -83,6 +85,7 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
     setNotes("");
     setReceipt(null);
     setTransactionTime(undefined);
+    setFuelCardHint(null);
     // occurredAt deliberately left as-is: back-to-back captures on the same day are the common case.
   }
 
@@ -103,6 +106,7 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
 
     setStatus(null);
     setIsExtracting(true);
+    setFuelCardHint(null);
     try {
       const result = await extractReceiptFields(receipt.uri, receipt.name, receipt.mimeType);
       if (!result.extraction_succeeded) {
@@ -115,6 +119,7 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
       if (result.occurred_at) setOccurredAt(result.occurred_at);
       if (result.merchant && !notes.trim()) setNotes(result.merchant);
       if (result.transaction_time) setTransactionTime(result.transaction_time);
+      setFuelCardHint(result.fuel_card_hint);
       showStatus({ kind: "info", text: "Auto-filled from the receipt — review before saving." });
     } catch (error) {
       // A 502/503/504 here is a gateway/timeout-style failure (large photo,
@@ -234,6 +239,12 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
       </Card>
 
       <Card>
+        {fuelCardHint && (
+          <Text style={{ color: colors.danger, fontSize: typography.small, marginBottom: spacing.sm }}>
+            This receipt looks like it was paid with a {fuelCardHint} — if that's a company-owned fuel card, you
+            didn't personally pay for this, so it shouldn't be claimed as a deductible expense. Still your call.
+          </Text>
+        )}
         <CategoryPickerModal label="Category" value={category} onChange={setCategory} />
 
         <DateField label="Date" value={occurredAt} onChange={setOccurredAt} maximumDate={new Date()} />

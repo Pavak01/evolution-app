@@ -45,6 +45,8 @@ After saving, you'll see your running total for the current tax year (net profit
 
 **Auto-fill from receipt**: a paid upgrade, currently in preview, that reads a picked receipt photo and fills in the category, amount, and date for you — still fully editable before you save. Not yet purchasable; accounts with early access see an **Auto-fill from receipt** button once a photo is added, everyone else sees a "coming soon" note in its place.
 
+**Fuel card warning**: if auto-fill spots signs of a commercial/fleet fuel card on a receipt (a named scheme like Allstar or BP Plus, or "FUEL CARD" printed on it), it shows a warning — fuel paid for on a company-owned card wasn't paid for by you, so it shouldn't be claimed as a deductible expense. This is a best-effort signal, not exhaustive, so it's always your own call whether to include a flagged receipt.
+
 **Import past receipts**: for accounts with early access to auto-fill, a link above the capture form opens a bulk-import flow for receipts you already had before you started using Evolution — pick several photos at once, each gets auto-read, then you review and correct before importing them all. Each receipt lands in whichever tax year its own date actually falls in, which is often not the current one — after importing, you'll see the current year's running total, plus a note if some of what you just imported went to a different year instead. If a receipt's date is likely past HMRC's amendment deadline for its tax year, you'll see a warning next to it — it's not blocked, just flagged, since it's still your call whether to include it.
 
 ## Record income

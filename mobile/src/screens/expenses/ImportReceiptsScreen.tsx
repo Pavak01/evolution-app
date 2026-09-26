@@ -27,6 +27,8 @@ type ImportRow = {
   // OCR-only enrichment, never a manual-entry field — used server-side as a
   // duplicate-matching signal only.
   transactionTime: string | undefined;
+  // OCR-only, informational — never blocks or excludes anything, just warns.
+  fuelCardHint: string | null;
   outcome: "pending" | "submitting" | "done" | "failed" | "queued";
 };
 
@@ -76,6 +78,7 @@ export function ImportReceiptsScreen(): React.JSX.Element {
         occurredAt: "",
         totalAmount: "",
         transactionTime: undefined,
+        fuelCardHint: null,
         outcome: "pending"
       }));
       setRows((current) => [...current, ...newRows]);
@@ -93,7 +96,8 @@ export function ImportReceiptsScreen(): React.JSX.Element {
             category: result.category ?? "",
             occurredAt: result.occurred_at ?? "",
             totalAmount: result.total_amount !== null ? String(result.total_amount) : "",
-            transactionTime: result.transaction_time ?? undefined
+            transactionTime: result.transaction_time ?? undefined,
+            fuelCardHint: result.fuel_card_hint
           });
         } catch {
           updateRow(row.key, { isExtracting: false, extractionSucceeded: false, included: false });
@@ -234,6 +238,13 @@ export function ImportReceiptsScreen(): React.JSX.Element {
                   {!row.extractionSucceeded && (
                     <Text style={{ color: colors.textMuted, fontSize: typography.small, marginBottom: spacing.sm }}>
                       Couldn't read this one automatically — fill in the details or leave it unchecked to skip.
+                    </Text>
+                  )}
+                  {row.fuelCardHint && (
+                    <Text style={{ color: colors.danger, fontSize: typography.small, marginBottom: spacing.sm }}>
+                      This receipt looks like it was paid with a {row.fuelCardHint} — if that's a company-owned fuel
+                      card, you didn't personally pay for this, so it shouldn't be claimed as a deductible expense.
+                      Still your call.
                     </Text>
                   )}
                   <CategoryPickerModal label="Category" value={row.category} onChange={(value) => updateRow(row.key, { category: value })} />

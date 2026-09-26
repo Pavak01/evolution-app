@@ -8,6 +8,10 @@ export type ReceiptExtraction = {
   // "HH:MM" printed on the receipt, when legible — used as a duplicate-
   // matching signal, never shown as a manual-entry field.
   transaction_time: string | null;
+  // A short description (e.g. "Allstar fuel card") only when the receipt
+  // shows clear signs of a commercial/fleet fuel card — surfaced as a
+  // non-blocking warning, never auto-excluded.
+  fuel_card_hint: string | null;
   extraction_succeeded: boolean;
 };
 
