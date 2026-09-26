@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { ApiError } from "../../api/client";
 import { createExpense } from "../../api/expenses";
 import { extractReceiptFields } from "../../api/receiptExtraction";
@@ -7,6 +7,7 @@ import { getTaxSummary } from "../../api/tax";
 import type { TaxSummary } from "../../api/types";
 import { CategoryPickerModal } from "../../components/CategoryPickerModal";
 import { Card, DateField, Field, PrimaryButton, SmallAction, SnapshotTile, StatusBanner } from "../../components/Controls";
+import { ImageViewerModal } from "../../components/ImageViewerModal";
 import { ReceiptThumbnail } from "../../components/ReceiptThumbnail";
 import { Screen } from "../../components/Screen";
 import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCapture";
@@ -45,6 +46,14 @@ export function ImportReceiptsScreen(): React.JSX.Element {
   const [status, setStatus] = useState<{ kind: "info" | "error"; text: string } | null>(null);
   const [lastSummary, setLastSummary] = useState<TaxSummary | null>(null);
   const [otherTaxYears, setOtherTaxYears] = useState<string[]>([]);
+  // The per-row thumbnail is small (a quick "yep, attached" glance) — not
+  // nearly big enough to actually verify an OCR-read field is correct,
+  // which matters a lot more here than on a single fresh capture, since a
+  // bulk import is often old/crumpled receipts the user has no memory of.
+  // These are local files, not yet uploaded, so no download step is needed
+  // — the same viewer used for an already-saved receipt just points at the
+  // picked file's own uri directly.
+  const [viewerUri, setViewerUri] = useState<string | null>(null);
 
   function updateRow(key: string, patch: Partial<ImportRow>): void {
     setRows((current) => current.map((row) => (row.key === key ? { ...row, ...patch } : row)));
@@ -199,7 +208,8 @@ export function ImportReceiptsScreen(): React.JSX.Element {
       <Text style={{ fontSize: typography.h1, fontWeight: "700", color: colors.textMain }}>Import past receipts</Text>
       <Text style={{ color: colors.textSecondary }}>
         For receipts you already have from before you started using Evolution. Pick several photos at once — each
-        one gets auto-read, then you review and correct before importing.
+        one gets auto-read, then you review and correct before importing. Tap a photo to view it full-size and check
+        the auto-read details against it.
       </Text>
       {status && <StatusBanner kind={status.kind} text={status.text} />}
 
@@ -208,9 +218,9 @@ export function ImportReceiptsScreen(): React.JSX.Element {
       {rows.map((row) => (
         <Card key={row.key}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm }}>
-            <View style={{ flex: 1 }}>
+            <Pressable style={{ flex: 1 }} onPress={() => setViewerUri(row.file.uri)}>
               <ReceiptThumbnail uri={row.file.uri} isPdf={false} filename={row.file.name} />
-            </View>
+            </Pressable>
             {row.isExtracting && <ActivityIndicator color={colors.accent} />}
             {row.outcome === "done" && <Text style={{ color: colors.accent, fontWeight: "700" }}>Imported</Text>}
             {row.outcome === "queued" && <Text style={{ color: colors.accent, fontWeight: "700" }}>Queued</Text>}
@@ -262,6 +272,8 @@ export function ImportReceiptsScreen(): React.JSX.Element {
           disabled={pendingCount === 0}
         />
       )}
+
+      <ImageViewerModal visible={!!viewerUri} uri={viewerUri} isLoading={false} onClose={() => setViewerUri(null)} />
 
       {lastSummary && (
         <Card>
