@@ -10,7 +10,7 @@ import { Screen } from "../../components/Screen";
 import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCapture";
 import { enqueueIncome, generateLocalId, syncQueue } from "../../offlineQueue";
 import { colors, spacing, typography } from "../../theme/tokens";
-import { getTaxYearFromDate } from "../../utils/taxYear";
+import { formatUkDate, getTaxYearFromDate } from "../../utils/taxYear";
 import { parseIncomeCsv, type ParsedIncomeCsvRow } from "../../utils/parseIncomeCsv";
 
 type ImportRow = ParsedIncomeCsvRow & {
@@ -195,7 +195,7 @@ export function ImportIncomeCsvScreen(): React.JSX.Element {
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <View>
               <Text style={{ color: colors.textMain, fontWeight: "700" }}>
-                {row.date} · £{row.totalAmount.toFixed(2)}
+                {formatUkDate(row.date)} · £{row.totalAmount.toFixed(2)}
               </Text>
               <Text style={{ color: colors.textMuted, fontSize: typography.small }}>Invoice {row.invoiceNumber}</Text>
             </View>

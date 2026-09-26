@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -11,11 +11,14 @@ import {
 import type { KeyboardTypeOptions } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { colors, radius, spacing, typography } from "../theme/tokens";
+import { formatUkDate } from "../utils/taxYear";
 
-// Adapted from Qbit's Controls.tsx. DateField here works directly in ISO
-// (YYYY-MM-DD) — the format the backend expects — rather than Qbit's
-// DD-MM-YYYY display format with a separate ISO-conversion step, since
-// there's no longer a reason for that extra layer in fresh code.
+// Adapted from Qbit's Controls.tsx. DateField's value/onChange contract
+// stays ISO (YYYY-MM-DD) throughout the app — the format the backend
+// expects — but is displayed/typed as DD/MM/YYYY, restoring Qbit's
+// original UK-friendly display after a plain-ISO display turned out to
+// read as confusingly US-shaped to an actual UK user (a receipt's
+// "2024-01-12" misread the same way an ambiguous OCR date can).
 function parseIsoDate(value: string): Date | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
   if (!match) {
@@ -32,6 +35,23 @@ function formatIsoDate(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const year = date.getFullYear();
   return `${year}-${month}-${day}`;
+}
+
+// Only returns a value once a full, plausible DD/MM/YYYY has been typed —
+// partial input (e.g. "12/0") just keeps displaying as typed, without
+// propagating anything upward yet.
+function ukDisplayToIso(display: string): string | null {
+  const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(display.trim());
+  if (!match) {
+    return null;
+  }
+  const [, day, month, year] = match;
+  const dayNum = Number(day);
+  const monthNum = Number(month);
+  if (dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12) {
+    return null;
+  }
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
 }
 
 export function Card({ children }: { children: React.ReactNode }): React.JSX.Element {
@@ -84,16 +104,34 @@ export function DateField({
   maximumDate?: Date;
 }): React.JSX.Element {
   const [showPicker, setShowPicker] = useState(false);
+  // Decoupled from `value` so the user can type a partial date (e.g.
+  // "12/0") without a re-render clobbering it mid-entry — re-synced below
+  // whenever `value` actually changes (the picker, or the parent resetting
+  // the form), which also normalizes to zero-padded DD/MM/YYYY once a
+  // valid date lands.
+  const [displayText, setDisplayText] = useState(() => formatUkDate(value));
+
+  useEffect(() => {
+    setDisplayText(formatUkDate(value));
+  }, [value]);
+
+  function handleTextChange(text: string): void {
+    setDisplayText(text);
+    const iso = ukDisplayToIso(text);
+    if (iso) {
+      onChange(iso);
+    }
+  }
 
   return (
     <View style={styles.fieldWrap}>
       <Text style={styles.label}>{label}</Text>
       <View style={styles.dateFieldRow}>
         <TextInput
-          value={value}
-          onChangeText={onChange}
+          value={displayText}
+          onChangeText={handleTextChange}
           style={[styles.input, styles.dateInput]}
-          placeholder={placeholder ?? "YYYY-MM-DD"}
+          placeholder={placeholder ?? "DD/MM/YYYY"}
         />
         <Pressable
           onPress={() => setShowPicker(true)}

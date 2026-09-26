@@ -10,7 +10,7 @@ import { PendingUploads } from "../../components/PendingUploads";
 import { useReceiptCapture } from "../../hooks/useReceiptCapture";
 import { listPending, removePending, syncQueue, type PendingItem } from "../../offlineQueue";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
-import { getTaxYearFromDate } from "../../utils/taxYear";
+import { formatUkDate, getTaxYearFromDate } from "../../utils/taxYear";
 
 function InvoiceRow({ invoice, onVoided }: { invoice: IncomeInvoice; onVoided: () => void }): React.JSX.Element {
   const { downloadToLocalUri, shareLocalUri } = useReceiptCapture();
@@ -74,7 +74,7 @@ function InvoiceRow({ invoice, onVoided }: { invoice: IncomeInvoice; onVoided: (
       <View style={styles.rowMain}>
         <Text style={styles.source}>{invoice.source}</Text>
         <Text style={styles.period}>
-          {invoice.period_start} → {invoice.period_end}
+          {formatUkDate(invoice.period_start)} → {formatUkDate(invoice.period_end)}
         </Text>
       </View>
       <View style={styles.rowEnd}>

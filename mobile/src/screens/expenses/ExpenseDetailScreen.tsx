@@ -11,6 +11,7 @@ import { Screen } from "../../components/Screen";
 import { useReceiptCapture } from "../../hooks/useReceiptCapture";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { humanizeCategory } from "../../utils/category";
+import { formatUkDate } from "../../utils/taxYear";
 import type { ExpensesStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<ExpensesStackParamList, "ExpenseDetail">;
@@ -111,7 +112,7 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
         <SummaryRow label="Total" value={expense.total_amount} />
         <SummaryRow label="Net deductible" value={expense.net_deductible_amount} />
         <Text style={{ color: colors.textMuted, marginTop: spacing.sm }}>
-          {expense.occurred_at} · {expense.payment_method}
+          {formatUkDate(expense.occurred_at)} · {expense.payment_method}
           {expense.business_use_percent !== 100 ? ` · ${expense.business_use_percent}% business use` : ""}
         </Text>
         {expense.notes && <Text style={{ color: colors.textSecondary, marginTop: spacing.sm }}>{expense.notes}</Text>}

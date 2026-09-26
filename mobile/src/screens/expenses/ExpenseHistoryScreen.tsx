@@ -11,7 +11,7 @@ import { Card, DateField, Field, StatusBanner } from "../../components/Controls"
 import { listPending, removePending, syncQueue, type PendingItem } from "../../offlineQueue";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { humanizeCategory } from "../../utils/category";
-import { getTaxYearFromDate } from "../../utils/taxYear";
+import { formatUkDate, getTaxYearFromDate } from "../../utils/taxYear";
 import type { ExpensesStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<ExpensesStackParamList, "ExpenseHistory">;
@@ -204,7 +204,7 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
           >
             <View style={styles.rowMain}>
               <Text style={styles.category}>{humanizeCategory(item.category)}</Text>
-              <Text style={styles.date}>{item.occurred_at}</Text>
+              <Text style={styles.date}>{formatUkDate(item.occurred_at)}</Text>
             </View>
             <View style={styles.rowEnd}>
               <Text style={styles.amount}>£{item.total_amount.toFixed(2)}</Text>
