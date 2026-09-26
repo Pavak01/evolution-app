@@ -9,7 +9,13 @@ import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { sendError } from "../middleware/errorHandler.js";
 import { uploadRateLimit } from "../middleware/rateLimit.js";
 import { upload } from "../middleware/upload.js";
-import { deleteReceiptObject, getReceiptPresignedUrl, receiptContentMatchesDeclaredType, uploadReceiptObject } from "../receiptStorage.js";
+import {
+  deleteReceiptObject,
+  getReceiptPresignedUrl,
+  normalizeImageOrientation,
+  receiptContentMatchesDeclaredType,
+  uploadReceiptObject
+} from "../receiptStorage.js";
 import { getTaxYearFromDate } from "../rulesEngine.js";
 import { recomputeTaxSummary } from "../taxSummary.js";
 import { voidSchema } from "../validation/expenses.schema.js";
@@ -99,7 +105,9 @@ incomeRouter.post(
       const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
       storageKey = `invoices/${authReq.userId}/${uuidv4()}-${safeName}`;
       try {
-        await uploadReceiptObject(storageKey, file.buffer, file.mimetype);
+        // No-ops for PDF/CSV — only bakes in EXIF rotation for an actual photo.
+        const normalizedFileBuffer = await normalizeImageOrientation(file.buffer, file.mimetype);
+        await uploadReceiptObject(storageKey, normalizedFileBuffer, file.mimetype);
       } catch (error) {
         return sendError(res, 500, "Failed to store invoice file", error);
       }
@@ -181,7 +189,9 @@ incomeRouter.post(
         return res.status(400).json({ error: "File content does not match its declared type" });
       }
 
-      const result = await extractInvoiceFields(req.file.buffer, req.file.mimetype);
+      // No-ops for PDF/CSV — only bakes in EXIF rotation for an actual photo.
+      const normalizedBuffer = await normalizeImageOrientation(req.file.buffer, req.file.mimetype);
+      const result = await extractInvoiceFields(normalizedBuffer, req.file.mimetype);
       return res.json(result);
     } catch (error) {
       return sendError(res, 500, "Failed to extract invoice fields", error);

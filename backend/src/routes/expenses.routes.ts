@@ -12,6 +12,7 @@ import { extractReceiptFields } from "../receiptExtraction.js";
 import {
   computeReceiptContentHash,
   deleteReceiptObject,
+  normalizeImageOrientation,
   receiptContentMatchesDeclaredType,
   uploadReceiptObject
 } from "../receiptStorage.js";
@@ -213,6 +214,11 @@ expensesRouter.post(
       return res.status(400).json({ error: "File content does not match its declared type" });
     }
 
+    // Bakes any EXIF "rotate on display" flag into the actual pixels before
+    // anything else touches this buffer — storage, the duplicate-detection
+    // hash, and OCR all then see the same, correctly-oriented image.
+    const normalizedBuffer = req.file ? await normalizeImageOrientation(req.file.buffer, req.file.mimetype) : null;
+
     // A retry after a lost response (e.g. a transient gateway error) should
     // return the original result, not create a real duplicate. Cheap pre-
     // check to skip a pointless re-upload in the common case — the unique
@@ -234,11 +240,11 @@ expensesRouter.post(
 
     const safeName = req.file ? req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_") : null;
     const storageKey = req.file ? `receipts/${authReq.userId}/${uuidv4()}-${safeName}` : null;
-    const contentHash = req.file ? computeReceiptContentHash(req.file.buffer) : null;
+    const contentHash = normalizedBuffer ? computeReceiptContentHash(normalizedBuffer) : null;
 
-    if (req.file && storageKey) {
+    if (req.file && normalizedBuffer && storageKey) {
       try {
-        await uploadReceiptObject(storageKey, req.file.buffer, req.file.mimetype);
+        await uploadReceiptObject(storageKey, normalizedBuffer, req.file.mimetype);
       } catch (error) {
         return sendError(res, 500, "Failed to store receipt", error);
       }
@@ -374,6 +380,8 @@ expensesRouter.post(
       return res.status(400).json({ error: "File content does not match its declared type" });
     }
 
+    const normalizedBuffer = await normalizeImageOrientation(req.file.buffer, req.file.mimetype);
+
     try {
       const expenseResult = await db.query<{ id: string; tax_year: string; category: string; total_amount: string; occurred_at: string; transaction_time: string | null }>(
         "SELECT id, tax_year, category, total_amount::text, occurred_at::text, transaction_time FROM expenses WHERE id = $1 AND user_id = $2 AND voided_at IS NULL LIMIT 1",
@@ -390,10 +398,10 @@ expensesRouter.post(
 
       const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
       const storageKey = `receipts/${authReq.userId}/${uuidv4()}-${safeName}`;
-      const contentHash = computeReceiptContentHash(req.file.buffer);
+      const contentHash = computeReceiptContentHash(normalizedBuffer);
 
       try {
-        await uploadReceiptObject(storageKey, req.file.buffer, req.file.mimetype);
+        await uploadReceiptObject(storageKey, normalizedBuffer, req.file.mimetype);
       } catch (error) {
         return sendError(res, 500, "Failed to store receipt", error);
       }
@@ -479,7 +487,8 @@ expensesRouter.post(
         return res.status(400).json({ error: "File content does not match its declared type" });
       }
 
-      const result = await extractReceiptFields(req.file.buffer, req.file.mimetype);
+      const normalizedBuffer = await normalizeImageOrientation(req.file.buffer, req.file.mimetype);
+      const result = await extractReceiptFields(normalizedBuffer, req.file.mimetype);
       return res.json(result);
     } catch (error) {
       return sendError(res, 500, "Failed to extract receipt fields", error);

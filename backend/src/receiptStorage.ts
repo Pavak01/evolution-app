@@ -1,6 +1,7 @@
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createHash } from "node:crypto";
+import sharp from "sharp";
 
 let cachedBucket: string | null = null;
 let cachedClient: S3Client | null = null;
@@ -154,4 +155,37 @@ export function receiptContentMatchesDeclaredType(buffer: Buffer, declaredMimeTy
   }
 
   return signatures.some((signature) => matchesSignature(buffer, signature));
+}
+
+const ROTATABLE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+// Phone cameras (Android especially) very often store a JPEG's pixels in
+// one orientation plus an EXIF "rotate on display" flag — the OS photo
+// viewer honours that flag so the photo looks correctly oriented to the
+// user, but a pipeline that reads raw pixel bytes without applying EXIF
+// (very plausibly including a vision API) sees the un-rotated image. This
+// bakes the flag into the actual pixels and strips it, so every consumer
+// of this buffer (S3 storage, the duplicate-detection content hash, OCR)
+// sees the same, correctly-oriented image regardless of source encoding.
+// Non-raster types pass through unchanged. Best-effort: falls back to the
+// original buffer on any processing error rather than failing the upload.
+export async function normalizeImageOrientation(buffer: Buffer, mimeType: string): Promise<Buffer> {
+  if (!ROTATABLE_MIME_TYPES.has(mimeType)) {
+    return buffer;
+  }
+
+  try {
+    return await sharp(buffer).rotate().toBuffer();
+  } catch (error) {
+    console.error("Image orientation normalization failed, using original buffer:", error);
+    return buffer;
+  }
+}
+
+// Explicit rotation on top of an already EXIF-normalized buffer — used by
+// receiptExtraction.ts/invoiceExtraction.ts's rotate-and-retry pass, for
+// content that's genuinely upside-down/sideways independent of any EXIF
+// flag (the photographed receipt itself was rotated).
+export async function rotateImageBuffer(buffer: Buffer, degrees: 90 | 180 | 270): Promise<Buffer> {
+  return sharp(buffer).rotate(degrees).toBuffer();
 }
