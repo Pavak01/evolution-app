@@ -50,9 +50,15 @@ export const authRateLimit = createRateLimitMiddleware({
 
 // Higher than Qbit's equivalent (25/10min): frequent small captures are the
 // whole point of this app's workflow, not an occasional weekly action.
+// Raised from 60: Import Receipts spends 2 requests per receipt (extract +
+// create) against this same shared, per-IP budget, so a real catch-up
+// session (old receipts from before the user started using the app) could
+// easily run past 30 receipts and start failing partway through. 300 still
+// comfortably bounds abuse (0.5 req/sec sustained) while covering a 100+
+// receipt import in one sitting.
 export const uploadRateLimit = createRateLimitMiddleware({
   key: "upload",
   windowMs: 10 * 60 * 1000,
-  max: 60,
+  max: 300,
   message: "Too many upload attempts. Please try again later."
 });
