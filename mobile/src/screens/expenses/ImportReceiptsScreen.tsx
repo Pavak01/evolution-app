@@ -229,31 +229,36 @@ export function ImportReceiptsScreen(): React.JSX.Element {
 
           {!row.isExtracting && row.outcome === "pending" && (
             <>
-              {!row.extractionSucceeded && (
-                <Text style={{ color: colors.textMuted, fontSize: typography.small, marginBottom: spacing.sm }}>
-                  Couldn't read this one automatically — fill in the details or leave it unchecked to skip.
-                </Text>
+              {row.included && (
+                <>
+                  {!row.extractionSucceeded && (
+                    <Text style={{ color: colors.textMuted, fontSize: typography.small, marginBottom: spacing.sm }}>
+                      Couldn't read this one automatically — fill in the details or leave it unchecked to skip.
+                    </Text>
+                  )}
+                  <CategoryPickerModal label="Category" value={row.category} onChange={(value) => updateRow(row.key, { category: value })} />
+                  <DateField
+                    label="Date"
+                    value={row.occurredAt}
+                    onChange={(value) => updateRow(row.key, { occurredAt: value })}
+                    maximumDate={new Date()}
+                  />
+                  {row.occurredAt && !isTaxYearStillClaimable(getTaxYearFromDate(new Date(row.occurredAt))) && (
+                    <Text style={{ color: colors.danger, fontSize: typography.small, marginBottom: spacing.sm }}>
+                      This falls in tax year {getTaxYearFromDate(new Date(row.occurredAt))}, which is likely past
+                      HMRC's amendment deadline — it can probably no longer be claimed. Still your call whether to
+                      include it.
+                    </Text>
+                  )}
+                  <Field
+                    label="Amount (£)"
+                    value={row.totalAmount}
+                    onChange={(value) => updateRow(row.key, { totalAmount: value })}
+                    keyboardType="decimal-pad"
+                    placeholder="0.00"
+                  />
+                </>
               )}
-              <CategoryPickerModal label="Category" value={row.category} onChange={(value) => updateRow(row.key, { category: value })} />
-              <DateField
-                label="Date"
-                value={row.occurredAt}
-                onChange={(value) => updateRow(row.key, { occurredAt: value })}
-                maximumDate={new Date()}
-              />
-              {row.occurredAt && !isTaxYearStillClaimable(getTaxYearFromDate(new Date(row.occurredAt))) && (
-                <Text style={{ color: colors.danger, fontSize: typography.small, marginBottom: spacing.sm }}>
-                  This falls in tax year {getTaxYearFromDate(new Date(row.occurredAt))}, which is likely past HMRC's
-                  amendment deadline — it can probably no longer be claimed. Still your call whether to include it.
-                </Text>
-              )}
-              <Field
-                label="Amount (£)"
-                value={row.totalAmount}
-                onChange={(value) => updateRow(row.key, { totalAmount: value })}
-                keyboardType="decimal-pad"
-                placeholder="0.00"
-              />
               <SmallAction
                 label={row.included ? "Included — tap to skip" : "Skipped — tap to include"}
                 active={row.included}
