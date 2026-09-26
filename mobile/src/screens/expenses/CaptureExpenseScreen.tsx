@@ -1,7 +1,7 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useRef, useState } from "react";
-import { Text, View, type ScrollView } from "react-native";
+import { Pressable, Text, View, type ScrollView } from "react-native";
 import { useAuth } from "../../auth/AuthContext";
 import { createExpense } from "../../api/expenses";
 import { getTaxSummary } from "../../api/tax";
@@ -10,6 +10,7 @@ import { extractReceiptFields } from "../../api/receiptExtraction";
 import type { PaymentMethod, TaxSummary } from "../../api/types";
 import { CategoryPickerModal } from "../../components/CategoryPickerModal";
 import { Card, DateField, Field, PrimaryButton, SmallAction, SnapshotTile, StatusBanner } from "../../components/Controls";
+import { ImageViewerModal } from "../../components/ImageViewerModal";
 import { ReceiptThumbnail } from "../../components/ReceiptThumbnail";
 import { Screen } from "../../components/Screen";
 import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCapture";
@@ -38,6 +39,9 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
   const [transactionTime, setTransactionTime] = useState<string | undefined>(undefined);
   // OCR-only, informational — never blocks or excludes anything, just warns.
   const [fuelCardHint, setFuelCardHint] = useState<string | null>(null);
+  // Local file, not yet uploaded — the viewer points straight at its uri,
+  // no download step needed (same as ImportReceiptsScreen's tap-to-enlarge).
+  const [viewerUri, setViewerUri] = useState<string | null>(null);
 
   // travel is the one category where a receipt genuinely may not exist yet
   // at capture time (see api/expenses.ts / offlineQueue.ts) — it can still
@@ -86,6 +90,7 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
     setReceipt(null);
     setTransactionTime(undefined);
     setFuelCardHint(null);
+    setViewerUri(null);
     // occurredAt deliberately left as-is: back-to-back captures on the same day are the common case.
   }
 
@@ -218,7 +223,12 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
         </View>
         {receipt ? (
           <>
-            <ReceiptThumbnail uri={receipt.uri} isPdf={receipt.mimeType === "application/pdf"} filename={receipt.name} />
+            <Pressable onPress={() => setViewerUri(receipt.uri)}>
+              <ReceiptThumbnail uri={receipt.uri} isPdf={receipt.mimeType === "application/pdf"} filename={receipt.name} />
+            </Pressable>
+            <Text style={{ color: colors.textMuted, fontSize: typography.micro, marginTop: spacing.xs }}>
+              Tap the photo to check it full-size before saving
+            </Text>
             <View style={{ height: spacing.sm }} />
             {hasOcrUpgrade ? (
               <PrimaryButton label="Auto-fill from receipt ✨" onPress={handleAutoFill} isLoading={isExtracting} />
@@ -289,6 +299,8 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
           </View>
         </Card>
       )}
+
+      <ImageViewerModal visible={!!viewerUri} uri={viewerUri} isLoading={false} onClose={() => setViewerUri(null)} />
     </Screen>
   );
 }
