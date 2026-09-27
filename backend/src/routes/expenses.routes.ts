@@ -155,14 +155,18 @@ async function loadExpenseResponse(
   authReq: AuthenticatedRequest,
   expenseId: string
 ): Promise<{
-  expense: ReturnType<typeof serializeExpense> & { receipt_download_url: string | null; possible_duplicate: DuplicateWarning };
+  expense: ReturnType<typeof serializeExpense> & {
+    receipt_download_url: string | null;
+    receipt_mime_type: string | null;
+    possible_duplicate: DuplicateWarning;
+  };
   summary: Awaited<ReturnType<typeof recomputeTaxSummary>>;
 }> {
-  const result = await db.query<ExpenseRow & { receipt_id: string | null } & DuplicateJoinRow>(
+  const result = await db.query<ExpenseRow & { receipt_id: string | null; receipt_mime_type: string | null } & DuplicateJoinRow>(
     `SELECT e.id, e.category, e.occurred_at::text, e.tax_year, e.payment_method, e.total_amount::text,
             e.reimbursement_status, e.reimbursed_amount::text, e.net_deductible_amount::text,
             e.business_use_percent::text, e.notes, e.voided_at::text, e.void_reason, e.created_at::text,
-            r.id AS receipt_id, ${duplicateJoinColumns}
+            r.id AS receipt_id, r.mime_type AS receipt_mime_type, ${duplicateJoinColumns}
      FROM expenses e
      LEFT JOIN receipts r ON r.expense_id = e.id
      ${duplicateJoin}
@@ -176,6 +180,7 @@ async function loadExpenseResponse(
     expense: {
       ...serializeExpense(row),
       receipt_download_url: row.receipt_id ? getReceiptDownloadUrl(req, authReq.userId, row.receipt_id) : null,
+      receipt_mime_type: row.receipt_id ? row.receipt_mime_type : null,
       possible_duplicate: serializePossibleDuplicate(row)
     },
     summary
@@ -339,6 +344,7 @@ expensesRouter.post(
         expense: {
           ...serializeExpense(expense),
           receipt_download_url: receiptId ? getReceiptDownloadUrl(req, authReq.userId, receiptId) : null,
+          receipt_mime_type: receiptId && req.file ? req.file.mimetype : null,
           possible_duplicate: duplicateWarning
         },
         summary,
@@ -450,6 +456,7 @@ expensesRouter.post(
         expense: {
           ...serializeExpense(expenseRow.rows[0]),
           receipt_download_url: getReceiptDownloadUrl(req, authReq.userId, receiptId),
+          receipt_mime_type: req.file.mimetype,
           possible_duplicate: duplicateWarning
         },
         summary,
@@ -591,11 +598,11 @@ expensesRouter.get("/expenses", requireAuth, async (req: Request, res: Response)
   params.push(limit + 1);
 
   try {
-    const rows = await db.query<ExpenseRow & { receipt_id: string | null } & DuplicateJoinRow>(
+    const rows = await db.query<ExpenseRow & { receipt_id: string | null; receipt_mime_type: string | null } & DuplicateJoinRow>(
       `SELECT e.id, e.category, e.occurred_at::text, e.tax_year, e.payment_method, e.total_amount::text,
               e.reimbursement_status, e.reimbursed_amount::text, e.net_deductible_amount::text,
               e.business_use_percent::text, e.notes, e.voided_at::text, e.void_reason, e.created_at::text,
-              r.id AS receipt_id, ${duplicateJoinColumns}
+              r.id AS receipt_id, r.mime_type AS receipt_mime_type, ${duplicateJoinColumns}
        FROM expenses e
        LEFT JOIN receipts r ON r.expense_id = e.id
        ${duplicateJoin}
@@ -614,6 +621,7 @@ expensesRouter.get("/expenses", requireAuth, async (req: Request, res: Response)
       expenses: page.map((row) => ({
         ...serializeExpense(row),
         receipt_download_url: row.receipt_id ? getReceiptDownloadUrl(req, authReq.userId, row.receipt_id) : null,
+        receipt_mime_type: row.receipt_id ? row.receipt_mime_type : null,
         possible_duplicate: serializePossibleDuplicate(row)
       })),
       next_cursor: nextCursor
@@ -627,11 +635,11 @@ expensesRouter.get("/expenses/:id", requireAuth, async (req: Request, res: Respo
   const authReq = req as AuthenticatedRequest;
 
   try {
-    const result = await db.query<ExpenseRow & { receipt_id: string | null } & DuplicateJoinRow>(
+    const result = await db.query<ExpenseRow & { receipt_id: string | null; receipt_mime_type: string | null } & DuplicateJoinRow>(
       `SELECT e.id, e.category, e.occurred_at::text, e.tax_year, e.payment_method, e.total_amount::text,
               e.reimbursement_status, e.reimbursed_amount::text, e.net_deductible_amount::text,
               e.business_use_percent::text, e.notes, e.voided_at::text, e.void_reason, e.created_at::text,
-              r.id AS receipt_id, ${duplicateJoinColumns}
+              r.id AS receipt_id, r.mime_type AS receipt_mime_type, ${duplicateJoinColumns}
        FROM expenses e
        LEFT JOIN receipts r ON r.expense_id = e.id
        ${duplicateJoin}
@@ -649,6 +657,7 @@ expensesRouter.get("/expenses/:id", requireAuth, async (req: Request, res: Respo
       expense: {
         ...serializeExpense(row),
         receipt_download_url: row.receipt_id ? getReceiptDownloadUrl(req, authReq.userId, row.receipt_id) : null,
+        receipt_mime_type: row.receipt_id ? row.receipt_mime_type : null,
         possible_duplicate: serializePossibleDuplicate(row)
       }
     });

@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, Text, View, type ScrollView } from "react-native";
 import { useAuth } from "../../auth/AuthContext";
 import { createExpense } from "../../api/expenses";
@@ -21,7 +21,7 @@ import { getTaxYearFromDate, getTodayIso } from "../../utils/taxYear";
 
 type Props = NativeStackScreenProps<CaptureStackParamList, "CaptureForm">;
 
-export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
+export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.Element {
   const { user } = useAuth();
   const { captureFromCamera, pickFromFiles } = useReceiptCapture();
   const hasOcrUpgrade = user?.entitlements.ocr_upgrade_active ?? false;
@@ -93,6 +93,26 @@ export function CaptureExpenseScreen({ navigation }: Props): React.JSX.Element {
     setViewerUri(null);
     // occurredAt deliberately left as-is: back-to-back captures on the same day are the common case.
   }
+
+  // ExpenseDetailScreen's "Resubmit" action on a voided expense lands here
+  // with everything pre-filled, including the same receipt (already
+  // downloaded to a local file — this screen has no download step of its
+  // own). Params are cleared right after applying them so this only ever
+  // fires once, not on every later visit to this screen while they linger.
+  useEffect(() => {
+    const resubmit = route.params?.resubmit;
+    if (!resubmit) return;
+
+    setCategory(resubmit.category);
+    setTotalAmount(resubmit.totalAmount);
+    setOccurredAt(resubmit.occurredAt);
+    setBusinessUsePercent(resubmit.businessUsePercent);
+    setNotes(resubmit.notes);
+    setReceipt(resubmit.file);
+    showStatus({ kind: "info", text: "Prefilled from a voided expense — review and correct before saving." });
+    navigation.setParams({ resubmit: undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.params?.resubmit]);
 
   function validate(): string | null {
     if (!category.trim()) return "Enter a category.";

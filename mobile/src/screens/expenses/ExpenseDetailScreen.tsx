@@ -1,4 +1,5 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import React, { useCallback, useRef, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { ActivityIndicator, Text, View, type ScrollView } from "react-native";
@@ -11,8 +12,14 @@ import { Screen } from "../../components/Screen";
 import { useReceiptCapture } from "../../hooks/useReceiptCapture";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { humanizeCategory } from "../../utils/category";
-import { formatUkDate } from "../../utils/taxYear";
-import type { ExpensesStackParamList } from "../../navigation/types";
+import { formatUkDate, getTodayIso } from "../../utils/taxYear";
+import type { ExpensesStackParamList, MainTabParamList } from "../../navigation/types";
+
+function extensionForMimeType(mimeType: string): string {
+  if (mimeType === "image/png") return "png";
+  if (mimeType === "image/webp") return "webp";
+  return "jpg";
+}
 
 type Props = NativeStackScreenProps<ExpensesStackParamList, "ExpenseDetail">;
 
@@ -25,6 +32,7 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
   const [voidReason, setVoidReason] = useState("");
   const [isVoiding, setIsVoiding] = useState(false);
   const [isAttaching, setIsAttaching] = useState(false);
+  const [isResubmitting, setIsResubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const scrollRef = useRef<ScrollView>(null);
@@ -76,6 +84,46 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
     }
   }
 
+  // Opens a fresh Capture entry prefilled from this voided expense — the
+  // whole point being to avoid retyping everything and separately
+  // re-attaching the photo by hand. Downloads the receipt locally first
+  // (CaptureExpenseScreen has no download step of its own, only ever deals
+  // in local files already picked/captured). occurredAt prefills to today,
+  // not this expense's original date — resubmitting corrects a mistake and
+  // logs it now, not re-backdates it; still fully editable either way.
+  async function handleResubmit(): Promise<void> {
+    if (!expense) return;
+
+    setIsResubmitting(true);
+    setError(null);
+    try {
+      let file: { uri: string; name: string; mimeType: string } | null = null;
+      if (expense.receipt_download_url && expense.receipt_mime_type) {
+        const ext = extensionForMimeType(expense.receipt_mime_type);
+        const localUri = await downloadToLocalUri(expense.receipt_download_url, `receipt.${ext}`);
+        if (localUri) {
+          file = { uri: localUri, name: `receipt.${ext}`, mimeType: expense.receipt_mime_type };
+        }
+      }
+
+      navigation.getParent<BottomTabNavigationProp<MainTabParamList>>()?.navigate("Capture", {
+        screen: "CaptureForm",
+        params: {
+          resubmit: {
+            category: expense.category,
+            totalAmount: String(expense.total_amount),
+            occurredAt: getTodayIso(),
+            businessUsePercent: String(expense.business_use_percent),
+            notes: expense.notes ?? "",
+            file
+          }
+        }
+      });
+    } finally {
+      setIsResubmitting(false);
+    }
+  }
+
   async function handleVoid(): Promise<void> {
     if (!voidReason.trim()) {
       setError("Enter a reason for voiding this expense.");
@@ -122,6 +170,10 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
           </Text>
         )}
       </Card>
+
+      {expense.voided_at && (
+        <PrimaryButton label="Resubmit" onPress={handleResubmit} isLoading={isResubmitting} />
+      )}
 
       {expense.possible_duplicate && !expense.voided_at && (
         <Card>

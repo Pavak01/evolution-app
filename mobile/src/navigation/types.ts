@@ -1,3 +1,5 @@
+import type { NavigatorScreenParams } from "@react-navigation/native";
+
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
@@ -9,10 +11,22 @@ export type ExpensesStackParamList = {
   ExpenseDetail: { expenseId: string };
 };
 
+// Carried from ExpenseDetailScreen's "Resubmit" action on a voided expense
+// into a fresh Capture entry — a local file already downloaded and ready to
+// re-attach, not a remote URL (CaptureExpenseScreen has no download step).
+export type ResubmitPrefill = {
+  category: string;
+  totalAmount: string;
+  occurredAt: string;
+  businessUsePercent: string;
+  notes: string;
+  file: { uri: string; name: string; mimeType: string } | null;
+};
+
 export type CaptureStackParamList = {
   // Named distinctly from the "Capture" tab that hosts this stack —
   // React Navigation warns about nested screens sharing a name.
-  CaptureForm: undefined;
+  CaptureForm: { resubmit?: ResubmitPrefill } | undefined;
   ImportReceipts: undefined;
 };
 
@@ -23,7 +37,11 @@ export type IncomeStackParamList = {
 };
 
 export type MainTabParamList = {
-  Capture: undefined;
+  // NavigatorScreenParams (not `undefined`) so a screen outside this tab can
+  // navigate straight into one of Capture's nested screens with params —
+  // React Navigation's standard pattern for typed cross-tab navigation, used
+  // by ExpenseDetailScreen's "Resubmit" action.
+  Capture: NavigatorScreenParams<CaptureStackParamList> | undefined;
   Income: undefined;
   Summary: undefined;
   History: undefined;
