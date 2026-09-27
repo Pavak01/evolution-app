@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
-import { ActivityIndicator, Text, View } from "react-native";
+import { ActivityIndicator, RefreshControl, Text, View } from "react-native";
 import { getTaxSummary } from "../../api/tax";
 import { ApiError } from "../../api/client";
 import type { TaxSummary } from "../../api/types";
@@ -38,7 +38,7 @@ export function SummaryScreen(): React.JSX.Element {
   const currentTaxYear = getTaxYearFromDate(new Date());
 
   return (
-    <Screen>
+    <Screen refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => load(taxYear)} />}>
       <Text style={{ fontSize: typography.h1, fontWeight: "700", color: colors.textMain }}>{taxYear} summary</Text>
 
       {taxYear !== previousTaxYear && (
