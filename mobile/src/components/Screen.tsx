@@ -21,16 +21,39 @@ export const Screen = forwardRef<
 
   useEffect(() => {
     const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const subscription = Keyboard.addListener(showEvent, () => {
+    // Android in particular can re-fire "show" while the keyboard is
+    // already up (e.g. its suggestion bar changing height as you type) —
+    // without this guard, every re-fire forced the scroll back to the end
+    // again, so it felt like the page was stuck and wouldn't scroll up.
+    // Only the genuine hidden -> shown transition should auto-scroll.
+    let isKeyboardVisible = false;
+    const showSubscription = Keyboard.addListener(showEvent, () => {
+      if (isKeyboardVisible) return;
+      isKeyboardVisible = true;
       internalRef.current?.scrollToEnd({ animated: true });
     });
-    return () => subscription.remove();
+    const hideSubscription = Keyboard.addListener("keyboardDidHide", () => {
+      isKeyboardVisible = false;
+    });
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
   }, []);
 
   return (
     <KeyboardAvoidingView
       style={styles.flex}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      // Android previously relied solely on the OS's own window resize
+      // (app.json's softwareKeyboardLayoutMode: "resize") with no help from
+      // this component, leaving `behavior` a no-op here. That's what let a
+      // field near the bottom of a screen end up genuinely unreachable —
+      // not just un-auto-scrolled, but not manually scrollable either,
+      // because the ScrollView's own measured content wasn't reliably
+      // shrinking to make room. Setting "height" here makes this container
+      // itself shrink on keyboard-show, guaranteeing the content overflows
+      // and becomes scrollable regardless of what the OS-level resize does.
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
         ref={(node) => {
