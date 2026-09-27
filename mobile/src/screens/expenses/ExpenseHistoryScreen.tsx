@@ -7,7 +7,7 @@ import { ApiError } from "../../api/client";
 import type { Expense } from "../../api/types";
 import { PendingUploads } from "../../components/PendingUploads";
 import { CategoryPickerModal } from "../../components/CategoryPickerModal";
-import { Card, DateField, Field, StatusBanner } from "../../components/Controls";
+import { Card, DateField, Field, SmallAction, StatusBanner } from "../../components/Controls";
 import { listPending, removePending, syncQueue, type PendingItem } from "../../offlineQueue";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { humanizeCategory } from "../../utils/category";
@@ -34,6 +34,10 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
   const [searchText, setSearchText] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  // History only ever showed the current tax year, with no way to reach an
+  // older one — a real gap once Import Receipts (or a corrected re-filed
+  // entry) puts something in a previous year: there was no way to find it.
+  const [taxYear, setTaxYear] = useState(getTaxYearFromDate(new Date()));
 
   // The request that's currently in flight — a slow earlier reset (e.g. a
   // broad search) that resolves after a newer one would otherwise clobber
@@ -70,7 +74,6 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
       }
 
       try {
-        const taxYear = getTaxYearFromDate(new Date());
         const result = await listExpenses({
           tax_year: taxYear,
           search: searchText.trim() || undefined,
@@ -99,7 +102,7 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
     // at call time, but including it here would re-trigger this callback
     // (and anything depending on it) on every page fetched.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [searchText, filters]
+    [searchText, filters, taxYear]
   );
 
   const handleRetry = useCallback(async () => {
@@ -131,13 +134,15 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
     const timer = setTimeout(() => void load(true), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchText, filters.category, filters.from, filters.to, filters.minAmount, filters.maxAmount]);
+  }, [searchText, filters.category, filters.from, filters.to, filters.minAmount, filters.maxAmount, taxYear]);
 
   function updateFilter<K extends keyof Filters>(key: K, value: Filters[K]): void {
     setFilters((current) => ({ ...current, [key]: value }));
   }
 
   const hasActiveFilters = filters.category !== null || filters.from || filters.to || filters.minAmount || filters.maxAmount;
+  const previousTaxYear = `${Number(taxYear.slice(0, 4)) - 1}-${String(Number(taxYear.slice(0, 4)) % 100).padStart(2, "0")}`;
+  const currentTaxYear = getTaxYearFromDate(new Date());
 
   if (isLoading && !hasLoadedOnceRef.current) {
     return (
@@ -162,6 +167,10 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
           void removePending(localId).then(() => load(true));
         }}
       />
+      <View style={styles.taxYearRow}>
+        <SmallAction label={previousTaxYear} active={taxYear === previousTaxYear} onPress={() => setTaxYear(previousTaxYear)} />
+        <SmallAction label={currentTaxYear} active={taxYear === currentTaxYear} onPress={() => setTaxYear(currentTaxYear)} />
+      </View>
       <View style={styles.searchWrap}>
         <Field label="Search" value={searchText} onChange={setSearchText} placeholder="Category or notes..." />
         <Text style={styles.filtersToggle} onPress={() => setShowFilters((current) => !current)}>
@@ -223,6 +232,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.canvas },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.canvas },
   errorWrap: { padding: spacing.md },
+  taxYearRow: { flexDirection: "row", gap: spacing.xs, paddingHorizontal: spacing.md, paddingTop: spacing.md },
   searchWrap: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
   filtersToggle: { color: colors.accent, fontWeight: "600", marginBottom: spacing.sm },
   clearFilters: { color: colors.danger, fontWeight: "600", textAlign: "center", marginTop: spacing.sm },
