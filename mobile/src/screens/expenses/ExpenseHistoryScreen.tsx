@@ -154,56 +154,65 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
 
   return (
     <View style={styles.flex}>
-      {error && (
-        <View style={styles.errorWrap}>
-          <StatusBanner kind="error" text={error} />
-        </View>
-      )}
-      <PendingUploads
-        items={pending}
-        isSyncing={isSyncing}
-        onRetry={handleRetry}
-        onDelete={(localId) => {
-          void removePending(localId).then(() => load(true));
-        }}
-      />
-      <View style={styles.taxYearRow}>
-        <SmallAction label={previousTaxYear} active={taxYear === previousTaxYear} onPress={() => setTaxYear(previousTaxYear)} />
-        <SmallAction label={currentTaxYear} active={taxYear === currentTaxYear} onPress={() => setTaxYear(currentTaxYear)} />
-      </View>
-      <View style={styles.searchWrap}>
-        <Field label="Search" value={searchText} onChange={setSearchText} placeholder="Category or notes..." />
-        <Text style={styles.filtersToggle} onPress={() => setShowFilters((current) => !current)}>
-          {showFilters ? "Hide filters" : "Filters"}
-          {hasActiveFilters ? " •" : ""}
-        </Text>
-      </View>
-
-      {showFilters && (
-        <Card>
-          <CategoryPickerModal
-            label="Category"
-            value={filters.category ?? ""}
-            onChange={(value) => updateFilter("category", value || null)}
-            allowClear
-          />
-          <DateField label="From" value={filters.from} onChange={(value) => updateFilter("from", value)} />
-          <DateField label="To" value={filters.to} onChange={(value) => updateFilter("to", value)} />
-          <Field label="Min amount (£)" value={filters.minAmount} onChange={(value) => updateFilter("minAmount", value)} keyboardType="decimal-pad" placeholder="0.00" />
-          <Field label="Max amount (£)" value={filters.maxAmount} onChange={(value) => updateFilter("maxAmount", value)} keyboardType="decimal-pad" placeholder="0.00" />
-          {hasActiveFilters && <Text style={styles.clearFilters} onPress={() => setFilters(EMPTY_FILTERS)}>Clear filters</Text>}
-        </Card>
-      )}
-
       <FlatList
         data={expenses}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
+        keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => load(true)} />}
         onEndReachedThreshold={0.4}
         onEndReached={() => {
           if (cursor && !isLoadingMore && !isLoading) void load(false);
         }}
+        // The search/filter fields used to sit above the FlatList as fixed
+        // siblings, outside any scrollable area — a field near the bottom
+        // of the filters panel (e.g. "Max amount") had no way to be scrolled
+        // into view once the keyboard covered it, on Android especially.
+        // As the list's own header, everything scrolls together.
+        ListHeaderComponent={
+          <>
+            {error && (
+              <View style={styles.errorWrap}>
+                <StatusBanner kind="error" text={error} />
+              </View>
+            )}
+            <PendingUploads
+              items={pending}
+              isSyncing={isSyncing}
+              onRetry={handleRetry}
+              onDelete={(localId) => {
+                void removePending(localId).then(() => load(true));
+              }}
+            />
+            <View style={styles.taxYearRow}>
+              <SmallAction label={previousTaxYear} active={taxYear === previousTaxYear} onPress={() => setTaxYear(previousTaxYear)} />
+              <SmallAction label={currentTaxYear} active={taxYear === currentTaxYear} onPress={() => setTaxYear(currentTaxYear)} />
+            </View>
+            <View style={styles.searchWrap}>
+              <Field label="Search" value={searchText} onChange={setSearchText} placeholder="Category or notes..." />
+              <Text style={styles.filtersToggle} onPress={() => setShowFilters((current) => !current)}>
+                {showFilters ? "Hide filters" : "Filters"}
+                {hasActiveFilters ? " •" : ""}
+              </Text>
+            </View>
+
+            {showFilters && (
+              <Card>
+                <CategoryPickerModal
+                  label="Category"
+                  value={filters.category ?? ""}
+                  onChange={(value) => updateFilter("category", value || null)}
+                  allowClear
+                />
+                <DateField label="From" value={filters.from} onChange={(value) => updateFilter("from", value)} />
+                <DateField label="To" value={filters.to} onChange={(value) => updateFilter("to", value)} />
+                <Field label="Min amount (£)" value={filters.minAmount} onChange={(value) => updateFilter("minAmount", value)} keyboardType="decimal-pad" placeholder="0.00" />
+                <Field label="Max amount (£)" value={filters.maxAmount} onChange={(value) => updateFilter("maxAmount", value)} keyboardType="decimal-pad" placeholder="0.00" />
+                {hasActiveFilters && <Text style={styles.clearFilters} onPress={() => setFilters(EMPTY_FILTERS)}>Clear filters</Text>}
+              </Card>
+            )}
+          </>
+        }
         ListEmptyComponent={<Text style={styles.empty}>No expenses match — try adjusting search or filters.</Text>}
         ListFooterComponent={isLoadingMore ? <ActivityIndicator color={colors.accent} style={styles.footerSpinner} /> : null}
         renderItem={({ item }) => (

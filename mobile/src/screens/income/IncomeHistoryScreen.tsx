@@ -180,6 +180,7 @@ export function IncomeHistoryScreen(): React.JSX.Element {
         data={invoices}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
+        keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={false} onRefresh={load} />}
         ListEmptyComponent={<Text style={styles.empty}>No income recorded yet this tax year.</Text>}
         renderItem={({ item }) => <InvoiceRow invoice={item} onVoided={load} />}
