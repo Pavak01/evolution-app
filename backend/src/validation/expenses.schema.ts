@@ -16,7 +16,10 @@ export const expenseWriteSchema = z
     // return the original result instead of creating a real duplicate.
     idempotency_key: z.string().trim().min(1).max(200).optional(),
     // OCR-only enrichment used for duplicate matching — never a manual-entry field.
-    transaction_time: z.string().regex(/^\d{2}:\d{2}$/).optional()
+    transaction_time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+    // Set by the "Resubmit" flow only — the backend still verifies this
+    // actually belongs to the caller and is voided before storing it.
+    resubmitted_from_expense_id: z.string().uuid().optional()
   })
   .superRefine((data, ctx) => {
     const reimbursed = data.reimbursed_amount ?? 0;

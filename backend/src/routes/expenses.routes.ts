@@ -86,6 +86,32 @@ function serializePossibleDuplicate(row: DuplicateJoinRow): DuplicateWarning {
 const duplicateJoin = `LEFT JOIN expenses d ON d.id = e.duplicate_of_expense_id AND d.voided_at IS NULL`;
 const duplicateJoinColumns = `d.id AS dup_id, d.occurred_at::text AS dup_occurred_at, d.category AS dup_category, d.total_amount::text AS dup_total_amount`;
 
+type ResubmittedFromWarning = { expense_id: string; message: string } | null;
+
+// Columns from a LEFT JOIN against the original expense referenced by
+// resubmitted_from_expense_id — a permanent historical fact, not recomputed
+// conditionally like the duplicate join above (the original stays voided
+// forever, there's no unvoid), so no "only if still active" guard is needed.
+type ResubmitJoinRow = {
+  resub_id: string | null;
+  resub_occurred_at: string | null;
+  resub_category: string | null;
+  resub_total_amount: string | null;
+};
+
+function serializeResubmittedFrom(row: ResubmitJoinRow): ResubmittedFromWarning {
+  if (!row.resub_id || !row.resub_occurred_at || !row.resub_category || row.resub_total_amount === null) {
+    return null;
+  }
+  return {
+    expense_id: row.resub_id,
+    message: `Resubmitted from a voided entry on ${row.resub_occurred_at} for ${humanizeCategory(row.resub_category)} (£${Number(row.resub_total_amount).toFixed(2)}).`
+  };
+}
+
+const resubmitJoin = `LEFT JOIN expenses rs ON rs.id = e.resubmitted_from_expense_id`;
+const resubmitJoinColumns = `rs.id AS resub_id, rs.occurred_at::text AS resub_occurred_at, rs.category AS resub_category, rs.total_amount::text AS resub_total_amount`;
+
 // Never blocks or delays a save — this only ever runs after the write has
 // committed, and is purely informational (see the void-with-reason
 // correction flow the message points users at).
@@ -159,17 +185,21 @@ async function loadExpenseResponse(
     receipt_download_url: string | null;
     receipt_mime_type: string | null;
     possible_duplicate: DuplicateWarning;
+    resubmitted_from: ResubmittedFromWarning;
   };
   summary: Awaited<ReturnType<typeof recomputeTaxSummary>>;
 }> {
-  const result = await db.query<ExpenseRow & { receipt_id: string | null; receipt_mime_type: string | null } & DuplicateJoinRow>(
+  const result = await db.query<
+    ExpenseRow & { receipt_id: string | null; receipt_mime_type: string | null } & DuplicateJoinRow & ResubmitJoinRow
+  >(
     `SELECT e.id, e.category, e.occurred_at::text, e.tax_year, e.payment_method, e.total_amount::text,
             e.reimbursement_status, e.reimbursed_amount::text, e.net_deductible_amount::text,
             e.business_use_percent::text, e.notes, e.voided_at::text, e.void_reason, e.created_at::text,
-            r.id AS receipt_id, r.mime_type AS receipt_mime_type, ${duplicateJoinColumns}
+            r.id AS receipt_id, r.mime_type AS receipt_mime_type, ${duplicateJoinColumns}, ${resubmitJoinColumns}
      FROM expenses e
      LEFT JOIN receipts r ON r.expense_id = e.id
      ${duplicateJoin}
+     ${resubmitJoin}
      WHERE e.id = $1 AND e.user_id = $2
      LIMIT 1`,
     [expenseId, authReq.userId]
@@ -181,7 +211,8 @@ async function loadExpenseResponse(
       ...serializeExpense(row),
       receipt_download_url: row.receipt_id ? getReceiptDownloadUrl(req, authReq.userId, row.receipt_id) : null,
       receipt_mime_type: row.receipt_id ? row.receipt_mime_type : null,
-      possible_duplicate: serializePossibleDuplicate(row)
+      possible_duplicate: serializePossibleDuplicate(row),
+      resubmitted_from: serializeResubmittedFrom(row)
     },
     summary
   };
@@ -224,6 +255,19 @@ expensesRouter.post(
     // hash, and OCR all then see the same, correctly-oriented image.
     const normalizedBuffer = req.file ? await normalizeImageOrientation(req.file.buffer, req.file.mimetype) : null;
 
+    // Informational only — a bad/spoofed/already-changed reference never
+    // blocks the save, it just silently doesn't get linked.
+    let resubmittedFromExpenseId: string | null = null;
+    if (data.resubmitted_from_expense_id) {
+      const original = await db.query<{ id: string }>(
+        "SELECT id FROM expenses WHERE id = $1 AND user_id = $2 AND voided_at IS NOT NULL LIMIT 1",
+        [data.resubmitted_from_expense_id, authReq.userId]
+      );
+      if (original.rows.length > 0) {
+        resubmittedFromExpenseId = original.rows[0].id;
+      }
+    }
+
     // A retry after a lost response (e.g. a transient gateway error) should
     // return the original result, not create a real duplicate. Cheap pre-
     // check to skip a pointless re-upload in the common case — the unique
@@ -263,9 +307,9 @@ expensesRouter.post(
         `INSERT INTO expenses (
            user_id, category, occurred_at, tax_year, payment_method, total_amount,
            reimbursement_status, reimbursed_amount, net_deductible_amount, business_use_percent, notes,
-           idempotency_key, transaction_time, created_at
+           idempotency_key, transaction_time, resubmitted_from_expense_id, created_at
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
          ON CONFLICT (user_id, idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING
          RETURNING id, category, occurred_at::text, tax_year, payment_method, total_amount::text,
                    reimbursement_status, reimbursed_amount::text, net_deductible_amount::text,
@@ -283,7 +327,8 @@ expensesRouter.post(
           data.business_use_percent,
           data.notes ?? null,
           data.idempotency_key ?? null,
-          data.transaction_time ?? null
+          data.transaction_time ?? null,
+          resubmittedFromExpenseId
         ]
       );
 
@@ -340,12 +385,25 @@ expensesRouter.post(
           .catch(() => {});
       }
 
+      let resubmittedFrom: ResubmittedFromWarning = null;
+      if (resubmittedFromExpenseId) {
+        const original = await db.query<ResubmitJoinRow>(
+          `SELECT id AS resub_id, occurred_at::text AS resub_occurred_at, category AS resub_category, total_amount::text AS resub_total_amount
+           FROM expenses WHERE id = $1`,
+          [resubmittedFromExpenseId]
+        );
+        if (original.rows.length > 0) {
+          resubmittedFrom = serializeResubmittedFrom(original.rows[0]);
+        }
+      }
+
       return res.status(201).json({
         expense: {
           ...serializeExpense(expense),
           receipt_download_url: receiptId ? getReceiptDownloadUrl(req, authReq.userId, receiptId) : null,
           receipt_mime_type: receiptId && req.file ? req.file.mimetype : null,
-          possible_duplicate: duplicateWarning
+          possible_duplicate: duplicateWarning,
+          resubmitted_from: resubmittedFrom
         },
         summary,
         duplicate_warning: duplicateWarning
@@ -598,14 +656,17 @@ expensesRouter.get("/expenses", requireAuth, async (req: Request, res: Response)
   params.push(limit + 1);
 
   try {
-    const rows = await db.query<ExpenseRow & { receipt_id: string | null; receipt_mime_type: string | null } & DuplicateJoinRow>(
+    const rows = await db.query<
+      ExpenseRow & { receipt_id: string | null; receipt_mime_type: string | null } & DuplicateJoinRow & ResubmitJoinRow
+    >(
       `SELECT e.id, e.category, e.occurred_at::text, e.tax_year, e.payment_method, e.total_amount::text,
               e.reimbursement_status, e.reimbursed_amount::text, e.net_deductible_amount::text,
               e.business_use_percent::text, e.notes, e.voided_at::text, e.void_reason, e.created_at::text,
-              r.id AS receipt_id, r.mime_type AS receipt_mime_type, ${duplicateJoinColumns}
+              r.id AS receipt_id, r.mime_type AS receipt_mime_type, ${duplicateJoinColumns}, ${resubmitJoinColumns}
        FROM expenses e
        LEFT JOIN receipts r ON r.expense_id = e.id
        ${duplicateJoin}
+       ${resubmitJoin}
        WHERE ${conditions.join(" AND ")}
        ORDER BY e.occurred_at DESC, e.created_at DESC, e.id DESC
        LIMIT $${params.length}`,
@@ -622,7 +683,8 @@ expensesRouter.get("/expenses", requireAuth, async (req: Request, res: Response)
         ...serializeExpense(row),
         receipt_download_url: row.receipt_id ? getReceiptDownloadUrl(req, authReq.userId, row.receipt_id) : null,
         receipt_mime_type: row.receipt_id ? row.receipt_mime_type : null,
-        possible_duplicate: serializePossibleDuplicate(row)
+        possible_duplicate: serializePossibleDuplicate(row),
+        resubmitted_from: serializeResubmittedFrom(row)
       })),
       next_cursor: nextCursor
     });
@@ -635,14 +697,17 @@ expensesRouter.get("/expenses/:id", requireAuth, async (req: Request, res: Respo
   const authReq = req as AuthenticatedRequest;
 
   try {
-    const result = await db.query<ExpenseRow & { receipt_id: string | null; receipt_mime_type: string | null } & DuplicateJoinRow>(
+    const result = await db.query<
+      ExpenseRow & { receipt_id: string | null; receipt_mime_type: string | null } & DuplicateJoinRow & ResubmitJoinRow
+    >(
       `SELECT e.id, e.category, e.occurred_at::text, e.tax_year, e.payment_method, e.total_amount::text,
               e.reimbursement_status, e.reimbursed_amount::text, e.net_deductible_amount::text,
               e.business_use_percent::text, e.notes, e.voided_at::text, e.void_reason, e.created_at::text,
-              r.id AS receipt_id, r.mime_type AS receipt_mime_type, ${duplicateJoinColumns}
+              r.id AS receipt_id, r.mime_type AS receipt_mime_type, ${duplicateJoinColumns}, ${resubmitJoinColumns}
        FROM expenses e
        LEFT JOIN receipts r ON r.expense_id = e.id
        ${duplicateJoin}
+       ${resubmitJoin}
        WHERE e.id = $1 AND e.user_id = $2
        LIMIT 1`,
       [req.params.id, authReq.userId]
@@ -658,7 +723,8 @@ expensesRouter.get("/expenses/:id", requireAuth, async (req: Request, res: Respo
         ...serializeExpense(row),
         receipt_download_url: row.receipt_id ? getReceiptDownloadUrl(req, authReq.userId, row.receipt_id) : null,
         receipt_mime_type: row.receipt_id ? row.receipt_mime_type : null,
-        possible_duplicate: serializePossibleDuplicate(row)
+        possible_duplicate: serializePossibleDuplicate(row),
+        resubmitted_from: serializeResubmittedFrom(row)
       }
     });
   } catch (error) {

@@ -26,6 +26,9 @@ export type Expense = {
   // (or had a receipt attached) — recomputed on every read, so it's null
   // again once the flagged expense is voided.
   possible_duplicate: DuplicateWarning;
+  // Set when this expense was created via "Resubmit" on a voided one — a
+  // permanent historical fact (unlike possible_duplicate, never clears).
+  resubmitted_from: DuplicateWarning;
 };
 
 export type IncomeInvoice = {

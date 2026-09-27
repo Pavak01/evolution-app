@@ -115,7 +115,8 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
             occurredAt: getTodayIso(),
             businessUsePercent: String(expense.business_use_percent),
             notes: expense.notes ?? "",
-            file
+            file,
+            originalExpenseId: expense.id
           }
         }
       });
@@ -186,6 +187,21 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
             onPress={() => navigation.navigate("ExpenseDetail", { expenseId: expense.possible_duplicate!.expense_id })}
           >
             Open the other entry
+          </Text>
+        </Card>
+      )}
+
+      {expense.resubmitted_from && (
+        <Card>
+          <Text style={{ fontSize: typography.body, fontWeight: "700", color: colors.textSecondary, marginBottom: spacing.sm }}>
+            Resubmitted
+          </Text>
+          <Text style={{ color: colors.textSecondary }}>{expense.resubmitted_from.message}</Text>
+          <Text
+            style={{ color: colors.accent, marginTop: spacing.sm, fontWeight: "600" }}
+            onPress={() => navigation.navigate("ExpenseDetail", { expenseId: expense.resubmitted_from!.expense_id })}
+          >
+            Open the original entry
           </Text>
         </Card>
       )}

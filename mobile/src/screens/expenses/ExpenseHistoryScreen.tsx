@@ -226,9 +226,14 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
             </View>
             <View style={styles.rowEnd}>
               <Text style={styles.amount}>£{item.total_amount.toFixed(2)}</Text>
-              {item.voided_at && <Text style={styles.voided}>voided</Text>}
+              {item.voided_at && (
+                <Text style={styles.voided} numberOfLines={1}>
+                  voided{item.void_reason ? `: ${item.void_reason}` : ""}
+                </Text>
+              )}
               {!item.voided_at && !item.receipt_download_url && <Text style={styles.voided}>missing receipt</Text>}
               {!item.voided_at && item.possible_duplicate && <Text style={styles.voided}>possible duplicate</Text>}
+              {!item.voided_at && item.resubmitted_from && <Text style={styles.voided}>resubmitted</Text>}
             </View>
           </Pressable>
         )}

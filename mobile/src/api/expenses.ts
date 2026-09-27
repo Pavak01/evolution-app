@@ -21,6 +21,8 @@ export type CreateExpenseInput = {
   idempotencyKey?: string;
   // OCR-only enrichment used for duplicate matching — never a manual-entry field.
   transactionTime?: string;
+  // Set only by the "Resubmit" flow on a voided expense's detail page.
+  resubmittedFromExpenseId?: string;
 };
 
 export async function createExpense(
@@ -47,6 +49,9 @@ export async function createExpense(
   }
   if (input.transactionTime) {
     fields.transaction_time = input.transactionTime;
+  }
+  if (input.resubmittedFromExpenseId) {
+    fields.resubmitted_from_expense_id = input.resubmittedFromExpenseId;
   }
 
   const file = input.receiptUri

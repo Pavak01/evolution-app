@@ -270,3 +270,12 @@ ALTER TABLE evolution.expenses DROP CONSTRAINT IF EXISTS expenses_net_deductible
 ALTER TABLE evolution.expenses ADD CONSTRAINT expenses_net_deductible_matches CHECK (
   net_deductible_amount = ROUND(total_amount * business_use_percent / 100, 2)
 );
+
+-- Set by the "Resubmit" flow (ExpenseDetailScreen -> CaptureExpenseScreen)
+-- when a new expense corrects a voided one — mirrors duplicate_of_expense_id
+-- exactly (nullable, no cascade, expenses are never hard-deleted). Unlike
+-- the duplicate flag this is a permanent historical fact, not something
+-- that needs to clear itself later — the original it points at stays
+-- voided forever, there's no unvoid for expenses.
+ALTER TABLE evolution.expenses ADD COLUMN IF NOT EXISTS resubmitted_from_expense_id UUID REFERENCES evolution.expenses(id);
+CREATE INDEX IF NOT EXISTS idx_expenses_resubmitted_from ON evolution.expenses(resubmitted_from_expense_id) WHERE resubmitted_from_expense_id IS NOT NULL;

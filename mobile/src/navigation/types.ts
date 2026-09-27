@@ -21,6 +21,10 @@ export type ResubmitPrefill = {
   businessUsePercent: string;
   notes: string;
   file: { uri: string; name: string; mimeType: string } | null;
+  // The voided expense being corrected — carried through to the new
+  // expense's resubmitted_from_expense_id so History/detail can show the
+  // link back to it (see "mark resubmitted as resubmitted").
+  originalExpenseId: string;
 };
 
 export type CaptureStackParamList = {

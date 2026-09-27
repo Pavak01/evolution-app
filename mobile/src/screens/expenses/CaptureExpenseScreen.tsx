@@ -42,6 +42,9 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
   // Local file, not yet uploaded — the viewer points straight at its uri,
   // no download step needed (same as ImportReceiptsScreen's tap-to-enlarge).
   const [viewerUri, setViewerUri] = useState<string | null>(null);
+  // Set only via the "Resubmit" prefill effect below — carries the voided
+  // expense's id through to the save, so it can be linked as the original.
+  const [resubmittedFromExpenseId, setResubmittedFromExpenseId] = useState<string | null>(null);
 
   // travel is the one category where a receipt genuinely may not exist yet
   // at capture time (see api/expenses.ts / offlineQueue.ts) — it can still
@@ -91,6 +94,7 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
     setTransactionTime(undefined);
     setFuelCardHint(null);
     setViewerUri(null);
+    setResubmittedFromExpenseId(null);
     // occurredAt deliberately left as-is: back-to-back captures on the same day are the common case.
   }
 
@@ -109,6 +113,7 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
     setBusinessUsePercent(resubmit.businessUsePercent);
     setNotes(resubmit.notes);
     setReceipt(resubmit.file);
+    setResubmittedFromExpenseId(resubmit.originalExpenseId);
     showStatus({ kind: "info", text: "Prefilled from a voided expense — review and correct before saving." });
     navigation.setParams({ resubmit: undefined });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -209,7 +214,8 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
       business_use_percent: Number(businessUsePercent),
       notes: notes.trim() || undefined,
       idempotencyKey,
-      transactionTime
+      transactionTime,
+      resubmittedFromExpenseId: resubmittedFromExpenseId ?? undefined
     };
     try {
       const { summary, duplicate_warning } = await createExpense({
