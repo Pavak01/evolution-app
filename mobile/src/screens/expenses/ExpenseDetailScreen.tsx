@@ -1,8 +1,8 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
-import { ActivityIndicator, Text, View, type ScrollView } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 import { attachReceipt, getExpense, voidExpense } from "../../api/expenses";
 import { ApiError } from "../../api/client";
 import type { Expense } from "../../api/types";
@@ -34,8 +34,6 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
   const [isAttaching, setIsAttaching] = useState(false);
   const [isResubmitting, setIsResubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const scrollRef = useRef<ScrollView>(null);
 
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerLoading, setViewerLoading] = useState(false);
@@ -152,7 +150,7 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
   }
 
   return (
-    <Screen ref={scrollRef}>
+    <Screen>
       <Text style={{ fontSize: typography.h1, fontWeight: "700", color: colors.textMain }}>
         {humanizeCategory(expense.category)}
       </Text>
@@ -245,7 +243,6 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
             value={voidReason}
             onChange={setVoidReason}
             placeholder="Duplicate entry, wrong amount..."
-            onFocus={() => scrollRef.current?.scrollToEnd({ animated: true })}
           />
           {error && <StatusBanner kind="error" text={error} />}
           <View style={{ height: spacing.sm }} />
