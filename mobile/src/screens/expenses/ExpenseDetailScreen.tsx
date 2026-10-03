@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { ActivityIndicator, Text, View } from "react-native";
 import { attachReceipt, getExpense, updateReimbursement, voidExpense } from "../../api/expenses";
@@ -38,6 +38,13 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
   const [reimbAmount, setReimbAmount] = useState("");
   const [isUpdatingReimb, setIsUpdatingReimb] = useState(false);
   const [reimbError, setReimbError] = useState<string | null>(null);
+  const [reimbUpdated, setReimbUpdated] = useState(false);
+  // Cleared on unmount so backing out manually during the "Updated" pause
+  // doesn't fire a second goBack() and pop History too.
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+  }, []);
 
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerLoading, setViewerLoading] = useState(false);
@@ -153,7 +160,10 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
     setReimbError(null);
     try {
       await updateReimbursement(expenseId, reimbStatus, reimbStatus === "partial" ? Number(reimbAmount) : undefined);
-      await load();
+      // Brief confirmation, then back to History (which reloads on focus
+      // and shows the reimbursement badge) — same exit as voiding.
+      setReimbUpdated(true);
+      closeTimer.current = setTimeout(() => navigation.goBack(), 800);
     } catch (err) {
       setReimbError(err instanceof ApiError ? err.message : "Could not update the reimbursement.");
     } finally {
@@ -282,12 +292,12 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
           )}
           {reimbError && <StatusBanner kind="error" text={reimbError} />}
           <PrimaryButton
-            label="Update"
+            label={reimbUpdated ? "Updated ✓" : "Update"}
             onPress={handleUpdateReimbursement}
             isLoading={isUpdatingReimb}
             disabled={
-              reimbStatus === "partial" &&
-              !(Number(reimbAmount) > 0 && Number(reimbAmount) < expense.total_amount)
+              reimbUpdated ||
+              (reimbStatus === "partial" && !(Number(reimbAmount) > 0 && Number(reimbAmount) < expense.total_amount))
             }
           />
         </Card>
