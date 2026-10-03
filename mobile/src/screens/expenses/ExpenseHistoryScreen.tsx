@@ -18,9 +18,18 @@ type Props = NativeStackScreenProps<ExpensesStackParamList, "ExpenseHistory">;
 
 const SEARCH_DEBOUNCE_MS = 400;
 
-type Filters = { category: string | null; from: string; to: string; minAmount: string; maxAmount: string };
+type Filters = {
+  category: string | null;
+  from: string;
+  to: string;
+  minAmount: string;
+  maxAmount: string;
+  // Finds the travel entries still waiting on a firm's reimbursement —
+  // the tax summary's AWAITING_REIMBURSEMENT warning points here.
+  awaitingOnly: boolean;
+};
 
-const EMPTY_FILTERS: Filters = { category: null, from: "", to: "", minAmount: "", maxAmount: "" };
+const EMPTY_FILTERS: Filters = { category: null, from: "", to: "", minAmount: "", maxAmount: "", awaitingOnly: false };
 
 export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -82,6 +91,8 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
           to: filters.to || undefined,
           min_amount: filters.minAmount ? Number(filters.minAmount) : undefined,
           max_amount: filters.maxAmount ? Number(filters.maxAmount) : undefined,
+          reimbursement_status: filters.awaitingOnly ? "awaiting" : undefined,
+          include_voided: !filters.awaitingOnly,
           cursor: reset ? undefined : (cursor ?? undefined)
         });
         if (requestId !== requestIdRef.current) return; // a newer request already landed
@@ -134,13 +145,14 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
     const timer = setTimeout(() => void load(true), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchText, filters.category, filters.from, filters.to, filters.minAmount, filters.maxAmount, taxYear]);
+  }, [searchText, filters.category, filters.from, filters.to, filters.minAmount, filters.maxAmount, filters.awaitingOnly, taxYear]);
 
   function updateFilter<K extends keyof Filters>(key: K, value: Filters[K]): void {
     setFilters((current) => ({ ...current, [key]: value }));
   }
 
-  const hasActiveFilters = filters.category !== null || filters.from || filters.to || filters.minAmount || filters.maxAmount;
+  const hasActiveFilters =
+    filters.category !== null || filters.from || filters.to || filters.minAmount || filters.maxAmount || filters.awaitingOnly;
   const previousTaxYear = `${Number(taxYear.slice(0, 4)) - 1}-${String(Number(taxYear.slice(0, 4)) % 100).padStart(2, "0")}`;
   const currentTaxYear = getTaxYearFromDate(new Date());
 
@@ -198,6 +210,13 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
 
             {showFilters && (
               <Card>
+                <View style={styles.awaitingRow}>
+                  <SmallAction
+                    label="Awaiting reimbursement"
+                    active={filters.awaitingOnly}
+                    onPress={() => updateFilter("awaitingOnly", !filters.awaitingOnly)}
+                  />
+                </View>
                 <CategoryPickerModal
                   label="Category"
                   value={filters.category ?? ""}
@@ -236,9 +255,11 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
               {!item.voided_at && item.resubmitted_from && <Text style={styles.voided}>resubmitted</Text>}
               {!item.voided_at && item.reimbursement_status !== "none" && (
                 <Text style={styles.voided}>
-                  {item.reimbursement_status === "full"
-                    ? "fully reimbursed"
-                    : `partially reimbursed: £${item.reimbursed_amount.toFixed(2)}`}
+                  {item.reimbursement_status === "awaiting"
+                    ? "awaiting reimbursement"
+                    : item.reimbursement_status === "full"
+                      ? "fully reimbursed"
+                      : `partially reimbursed: £${item.reimbursed_amount.toFixed(2)}`}
                 </Text>
               )}
             </View>
@@ -255,6 +276,7 @@ const styles = StyleSheet.create({
   errorWrap: { padding: spacing.md },
   taxYearRow: { flexDirection: "row", gap: spacing.xs, paddingHorizontal: spacing.md, paddingTop: spacing.md },
   searchWrap: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
+  awaitingRow: { flexDirection: "row", marginBottom: spacing.md },
   filtersToggle: { color: colors.accent, fontWeight: "600", marginBottom: spacing.sm },
   clearFilters: { color: colors.danger, fontWeight: "600", textAlign: "center", marginTop: spacing.sm },
   list: { padding: spacing.md, gap: spacing.sm },

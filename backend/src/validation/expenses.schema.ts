@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ReimbursementStatus } from "../types.js";
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "must be an ISO date (YYYY-MM-DD)");
 
@@ -14,7 +15,9 @@ export const expenseWriteSchema = z
     occurred_at: isoDate,
     payment_method: z.enum(["cash", "card"]),
     total_amount: money.pipe(z.number().positive()),
-    reimbursement_status: z.enum(["none", "partial", "full"]).default("none"),
+    // Only "is one expected?" at capture — an amount is never known yet, and
+    // is only ever recorded afterwards via POST /expenses/:id/reimbursement.
+    reimbursement_status: z.enum(["none", "awaiting"]).default("none"),
     reimbursed_amount: money.pipe(z.number().min(0)).optional(),
     business_use_percent: money.pipe(z.number().min(1).max(100)).default(100),
     notes: z.string().trim().max(1000).optional(),
@@ -34,27 +37,11 @@ export const expenseWriteSchema = z
       ctx.addIssue({ code: "custom", path: ["occurred_at"], message: "occurred_at cannot be in the future" });
     }
 
-    if (data.reimbursement_status === "none" && reimbursed !== 0) {
+    if (reimbursed !== 0) {
       ctx.addIssue({
         code: "custom",
         path: ["reimbursed_amount"],
-        message: "reimbursed_amount must be 0 (or omitted) when reimbursement_status is none"
-      });
-    }
-
-    if (data.reimbursement_status === "partial" && !(reimbursed > 0 && reimbursed < data.total_amount)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["reimbursed_amount"],
-        message: "reimbursed_amount must be greater than 0 and less than total_amount when reimbursement_status is partial"
-      });
-    }
-
-    if (data.reimbursement_status === "full" && data.reimbursed_amount !== undefined && reimbursed !== data.total_amount) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["reimbursed_amount"],
-        message: "reimbursed_amount must equal total_amount (or be omitted) when reimbursement_status is full"
+        message: "reimbursed_amount must be 0 (or omitted) when creating an expense — record it afterwards"
       });
     }
   });
@@ -75,7 +62,7 @@ export type ExpenseWriteInput = z.infer<typeof expenseWriteSchema>;
 // Inputs are already validated to at most 2 decimal places.
 export function computeNetDeductible(
   totalAmount: number,
-  reimbursementStatus: "none" | "partial" | "full",
+  reimbursementStatus: ReimbursementStatus,
   reimbursedAmount: number,
   businessUsePercent: number
 ): number {
@@ -88,10 +75,11 @@ export function computeNetDeductible(
   return netPennies > 0n ? Number(netPennies) / 100 : 0;
 }
 
-// Create path only: reimbursement is never known at capture time — a firm
-// that reimburses does so later, as a separate payment never folded into
-// any income record. So a new expense always starts at reimbursed 0; real
-// values are only ever written afterwards via POST /expenses/:id/reimbursement.
+// Create path only: the reimbursed amount is never known at capture time —
+// a firm that reimburses does so later, as a separate payment never folded
+// into any income record. So a new expense ("none" or "awaiting") always
+// starts at reimbursed 0 and counts in full; real values are only ever
+// written afterwards via POST /expenses/:id/reimbursement.
 export function deriveExpenseAmounts(data: ExpenseWriteInput): {
   reimbursed_amount: number;
   net_deductible_amount: number;
@@ -105,7 +93,7 @@ export function deriveExpenseAmounts(data: ExpenseWriteInput): {
 // Amount-vs-total checks happen in the route after loading the row — zod
 // has no access to the stored total_amount here.
 export const reimbursementUpdateSchema = z.object({
-  reimbursement_status: z.enum(["none", "partial", "full"]),
+  reimbursement_status: z.enum(["none", "awaiting", "partial", "full"]),
   reimbursed_amount: money.pipe(z.number().min(0)).optional()
 });
 
@@ -118,7 +106,7 @@ export const expenseListQuerySchema = z.object({
   from: isoDate.optional(),
   to: isoDate.optional(),
   category: z.string().trim().min(1).max(100).optional(),
-  reimbursement_status: z.enum(["none", "partial", "full"]).optional(),
+  reimbursement_status: z.enum(["none", "awaiting", "partial", "full"]).optional(),
   include_voided: z
     .enum(["true", "false"])
     .optional()

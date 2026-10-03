@@ -31,13 +31,17 @@ export async function recomputeTaxSummary(userId: string, taxYear: string): Prom
     net_deductible_amount: string;
     pending_deductible_amount: string;
     has_food: boolean;
+    awaiting_count: string;
+    awaiting_amount: string;
   }>(
     `SELECT
        COALESCE(SUM(e.total_amount), 0)::text AS total_amount,
        COALESCE(SUM(e.reimbursed_amount), 0)::text AS reimbursed_amount,
        COALESCE(SUM(CASE WHEN r.id IS NOT NULL THEN e.net_deductible_amount ELSE 0 END), 0)::text AS net_deductible_amount,
        COALESCE(SUM(CASE WHEN r.id IS NULL THEN e.net_deductible_amount ELSE 0 END), 0)::text AS pending_deductible_amount,
-       BOOL_OR(LOWER(e.category) = 'food') AS has_food
+       BOOL_OR(LOWER(e.category) = 'food') AS has_food,
+       COUNT(DISTINCT e.id) FILTER (WHERE e.reimbursement_status = 'awaiting')::text AS awaiting_count,
+       COALESCE(SUM(e.total_amount) FILTER (WHERE e.reimbursement_status = 'awaiting'), 0)::text AS awaiting_amount
      FROM expenses e
      LEFT JOIN receipts r ON r.expense_id = e.id
      WHERE e.user_id = $1 AND e.tax_year = $2 AND e.voided_at IS NULL`,
@@ -81,6 +85,20 @@ export async function recomputeTaxSummary(userId: string, taxYear: string): Prom
     pendingDeductibleAmount,
     excessReimbursement: 0
   });
+
+  // Added here rather than in generateComplianceWarnings, which is kept a
+  // byte-for-byte match with Qbit's taxEngine.ts. Awaiting expenses still
+  // count in full (correct if the money never comes) — this just keeps the
+  // outstanding ones from being forgotten once it does.
+  const awaitingCount = Number(expenseTotals.rows[0].awaiting_count);
+  if (awaitingCount > 0) {
+    const awaitingAmount = Number(expenseTotals.rows[0].awaiting_amount);
+    warnings.push({
+      code: "AWAITING_REIMBURSEMENT",
+      message: `${awaitingCount} expense${awaitingCount === 1 ? " is" : "s are"} awaiting reimbursement (£${awaitingAmount.toFixed(2)}) — record what's paid back once you know, or your deductions may be overstated. Filter History by "Awaiting reimbursement" to find them.`,
+      severity: "medium"
+    });
+  }
 
   await db.query(
     `INSERT INTO tax_summaries (

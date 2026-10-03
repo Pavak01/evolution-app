@@ -792,9 +792,11 @@ expensesRouter.post("/expenses/:id/reimbursement", requireAuth, async (req: Requ
     const total = Number(row.total_amount);
     const { reimbursement_status: status } = parsed.data;
     let reimbursed: number;
-    if (status === "none") {
+    if (status === "none" || status === "awaiting") {
       if ((parsed.data.reimbursed_amount ?? 0) !== 0) {
-        return res.status(400).json({ error: "Reimbursed amount must be 0 (or omitted) when not reimbursed" });
+        return res
+          .status(400)
+          .json({ error: "Reimbursed amount must be 0 (or omitted) when not reimbursed or still awaiting it" });
       }
       reimbursed = 0;
     } else if (status === "partial") {

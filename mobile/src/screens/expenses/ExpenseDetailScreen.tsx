@@ -128,7 +128,8 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
             businessUsePercent: String(expense.business_use_percent),
             notes: expense.notes ?? "",
             file,
-            originalExpenseId: expense.id
+            originalExpenseId: expense.id,
+            awaitingReimbursement: expense.reimbursement_status === "awaiting"
           }
         }
       });
@@ -272,12 +273,15 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
             Currently:{" "}
             {expense.reimbursement_status === "none"
               ? "not reimbursed"
-              : expense.reimbursement_status === "full"
-                ? "fully reimbursed"
-                : `£${expense.reimbursed_amount.toFixed(2)} reimbursed`}
+              : expense.reimbursement_status === "awaiting"
+                ? "awaiting reimbursement (counted in full until recorded)"
+                : expense.reimbursement_status === "full"
+                  ? "fully reimbursed"
+                  : `£${expense.reimbursed_amount.toFixed(2)} reimbursed`}
           </Text>
-          <View style={{ flexDirection: "row", gap: spacing.xs, marginBottom: spacing.md }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginBottom: spacing.md }}>
             <SmallAction label="Not reimbursed" active={reimbStatus === "none"} onPress={() => setReimbStatus("none")} />
+            <SmallAction label="Awaiting" active={reimbStatus === "awaiting"} onPress={() => setReimbStatus("awaiting")} />
             <SmallAction label="Partially" active={reimbStatus === "partial"} onPress={() => setReimbStatus("partial")} />
             <SmallAction label="Fully" active={reimbStatus === "full"} onPress={() => setReimbStatus("full")} />
           </View>

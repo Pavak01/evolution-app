@@ -1,6 +1,6 @@
 export type PaymentMethod = "cash" | "card";
 
-export type ReimbursementStatus = "none" | "partial" | "full";
+export type ReimbursementStatus = "none" | "awaiting" | "partial" | "full";
 
 export type TaxRuleSet = {
   id: string;

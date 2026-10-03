@@ -311,3 +311,23 @@ ALTER TABLE evolution.expenses DROP CONSTRAINT IF EXISTS expenses_net_deductible
 ALTER TABLE evolution.expenses ADD CONSTRAINT expenses_net_deductible_matches CHECK (
   net_deductible_amount = GREATEST(0, ROUND(total_amount * business_use_percent / 100, 2) - reimbursed_amount)
 );
+
+-- 'awaiting': marked at capture (travel only, in the app) when a firm is
+-- expected to reimburse it later but hasn't said how much yet. Counts in
+-- full until the real amount is recorded — if the reimbursement never
+-- arrives, the full deduction was correct all along. Stores no amount, so
+-- the net_deductible CHECK above applies unchanged. Its only other effect
+-- is the AWAITING_REIMBURSEMENT warning on the tax summary, so it can't be
+-- forgotten.
+ALTER TABLE evolution.expenses DROP CONSTRAINT IF EXISTS expenses_reimbursement_status_check;
+ALTER TABLE evolution.expenses ADD CONSTRAINT expenses_reimbursement_status_check
+  CHECK (reimbursement_status IN ('none', 'awaiting', 'partial', 'full'));
+
+ALTER TABLE evolution.expenses DROP CONSTRAINT IF EXISTS expenses_reimbursement_consistency;
+ALTER TABLE evolution.expenses ADD CONSTRAINT expenses_reimbursement_consistency CHECK (
+  (reimbursement_status IN ('none', 'awaiting') AND reimbursed_amount = 0) OR
+  (reimbursement_status = 'partial' AND reimbursed_amount > 0 AND reimbursed_amount < total_amount) OR
+  (reimbursement_status = 'full'    AND reimbursed_amount = total_amount)
+);
+CREATE INDEX IF NOT EXISTS idx_expenses_awaiting_reimbursement
+  ON evolution.expenses(user_id, tax_year) WHERE reimbursement_status = 'awaiting' AND voided_at IS NULL;

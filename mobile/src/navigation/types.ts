@@ -21,6 +21,8 @@ export type ResubmitPrefill = {
   businessUsePercent: string;
   notes: string;
   file: { uri: string; name: string; mimeType: string } | null;
+  // Carries a still-outstanding reimbursement over to the corrected entry.
+  awaitingReimbursement: boolean;
   // The voided expense being corrected — carried through to the new
   // expense's resubmitted_from_expense_id so History/detail can show the
   // link back to it (see "mark resubmitted as resubmitted").

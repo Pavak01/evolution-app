@@ -50,6 +50,11 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
   // at capture time (see api/expenses.ts / offlineQueue.ts) — it can still
   // be attached later from ExpenseDetailScreen.
   const isTravel = category.trim().toLowerCase() === "travel";
+  // Travel only: "will a firm pay some of this back later?" — the amount
+  // is never known yet. Saves as reimbursement_status "awaiting", which
+  // still counts in full but keeps a tax-summary warning up until the
+  // real amount is recorded from ExpenseDetailScreen.
+  const [awaitingReimbursement, setAwaitingReimbursement] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
@@ -95,6 +100,7 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
     setFuelCardHint(null);
     setViewerUri(null);
     setResubmittedFromExpenseId(null);
+    setAwaitingReimbursement(false);
     // occurredAt deliberately left as-is: back-to-back captures on the same day are the common case.
   }
 
@@ -114,6 +120,7 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
     setNotes(resubmit.notes);
     setReceipt(resubmit.file);
     setResubmittedFromExpenseId(resubmit.originalExpenseId);
+    setAwaitingReimbursement(resubmit.awaitingReimbursement);
     showStatus({ kind: "info", text: "Prefilled from a voided expense — review and correct before saving." });
     navigation.setParams({ resubmit: undefined });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -207,10 +214,9 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
       occurred_at: occurredAt,
       payment_method: paymentMethod,
       total_amount: Number(totalAmount),
-      // Reimbursement tracking is parked, not removed — see
-      // deriveExpenseAmounts in the backend for why. Always "none" here,
-      // matching ImportReceiptsScreen's same default.
-      reimbursement_status: "none" as const,
+      // Only ever "is one expected?" at capture — the amount is recorded
+      // later from ExpenseDetailScreen. ImportReceiptsScreen always sends "none".
+      reimbursement_status: isTravel && awaitingReimbursement ? ("awaiting" as const) : ("none" as const),
       business_use_percent: Number(businessUsePercent),
       notes: notes.trim() || undefined,
       idempotencyKey,
@@ -313,6 +319,18 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
           <SmallAction label="Card" active={paymentMethod === "card"} onPress={() => setPaymentMethod("card")} />
           <SmallAction label="Cash" active={paymentMethod === "cash"} onPress={() => setPaymentMethod("cash")} />
         </View>
+
+        {isTravel && (
+          <>
+            <Text style={{ fontSize: typography.body, fontWeight: "600", color: colors.textSecondary, marginBottom: spacing.xs }}>
+              Expecting reimbursement?
+            </Text>
+            <View style={{ flexDirection: "row", gap: spacing.xs, marginBottom: spacing.md }}>
+              <SmallAction label="No" active={!awaitingReimbursement} onPress={() => setAwaitingReimbursement(false)} />
+              <SmallAction label="Yes" active={awaitingReimbursement} onPress={() => setAwaitingReimbursement(true)} />
+            </View>
+          </>
+        )}
 
         {isAdjustingBusinessUse ? (
           <Field

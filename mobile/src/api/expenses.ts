@@ -79,6 +79,10 @@ export type ListExpensesParams = {
   to?: string;
   min_amount?: number;
   max_amount?: number;
+  reimbursement_status?: ReimbursementStatus;
+  // Defaults to true — see below. Off only for "find what's still to do"
+  // filters, where a voided entry is never one of them.
+  include_voided?: boolean;
   cursor?: string;
   limit?: number;
 };
@@ -87,7 +91,7 @@ export async function listExpenses(params?: ListExpensesParams): Promise<{ expen
   // Voided entries must stay visible (audit trail — see void's design intent)
   // rather than disappearing, so History's one caller always includes them;
   // the "voided" badge in ExpenseHistoryScreen is what distinguishes them.
-  const query = new URLSearchParams({ include_voided: "true" });
+  const query = new URLSearchParams({ include_voided: String(params?.include_voided ?? true) });
   if (params?.tax_year) query.set("tax_year", params.tax_year);
   if (params?.search) query.set("search", params.search);
   if (params?.category) query.set("category", params.category);
@@ -95,6 +99,7 @@ export async function listExpenses(params?: ListExpensesParams): Promise<{ expen
   if (params?.to) query.set("to", params.to);
   if (params?.min_amount !== undefined) query.set("min_amount", String(params.min_amount));
   if (params?.max_amount !== undefined) query.set("max_amount", String(params.max_amount));
+  if (params?.reimbursement_status) query.set("reimbursement_status", params.reimbursement_status);
   if (params?.cursor) query.set("cursor", params.cursor);
   if (params?.limit !== undefined) query.set("limit", String(params.limit));
   return apiJson<{ expenses: Expense[]; next_cursor: string | null }>(`/expenses?${query.toString()}`);
