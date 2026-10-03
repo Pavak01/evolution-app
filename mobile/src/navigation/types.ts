@@ -7,7 +7,8 @@ export type AuthStackParamList = {
 };
 
 export type ExpensesStackParamList = {
-  ExpenseHistory: undefined;
+  // awaitingOnly: opened from a reimbursement reminder — starts filtered.
+  ExpenseHistory: { awaitingOnly?: boolean } | undefined;
   ExpenseDetail: { expenseId: string };
 };
 
@@ -50,7 +51,7 @@ export type MainTabParamList = {
   Capture: NavigatorScreenParams<CaptureStackParamList> | undefined;
   Income: undefined;
   Summary: undefined;
-  History: undefined;
+  History: NavigatorScreenParams<ExpensesStackParamList> | undefined;
   Export: undefined;
   Settings: undefined;
 };

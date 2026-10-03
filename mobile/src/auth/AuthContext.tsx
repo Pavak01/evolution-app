@@ -3,6 +3,7 @@ import { AppState } from "react-native";
 import { fetchMe, login as apiLogin, register as apiRegister, verifyTwoFactor as apiVerifyTwoFactor, type AuthUser, type LoginResult } from "../api/auth";
 import { clearToken, getToken, setUnauthorizedListener } from "../api/client";
 import { syncQueue } from "../offlineQueue";
+import { cancelReimbursementReminders, syncReimbursementReminders } from "../reimbursementReminders";
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -28,12 +29,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   // the foreground while signed in — the queue survives a forced logout
   // from unauthorizedListener above (only ever removed on success), so
   // this naturally picks queued items back up once the user signs in again.
+  //
+  // Reimbursement reminders are rebuilt on the same trigger, after the queue
+  // (a just-synced "awaiting" expense should count), and cleared on sign-out
+  // so a signed-out device never nags about someone's expenses.
   useEffect(() => {
-    if (!user) return;
-    void syncQueue();
+    if (!user) {
+      void cancelReimbursementReminders().catch(() => undefined);
+      return;
+    }
+    const syncAll = () => void syncQueue().finally(() => syncReimbursementReminders());
+    syncAll();
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") {
-        void syncQueue();
+        syncAll();
       }
     });
     return () => subscription.remove();

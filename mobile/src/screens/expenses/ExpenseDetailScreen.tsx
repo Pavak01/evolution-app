@@ -8,6 +8,7 @@ import { ApiError } from "../../api/client";
 import type { Expense, ReimbursementStatus } from "../../api/types";
 import { awaitingPill, Card, DangerAction, Field, PrimaryButton, SmallAction, StatusBanner, SummaryRow } from "../../components/Controls";
 import { ImageViewerModal } from "../../components/ImageViewerModal";
+import { syncReimbursementReminders } from "../../reimbursementReminders";
 import { Screen } from "../../components/Screen";
 import { useReceiptCapture } from "../../hooks/useReceiptCapture";
 import { colors, spacing, typography } from "../../theme/tokens";
@@ -148,6 +149,7 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
     setError(null);
     try {
       await voidExpense(expenseId, voidReason.trim());
+      void syncReimbursementReminders();
       navigation.goBack();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not void this expense.");
@@ -161,6 +163,7 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
     setReimbError(null);
     try {
       await updateReimbursement(expenseId, reimbStatus, reimbStatus === "partial" ? Number(reimbAmount) : undefined);
+      void syncReimbursementReminders({ askPermission: reimbStatus === "awaiting" });
       // Brief confirmation, then back to History (which reloads on focus
       // and shows the reimbursement badge) — same exit as voiding.
       setReimbUpdated(true);

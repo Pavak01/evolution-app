@@ -15,6 +15,7 @@ import { ReceiptThumbnail } from "../../components/ReceiptThumbnail";
 import { Screen } from "../../components/Screen";
 import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCapture";
 import { enqueueExpense, generateLocalId, syncQueue } from "../../offlineQueue";
+import { syncReimbursementReminders } from "../../reimbursementReminders";
 import type { CaptureStackParamList } from "../../navigation/types";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTaxYearFromDate, getTodayIso } from "../../utils/taxYear";
@@ -231,6 +232,10 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
         receiptType: receipt?.mimeType
       });
       setLastSummary(summary);
+      if (fields.reimbursement_status === "awaiting") {
+        // The moment a reminder makes sense — asks for notification permission if not yet decided.
+        void syncReimbursementReminders({ askPermission: true });
+      }
       showStatus({
         kind: "info",
         text: duplicate_warning ? `Expense logged. ${duplicate_warning.message}` : "Expense logged."

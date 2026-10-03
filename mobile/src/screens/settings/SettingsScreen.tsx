@@ -5,6 +5,7 @@ import { ApiError } from "../../api/client";
 import { resetAllData } from "../../api/dataReset";
 import { Card, DangerAction, Field, PrimaryButton, StatusBanner } from "../../components/Controls";
 import { Screen } from "../../components/Screen";
+import { sendTestReimbursementReminder } from "../../reimbursementReminders";
 import { useAuth } from "../../auth/AuthContext";
 import { colors, spacing, typography } from "../../theme/tokens";
 
@@ -20,6 +21,7 @@ function openDoc(path: string): void {
 export function SettingsScreen(): React.JSX.Element {
   const { user, logout } = useAuth();
 
+  const [testReminderNote, setTestReminderNote] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [confirmText, setConfirmText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -81,6 +83,22 @@ export function SettingsScreen(): React.JSX.Element {
         </Text>
         <PrimaryButton label="Log out" onPress={logout} />
       </Card>
+
+      {__DEV__ && (
+        <Card>
+          <Text style={{ color: colors.textMuted, marginBottom: spacing.sm }}>
+            Dev only: {testReminderNote ?? "fires a sample reimbursement reminder in 10 seconds — background the app to see it."}
+          </Text>
+          <PrimaryButton
+            label="Send test reminder"
+            onPress={() =>
+              void sendTestReimbursementReminder().then((ok) =>
+                setTestReminderNote(ok ? "scheduled — background the app now." : "notifications aren't allowed for this app.")
+              )
+            }
+          />
+        </Card>
+      )}
 
       <Card>
         <Text style={{ fontSize: typography.body, fontWeight: "700", color: colors.textMain, marginBottom: spacing.sm }}>

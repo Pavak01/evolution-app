@@ -31,7 +31,7 @@ type Filters = {
 
 const EMPTY_FILTERS: Filters = { category: null, from: "", to: "", minAmount: "", maxAmount: "", awaitingOnly: false };
 
-export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
+export function ExpenseHistoryScreen({ navigation, route }: Props): React.JSX.Element {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [pending, setPending] = useState<PendingItem[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -146,6 +146,16 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchText, filters.category, filters.from, filters.to, filters.minAmount, filters.maxAmount, filters.awaitingOnly, taxYear]);
+
+  // Tapping a reimbursement reminder lands here with awaitingOnly — open
+  // straight onto the list it's reminding about. Cleared once applied.
+  useEffect(() => {
+    if (!route.params?.awaitingOnly) return;
+    setFilters({ ...EMPTY_FILTERS, awaitingOnly: true });
+    setShowFilters(true);
+    navigation.setParams({ awaitingOnly: undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.params?.awaitingOnly]);
 
   function updateFilter<K extends keyof Filters>(key: K, value: Filters[K]): void {
     setFilters((current) => ({ ...current, [key]: value }));

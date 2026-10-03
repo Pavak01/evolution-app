@@ -44,6 +44,8 @@ After saving, you'll see your running total for the current tax year (net profit
 
 **Expecting a reimbursement?** Some firms pay back part of your travel costs separately, later on — not as part of your invoice. When you log a travel expense, you'll see **Expecting reimbursement?** with **No** / **Yes**. Choose **Yes** if a firm is likely to pay some of it back. You don't need to know the amount yet. The expense is saved as **awaiting reimbursement** (shown in amber everywhere) and still counts in full for now, because if the money never arrives, it's a cost you genuinely paid. See [Recording a reimbursement](#recording-a-reimbursement) for what to do once you know the amount.
 
+The first time you do this, the app asks whether it can send you notifications. If you allow it, you'll get a reminder at 9am, two weeks after the oldest expense still awaiting reimbursement, and then once a week until you've recorded them all. Tapping the reminder opens History showing just those expenses. Reminders stop on their own once nothing is awaiting, and you can turn them off any time in your phone's notification settings.
+
 **A note on other file types**: photo capture and photo-library selection both work reliably. Picking a PDF or a "Files" document doesn't currently work — a photo or screenshot of the PDF works as a substitute.
 
 **Auto-fill from receipt**: a paid upgrade, currently in preview, that reads a picked receipt photo and fills in the category, amount, and date for you — still fully editable before you save. Not yet purchasable; accounts with early access see an **Auto-fill from receipt** button once a photo is added, everyone else sees a "coming soon" note in its place.

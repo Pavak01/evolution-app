@@ -46,7 +46,7 @@ When you log the travel expense, choose **Yes** under **Expecting reimbursement?
 Then the full expense was always deductible, and that's how it's already being counted. An expense awaiting reimbursement counts in full until you record otherwise. Open it and choose **Not reimbursed** to clear the reminder.
 
 **How do I make sure I don't forget to record a reimbursement?**
-While any expense is awaiting reimbursement, Summary shows an amber note under **Things to review** with how many there are and their total. In History, they're marked in amber, and **Filters → Awaiting reimbursement** lists just those, so you can work through them against the firm's statement.
+While any expense is awaiting reimbursement, Summary shows an amber note under **Things to review** with how many there are and their total. In History, they're marked in amber, and **Filters → Awaiting reimbursement** lists just those, so you can work through them against the firm's statement. If you allow notifications, you'll also get a reminder two weeks after the oldest one, then weekly, until they're all recorded. Tap it to go straight to that list.
 
 **How does a reimbursement work with "Business use %"?**
 The reimbursement comes off the business share of the cost, since that's the part it's paying back, and the result never goes below zero. For example, a £50 cost at 60% business use is £30 of business cost; if £10 is paid back, £20 is deductible.

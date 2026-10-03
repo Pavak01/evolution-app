@@ -1,7 +1,8 @@
-import { NavigationContainer } from "@react-navigation/native";
+import { createNavigationContainerRef, NavigationContainer } from "@react-navigation/native";
+import * as Notifications from "expo-notifications";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import React from "react";
+import React, { useCallback, useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { useAuth } from "../auth/AuthContext";
 import { LoginScreen } from "../screens/auth/LoginScreen";
@@ -79,8 +80,32 @@ function MainTabs(): React.JSX.Element {
   );
 }
 
+const navigationRef = createNavigationContainerRef<MainTabParamList>();
+
+function openAwaitingFromReminder(response: Notifications.NotificationResponse | null): void {
+  if (response?.notification.request.content.data?.kind !== "reimbursement-reminder") return;
+  if (!navigationRef.isReady()) return;
+  navigationRef.navigate("History", { screen: "ExpenseHistory", params: { awaitingOnly: true } });
+}
+
 export function RootNavigator(): React.JSX.Element {
   const { user, isLoading } = useAuth();
+
+  // Tapping a reimbursement reminder opens History filtered to what's
+  // still awaiting — both while running and from a cold start (onReady).
+  useEffect(() => {
+    if (!user) return;
+    const subscription = Notifications.addNotificationResponseReceivedListener(openAwaitingFromReminder);
+    return () => subscription.remove();
+  }, [user]);
+
+  const handleReady = useCallback(() => {
+    if (!user) return;
+    void Notifications.getLastNotificationResponseAsync().then((response) => {
+      openAwaitingFromReminder(response);
+      if (response) void Notifications.clearLastNotificationResponseAsync();
+    });
+  }, [user]);
 
   if (isLoading) {
     return (
@@ -91,7 +116,7 @@ export function RootNavigator(): React.JSX.Element {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef} onReady={handleReady}>
       {user ? (
         <MainTabs />
       ) : (
