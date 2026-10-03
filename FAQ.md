@@ -39,6 +39,18 @@ Quick-pick suggestions are: fuel, travel, parking & tolls, phone, home office, c
 **What's "Business use %" for?**
 Some expenses are only partly for work — a phone bill, home office costs. It defaults to 100%; lower it and only that portion counts toward what you can deduct, instead of the whole amount.
 
+**A firm pays back some of my travel costs — how do I record that?**
+When you log the travel expense, choose **Yes** under **Expecting reimbursement?**. You don't need the amount yet. Once the firm tells you what it's paying back, open the expense from History and set **Partially** (with the amount) or **Fully** in its **Reimbursement** section, then tap **Update**. Only the cost you actually bore stays deductible. This is for reimbursements paid to you separately. If a client includes your costs in the invoice total you've already recorded as income, don't record it as a reimbursement as well, or you'd be taking it off twice.
+
+**What if the reimbursement never arrives?**
+Then the full expense was always deductible, and that's how it's already being counted. An expense awaiting reimbursement counts in full until you record otherwise. Open it and choose **Not reimbursed** to clear the reminder.
+
+**How do I make sure I don't forget to record a reimbursement?**
+While any expense is awaiting reimbursement, Summary shows an amber note under **Things to review** with how many there are and their total. In History, they're marked in amber, and **Filters → Awaiting reimbursement** lists just those, so you can work through them against the firm's statement.
+
+**How does a reimbursement work with "Business use %"?**
+The reimbursement comes off the business share of the cost, since that's the part it's paying back, and the result never goes below zero. For example, a £50 cost at 60% business use is £30 of business cost; if £10 is paid back, £20 is deductible.
+
 **I made a mistake on an expense — how do I fix it?**
 There's no edit button by design. Open the expense in History and **void** it with a reason, then log a fresh correct entry. This keeps a clean audit trail — nothing is silently changed after the fact, which matters if your records are ever checked by HMRC.
 
@@ -89,7 +101,7 @@ From the date ranges of your income invoices, not from a manual weekly checklist
 They're estimates based on current UK tax rules, meant to help you set aside the right amount and spot issues early — not a substitute for your actual Self Assessment filing or professional advice.
 
 **What shows up under "Things to review"?**
-Automated warnings the app generates when something about your figures looks worth a second look (for example, an unusual pattern in a category). They're prompts to check your own records, not errors.
+Automated warnings the app generates when something about your figures looks worth a second look (for example, an unusual pattern in a category). They're prompts to check your own records, not errors. One, shown in amber, lists expenses still awaiting reimbursement. It disappears once you've recorded what was paid back, or marked them as not reimbursed.
 
 ## Data, storage, and security
 

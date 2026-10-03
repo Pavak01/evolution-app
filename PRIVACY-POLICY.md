@@ -41,7 +41,7 @@ This policy applies to users of Evolution, including the mobile app and its back
 - Optional two-factor authentication state (Evolution verifies, but does not itself generate, a two-factor code against an encrypted secret already stored on the account)
 
 ### B. Expense information you enter
-- Category, amount, payment method (cash or card), and reimbursement status (none, partial, or full) for each expense
+- Category, amount, payment method (cash or card), and reimbursement status (none, awaiting, partial, or full) for each expense, plus the amount reimbursed if you record one
 - The date the expense occurred
 - A receipt photo or file for each expense
 - Optional notes

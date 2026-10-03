@@ -53,7 +53,8 @@ Set `EXPO_PUBLIC_API_BASE_URL` for device testing (use your machine's LAN IP, no
 
 ## Implemented MVP scope
 
-- Expense capture: receipt photo/file + category, amount, payment method (cash/card), reimbursement status (none/partial/full) — captured together in one action
+- Expense capture: receipt photo/file + category, amount, payment method (cash/card) — captured together in one action. Travel can also be flagged "expecting reimbursement" (`awaiting`) at capture
+- Reimbursement recorded after the fact: a firm that pays back part of a travel cost does so separately and later, so the amount is entered afterwards from expense detail (`none` / `awaiting` / `partial` / `full`)
 - Income recording: periodic invoice (period, source, total, optional file)
 - Tax + NI estimate and year summary, computed from expenses + income invoices
 - Export (JSON + CSV)
@@ -69,13 +70,15 @@ Public:
 
 Protected (Bearer token):
 
-- `POST /expenses` (multipart: receipt + fields), `GET /expenses`, `GET /expenses/:id`, `POST /expenses/:id/void`
+- `POST /expenses` (multipart: receipt + fields), `GET /expenses` (filterable, incl. `reimbursement_status`), `GET /expenses/:id`, `POST /expenses/:id/void`, `POST /expenses/:id/reimbursement`
 - `GET /receipts/:receiptId/download?token=...`
 - `POST /income-invoices` (multipart, file optional), `GET /income-invoices`, `GET /income-invoices/:id`, `POST /income-invoices/:id/void`, `GET /income-invoices/:id/download?token=...`
 - `GET /tax-years/:taxYear/summary`, `GET /tax-years/:taxYear/rules-monitoring`, `GET /tax-years/:taxYear/export?format=json|csv`
 
 ## Notes on the tax model
 
-- Reimbursement status is explicit (`none` / `partial` / `full`) rather than a bare numeric field — a fully reimbursed expense is not a deductible loss at all.
+- Reimbursement status is explicit (`none` / `awaiting` / `partial` / `full`) rather than a bare numeric field. Net deductible = (total × business use %) − reimbursed, floored at 0 — a reimbursement pays back the business share of a cost, so a fully reimbursed expense is not a deductible loss at all. It's only valid for a reimbursement paid separately from income (never folded into an invoice), otherwise it would double-count.
+- `awaiting` (no amount yet) counts in full — correct if the money never arrives — and raises an `AWAITING_REIMBURSEMENT` summary warning until the real amount is recorded, so it can't be forgotten.
+- Deductible amounts are computed in exact integer pennies to match Postgres `ROUND(numeric, 2)`, which the `expenses_net_deductible_matches` CHECK constraint enforces; money inputs are limited to 2 decimal places.
 - Receipts are keyed directly to one expense (`receipts.expense_id`), not to a week or period.
 - The NI Class 2 "weeks logged" figure is derived from income-invoice trading periods overlapping the tax year (`backend/src/incomeAggregation.ts`), not from a per-week record — a straddling invoice correctly contributes only its in-year days to each tax year it touches.

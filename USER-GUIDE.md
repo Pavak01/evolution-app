@@ -11,6 +11,7 @@ This guide walks through every screen. For quick answers, see the [FAQ](FAQ.md).
 - [Record income](#record-income)
 - [Summary](#summary)
 - [History](#history)
+  - [Recording a reimbursement](#recording-a-reimbursement)
 - [Export](#export)
 - [Settings](#settings)
 
@@ -40,6 +41,8 @@ After saving, you'll see your running total for the current tax year (net profit
 **Business use %**: every expense defaults to 100% business use. If something was only partly for work (a phone bill, home office costs), tap **Change** next to "Business use" and lower the percentage — only that portion counts toward your deductible total.
 
 **Travel is the one category that doesn't need a receipt right away.** A bus, train, or taxi fare rarely has anything to photograph in the moment — so for `travel`, you can save the expense with no photo at all. It shows up in History flagged **"missing receipt"** and doesn't count toward your deductible total or tax estimate yet — open it from History once you've got proof (a bank statement screenshot, an app payment confirmation, an emailed receipt) and tap **Attach receipt** to complete it. Every other category still needs a receipt at the point you log it.
+
+**Expecting a reimbursement?** Some firms pay back part of your travel costs separately, later on — not as part of your invoice. When you log a travel expense, you'll see **Expecting reimbursement?** with **No** / **Yes**. Choose **Yes** if a firm is likely to pay some of it back. You don't need to know the amount yet. The expense is saved as **awaiting reimbursement** (shown in amber everywhere) and still counts in full for now, because if the money never arrives, it's a cost you genuinely paid. See [Recording a reimbursement](#recording-a-reimbursement) for what to do once you know the amount.
 
 **A note on other file types**: photo capture and photo-library selection both work reliably. Picking a PDF or a "Files" document doesn't currently work — a photo or screenshot of the PDF works as a substitute.
 
@@ -74,11 +77,24 @@ Income periods can overlap between different clients (two people paying you for 
 
 Your tax-year dashboard: total income, total expenses, net profit, weeks logged, and the estimate breakdown — income tax, Class 2 NI, Class 4 NI, and the total you should set aside.
 
-Switch between the current and previous tax year using the buttons at the top. If anything about your figures needs attention (for example, an unusually high proportion of one category), it appears under **Things to review**.
+Switch between the current and previous tax year using the buttons at the top. If anything about your figures needs attention (for example, an unusually high proportion of one category), it appears under **Things to review**. If any expenses are still awaiting reimbursement, you'll see an amber note there with how many and their total, until you record what was paid back.
 
 ## History
 
 Browse everything you've logged for the current tax year, newest first. Tap any entry to see the full detail: amounts, payment method, and the receipt itself (**View receipt** opens it in an in-app viewer, with an option to share it). An entry showing **"missing receipt"** is a travel expense saved without one yet — open it and tap **Attach receipt** once you have proof. An entry showing **"possible duplicate"** matched another one you've logged — open it for the full detail and a link to the other entry.
+
+An entry showing **"awaiting reimbursement"** (in amber) is one you're expecting a firm to pay some of back. Entries already recorded show **"partially reimbursed"** or **"fully reimbursed"**. To list only the ones still awaiting, open **Filters** and tap **Awaiting reimbursement**.
+
+### Recording a reimbursement
+
+When a firm tells you what it's paying back, open the expense from History and find the **Reimbursement** section:
+
+- **Partially**: enter the amount reimbursed.
+- **Fully**: the whole cost was paid back.
+- **Not reimbursed**: the money isn't coming after all. The expense keeps counting in full.
+- **Awaiting**: if you forgot to choose **Yes** when you logged it.
+
+Tap **Update**. You'll see **Updated ✓** and go back to History. Your deductible amount is the business share of the cost minus what was paid back, never below zero. For example, £50 of travel at 100% business use with £12.50 paid back leaves £37.50 deductible.
 
 **Voiding an entry**: there's no edit-in-place. If you made a mistake, open the entry and **void** it with a reason (for example, "duplicate entry" or "wrong amount"). Voided entries stay visible for your records but no longer count toward your totals — this keeps an accurate audit trail rather than silently overwriting history, which matters for tax compliance.
 
