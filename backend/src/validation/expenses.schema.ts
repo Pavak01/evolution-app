@@ -2,15 +2,21 @@ import { z } from "zod";
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "must be an ISO date (YYYY-MM-DD)");
 
+// The columns are NUMERIC(x,2), so Postgres would silently round extra
+// decimals on store — and then the net_deductible CHECK would be comparing
+// against a value computed from the unrounded input. Reject them instead.
+const hasAtMost2dp = (value: number): boolean => Math.abs(value * 100 - Math.round(value * 100)) < 1e-6;
+const money = z.coerce.number().refine(hasAtMost2dp, "must have at most 2 decimal places");
+
 export const expenseWriteSchema = z
   .object({
     category: z.string().trim().min(1).max(100),
     occurred_at: isoDate,
     payment_method: z.enum(["cash", "card"]),
-    total_amount: z.coerce.number().positive(),
+    total_amount: money.pipe(z.number().positive()),
     reimbursement_status: z.enum(["none", "partial", "full"]).default("none"),
-    reimbursed_amount: z.coerce.number().min(0).optional(),
-    business_use_percent: z.coerce.number().min(1).max(100).default(100),
+    reimbursed_amount: money.pipe(z.number().min(0)).optional(),
+    business_use_percent: money.pipe(z.number().min(1).max(100)).default(100),
     notes: z.string().trim().max(1000).optional(),
     // Lets a retry after a lost response (e.g. a transient gateway error)
     // return the original result instead of creating a real duplicate.
@@ -55,19 +61,27 @@ export const expenseWriteSchema = z
 
 export type ExpenseWriteInput = z.infer<typeof expenseWriteSchema>;
 
-const round2 = (value: number): number => Math.round(value * 100) / 100;
-
 // The server, never the client, is the source of truth for these derived
 // amounts — mirrors the expenses_net_deductible_matches CHECK constraint.
 // status 'full' -> 0; otherwise (total - reimbursed), both x business use %.
+//
+// Done in exact integer pennies with half-up rounding, matching Postgres'
+// ROUND(numeric, 2). Floating point (Math.round(x * 100) / 100) disagrees
+// with it by a penny on ~1% of half-penny results (e.g. £0.29 at 50% ->
+// 0.14 vs 0.15), which the CHECK constraint then rejects as a 500.
+// Inputs are already validated to at most 2 decimal places.
 export function computeNetDeductible(
   totalAmount: number,
   reimbursementStatus: "none" | "partial" | "full",
   reimbursedAmount: number,
   businessUsePercent: number
 ): number {
-  const borne = reimbursementStatus === "full" ? 0 : totalAmount - reimbursedAmount;
-  return round2((borne * businessUsePercent) / 100);
+  const bornePennies =
+    reimbursementStatus === "full" ? 0n : BigInt(Math.round(totalAmount * 100) - Math.round(reimbursedAmount * 100));
+  const buHundredths = BigInt(Math.round(businessUsePercent * 100));
+  // pennies x (percent x 100) is in units of 1/10000 of a penny.
+  const netPennies = (bornePennies * buHundredths + 5000n) / 10000n;
+  return Number(netPennies) / 100;
 }
 
 // Create path only: reimbursement is never known at capture time — a firm
@@ -88,7 +102,7 @@ export function deriveExpenseAmounts(data: ExpenseWriteInput): {
 // has no access to the stored total_amount here.
 export const reimbursementUpdateSchema = z.object({
   reimbursement_status: z.enum(["none", "partial", "full"]),
-  reimbursed_amount: z.coerce.number().min(0).optional()
+  reimbursed_amount: money.pipe(z.number().min(0)).optional()
 });
 
 export const voidSchema = z.object({
