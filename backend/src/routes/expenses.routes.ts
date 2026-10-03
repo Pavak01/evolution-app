@@ -18,7 +18,14 @@ import {
 } from "../receiptStorage.js";
 import { getTaxYearFromDate } from "../rulesEngine.js";
 import { recomputeTaxSummary } from "../taxSummary.js";
-import { deriveExpenseAmounts, expenseListQuerySchema, expenseWriteSchema, voidSchema } from "../validation/expenses.schema.js";
+import {
+  computeNetDeductible,
+  deriveExpenseAmounts,
+  expenseListQuerySchema,
+  expenseWriteSchema,
+  reimbursementUpdateSchema,
+  voidSchema
+} from "../validation/expenses.schema.js";
 
 export const expensesRouter = Router();
 
@@ -756,5 +763,66 @@ expensesRouter.post("/expenses/:id/void", requireAuth, async (req: Request, res:
     return res.json({ voided: true, summary });
   } catch (error) {
     return sendError(res, 500, "Failed to void expense", error);
+  }
+});
+
+// Filled in after the fact — the reimbursed amount is only known once the
+// firm pays it, separately from any invoice, so it's never set at capture.
+expensesRouter.post("/expenses/:id/reimbursement", requireAuth, async (req: Request, res: Response) => {
+  const authReq = req as AuthenticatedRequest;
+  const parsed = reimbursementUpdateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid payload", details: parsed.error.flatten() });
+  }
+
+  try {
+    const existing = await db.query<{ total_amount: string; business_use_percent: string; voided_at: string | null }>(
+      `SELECT total_amount::text, business_use_percent::text, voided_at::text
+       FROM expenses WHERE id = $1 AND user_id = $2 LIMIT 1`,
+      [req.params.id, authReq.userId]
+    );
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: "Expense not found" });
+    }
+    const row = existing.rows[0];
+    if (row.voided_at) {
+      return res.status(409).json({ error: "Expense is voided" });
+    }
+
+    const total = Number(row.total_amount);
+    const { reimbursement_status: status } = parsed.data;
+    let reimbursed: number;
+    if (status === "none") {
+      if ((parsed.data.reimbursed_amount ?? 0) !== 0) {
+        return res.status(400).json({ error: "Reimbursed amount must be 0 (or omitted) when not reimbursed" });
+      }
+      reimbursed = 0;
+    } else if (status === "partial") {
+      reimbursed = parsed.data.reimbursed_amount ?? 0;
+      if (!(reimbursed > 0 && reimbursed < total)) {
+        return res
+          .status(400)
+          .json({ error: `Reimbursed amount must be more than £0 and less than the £${total.toFixed(2)} total` });
+      }
+    } else {
+      reimbursed = parsed.data.reimbursed_amount ?? total;
+      if (reimbursed !== total) {
+        return res
+          .status(400)
+          .json({ error: `Reimbursed amount must equal the £${total.toFixed(2)} total (or be omitted) when fully reimbursed` });
+      }
+    }
+
+    const netDeductible = computeNetDeductible(total, status, reimbursed, Number(row.business_use_percent));
+    await db.query(
+      `UPDATE expenses
+       SET reimbursement_status = $3, reimbursed_amount = $4, net_deductible_amount = $5
+       WHERE id = $1 AND user_id = $2`,
+      [req.params.id, authReq.userId, status, reimbursed, netDeductible]
+    );
+
+    return res.json(await loadExpenseResponse(req, authReq, req.params.id));
+  } catch (error) {
+    return sendError(res, 500, "Failed to update reimbursement", error);
   }
 });

@@ -234,6 +234,13 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
               {!item.voided_at && !item.receipt_download_url && <Text style={styles.voided}>missing receipt</Text>}
               {!item.voided_at && item.possible_duplicate && <Text style={styles.voided}>possible duplicate</Text>}
               {!item.voided_at && item.resubmitted_from && <Text style={styles.voided}>resubmitted</Text>}
+              {!item.voided_at && item.reimbursement_status !== "none" && (
+                <Text style={styles.voided}>
+                  {item.reimbursement_status === "full"
+                    ? "fully reimbursed"
+                    : `partially reimbursed: £${item.reimbursed_amount.toFixed(2)}`}
+                </Text>
+              )}
             </View>
           </Pressable>
         )}

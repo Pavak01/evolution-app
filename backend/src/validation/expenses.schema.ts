@@ -59,20 +59,37 @@ const round2 = (value: number): number => Math.round(value * 100) / 100;
 
 // The server, never the client, is the source of truth for these derived
 // amounts — mirrors the expenses_net_deductible_matches CHECK constraint.
-//
-// Parked, not removed — reimbursement_status/reimbursed_amount are ignored
-// here deliberately. Every income model this app is actually used for
-// (self-billed invoices) already includes any reimbursed cost in the
-// invoice's full total_amount, so subtracting it again here would double-tax
-// it. Restore the previous (total_amount - reimbursed_amount)-based formula
-// if this is ever revived for an income model with a genuine separate
-// non-taxable reimbursement.
+// status 'full' -> 0; otherwise (total - reimbursed), both x business use %.
+export function computeNetDeductible(
+  totalAmount: number,
+  reimbursementStatus: "none" | "partial" | "full",
+  reimbursedAmount: number,
+  businessUsePercent: number
+): number {
+  const borne = reimbursementStatus === "full" ? 0 : totalAmount - reimbursedAmount;
+  return round2((borne * businessUsePercent) / 100);
+}
+
+// Create path only: reimbursement is never known at capture time — a firm
+// that reimburses does so later, as a separate payment never folded into
+// any income record. So a new expense always starts at reimbursed 0; real
+// values are only ever written afterwards via POST /expenses/:id/reimbursement.
 export function deriveExpenseAmounts(data: ExpenseWriteInput): {
   reimbursed_amount: number;
   net_deductible_amount: number;
 } {
-  return { reimbursed_amount: 0, net_deductible_amount: round2((data.total_amount * data.business_use_percent) / 100) };
+  return {
+    reimbursed_amount: 0,
+    net_deductible_amount: computeNetDeductible(data.total_amount, "none", 0, data.business_use_percent)
+  };
 }
+
+// Amount-vs-total checks happen in the route after loading the row — zod
+// has no access to the stored total_amount here.
+export const reimbursementUpdateSchema = z.object({
+  reimbursement_status: z.enum(["none", "partial", "full"]),
+  reimbursed_amount: z.coerce.number().min(0).optional()
+});
 
 export const voidSchema = z.object({
   reason: z.string().trim().min(1).max(500)

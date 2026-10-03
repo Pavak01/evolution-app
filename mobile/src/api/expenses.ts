@@ -120,3 +120,15 @@ export async function voidExpense(id: string, reason: string): Promise<TaxSummar
   });
   return result.summary;
 }
+
+// Filled in after the fact, once the firm says what it actually reimbursed.
+export async function updateReimbursement(
+  id: string,
+  status: ReimbursementStatus,
+  reimbursedAmount?: number
+): Promise<{ expense: Expense; summary: TaxSummary }> {
+  return apiJson<{ expense: Expense; summary: TaxSummary }>(`/expenses/${id}/reimbursement`, {
+    method: "POST",
+    body: JSON.stringify({ reimbursement_status: status, reimbursed_amount: reimbursedAmount })
+  });
+}

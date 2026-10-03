@@ -279,3 +279,25 @@ ALTER TABLE evolution.expenses ADD CONSTRAINT expenses_net_deductible_matches CH
 -- voided forever, there's no unvoid for expenses.
 ALTER TABLE evolution.expenses ADD COLUMN IF NOT EXISTS resubmitted_from_expense_id UUID REFERENCES evolution.expenses(id);
 CREATE INDEX IF NOT EXISTS idx_expenses_resubmitted_from ON evolution.expenses(resubmitted_from_expense_id) WHERE resubmitted_from_expense_id IS NOT NULL;
+
+-- Reimbursement tracking revived, superseding the parked constraints above.
+-- Safe now because the case it serves is a genuine separate, after-the-fact
+-- payment (a firm reimbursing submitted travel items out-of-band), never
+-- folded into any invoice or income record — so netting it here can't
+-- double-count anything on the income side. Still never set at capture
+-- time (the amount isn't known yet); only POST /expenses/:id/reimbursement
+-- writes non-zero values.
+ALTER TABLE evolution.expenses DROP CONSTRAINT IF EXISTS expenses_reimbursement_consistency;
+ALTER TABLE evolution.expenses ADD CONSTRAINT expenses_reimbursement_consistency CHECK (
+  (reimbursement_status = 'none'    AND reimbursed_amount = 0) OR
+  (reimbursement_status = 'partial' AND reimbursed_amount > 0 AND reimbursed_amount < total_amount) OR
+  (reimbursement_status = 'full'    AND reimbursed_amount = total_amount)
+);
+
+ALTER TABLE evolution.expenses DROP CONSTRAINT IF EXISTS expenses_net_deductible_matches;
+ALTER TABLE evolution.expenses ADD CONSTRAINT expenses_net_deductible_matches CHECK (
+  net_deductible_amount = ROUND(
+    (CASE WHEN reimbursement_status = 'full' THEN 0 ELSE total_amount - reimbursed_amount END) * business_use_percent / 100,
+    2
+  )
+);

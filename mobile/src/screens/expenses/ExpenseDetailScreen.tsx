@@ -3,10 +3,10 @@ import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import React, { useCallback, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { ActivityIndicator, Text, View } from "react-native";
-import { attachReceipt, getExpense, voidExpense } from "../../api/expenses";
+import { attachReceipt, getExpense, updateReimbursement, voidExpense } from "../../api/expenses";
 import { ApiError } from "../../api/client";
-import type { Expense } from "../../api/types";
-import { Card, DangerAction, Field, PrimaryButton, StatusBanner, SummaryRow } from "../../components/Controls";
+import type { Expense, ReimbursementStatus } from "../../api/types";
+import { Card, DangerAction, Field, PrimaryButton, SmallAction, StatusBanner, SummaryRow } from "../../components/Controls";
 import { ImageViewerModal } from "../../components/ImageViewerModal";
 import { Screen } from "../../components/Screen";
 import { useReceiptCapture } from "../../hooks/useReceiptCapture";
@@ -34,6 +34,10 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
   const [isAttaching, setIsAttaching] = useState(false);
   const [isResubmitting, setIsResubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reimbStatus, setReimbStatus] = useState<ReimbursementStatus>("none");
+  const [reimbAmount, setReimbAmount] = useState("");
+  const [isUpdatingReimb, setIsUpdatingReimb] = useState(false);
+  const [reimbError, setReimbError] = useState<string | null>(null);
 
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerLoading, setViewerLoading] = useState(false);
@@ -42,7 +46,10 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
   const load = useCallback(async () => {
     setError(null);
     try {
-      setExpense(await getExpense(expenseId));
+      const loaded = await getExpense(expenseId);
+      setExpense(loaded);
+      setReimbStatus(loaded.reimbursement_status);
+      setReimbAmount(loaded.reimbursement_status === "partial" ? String(loaded.reimbursed_amount) : "");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not load this expense.");
     } finally {
@@ -141,6 +148,19 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
     }
   }
 
+  async function handleUpdateReimbursement(): Promise<void> {
+    setIsUpdatingReimb(true);
+    setReimbError(null);
+    try {
+      await updateReimbursement(expenseId, reimbStatus, reimbStatus === "partial" ? Number(reimbAmount) : undefined);
+      await load();
+    } catch (err) {
+      setReimbError(err instanceof ApiError ? err.message : "Could not update the reimbursement.");
+    } finally {
+      setIsUpdatingReimb(false);
+    }
+  }
+
   if (isLoading || !expense) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.canvas }}>
@@ -232,6 +252,46 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
         onClose={() => setViewerVisible(false)}
         onShare={viewerUri ? () => shareLocalUri(viewerUri) : undefined}
       />
+
+      {!expense.voided_at && (
+        <Card>
+          <Text style={{ fontSize: typography.body, fontWeight: "700", color: colors.textMain, marginBottom: spacing.xs }}>
+            Reimbursement
+          </Text>
+          <Text style={{ color: colors.textMuted, marginBottom: spacing.sm }}>
+            Currently:{" "}
+            {expense.reimbursement_status === "none"
+              ? "not reimbursed"
+              : expense.reimbursement_status === "full"
+                ? "fully reimbursed"
+                : `£${expense.reimbursed_amount.toFixed(2)} reimbursed`}
+          </Text>
+          <View style={{ flexDirection: "row", gap: spacing.xs, marginBottom: spacing.md }}>
+            <SmallAction label="Not reimbursed" active={reimbStatus === "none"} onPress={() => setReimbStatus("none")} />
+            <SmallAction label="Partially" active={reimbStatus === "partial"} onPress={() => setReimbStatus("partial")} />
+            <SmallAction label="Fully" active={reimbStatus === "full"} onPress={() => setReimbStatus("full")} />
+          </View>
+          {reimbStatus === "partial" && (
+            <Field
+              label="Amount reimbursed (£)"
+              value={reimbAmount}
+              onChange={setReimbAmount}
+              keyboardType="decimal-pad"
+              placeholder="0.00"
+            />
+          )}
+          {reimbError && <StatusBanner kind="error" text={reimbError} />}
+          <PrimaryButton
+            label="Update"
+            onPress={handleUpdateReimbursement}
+            isLoading={isUpdatingReimb}
+            disabled={
+              reimbStatus === "partial" &&
+              !(Number(reimbAmount) > 0 && Number(reimbAmount) < expense.total_amount)
+            }
+          />
+        </Card>
+      )}
 
       {!expense.voided_at && (
         <Card>
