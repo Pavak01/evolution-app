@@ -6,7 +6,7 @@ import { ActivityIndicator, Text, View } from "react-native";
 import { attachReceipt, getExpense, updateReimbursement, voidExpense } from "../../api/expenses";
 import { ApiError } from "../../api/client";
 import type { Expense, ReimbursementStatus } from "../../api/types";
-import { Card, DangerAction, Field, PrimaryButton, SmallAction, StatusBanner, SummaryRow } from "../../components/Controls";
+import { awaitingPill, Card, DangerAction, Field, PrimaryButton, SmallAction, StatusBanner, SummaryRow } from "../../components/Controls";
 import { ImageViewerModal } from "../../components/ImageViewerModal";
 import { Screen } from "../../components/Screen";
 import { useReceiptCapture } from "../../hooks/useReceiptCapture";
@@ -199,6 +199,9 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
             Voided: {expense.void_reason}
           </Text>
         )}
+        {!expense.voided_at && expense.reimbursement_status === "awaiting" && (
+          <Text style={[awaitingPill, { marginTop: spacing.sm, alignSelf: "flex-start" }]}>Awaiting reimbursement</Text>
+        )}
       </Card>
 
       {expense.voided_at && (
@@ -269,7 +272,13 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
           <Text style={{ fontSize: typography.body, fontWeight: "700", color: colors.textMain, marginBottom: spacing.xs }}>
             Reimbursement
           </Text>
-          <Text style={{ color: colors.textMuted, marginBottom: spacing.sm }}>
+          <Text
+            style={
+              expense.reimbursement_status === "awaiting"
+                ? [awaitingPill, { marginBottom: spacing.sm }]
+                : { color: colors.textMuted, marginBottom: spacing.sm }
+            }
+          >
             Currently:{" "}
             {expense.reimbursement_status === "none"
               ? "not reimbursed"

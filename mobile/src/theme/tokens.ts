@@ -24,7 +24,12 @@ export const colors = {
   ornamentWarm: "#d9905c",
   ornamentCool: "#2b5f5a",
   snapshotValue: "#1f4c49",
-  sectionHint: "#6b4f3a"
+  sectionHint: "#6b4f3a",
+  // "Awaiting reimbursement" everywhere it appears — amber, deliberately
+  // distinct from danger red (voided / missing receipt) so it reads as
+  // "still to do", not "something's wrong". ~5:1 contrast on awaitingBg.
+  awaiting: "#8a4f00",
+  awaitingBg: "#fde9c2"
 } as const;
 
 export const spacing = {

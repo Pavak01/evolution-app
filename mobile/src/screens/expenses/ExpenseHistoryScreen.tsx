@@ -7,7 +7,7 @@ import { ApiError } from "../../api/client";
 import type { Expense } from "../../api/types";
 import { PendingUploads } from "../../components/PendingUploads";
 import { CategoryPickerModal } from "../../components/CategoryPickerModal";
-import { Card, DateField, Field, SmallAction, StatusBanner } from "../../components/Controls";
+import { awaitingPill, Card, DateField, Field, SmallAction, StatusBanner } from "../../components/Controls";
 import { listPending, removePending, syncQueue, type PendingItem } from "../../offlineQueue";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { humanizeCategory } from "../../utils/category";
@@ -254,7 +254,7 @@ export function ExpenseHistoryScreen({ navigation }: Props): React.JSX.Element {
               {!item.voided_at && item.possible_duplicate && <Text style={styles.voided}>possible duplicate</Text>}
               {!item.voided_at && item.resubmitted_from && <Text style={styles.voided}>resubmitted</Text>}
               {!item.voided_at && item.reimbursement_status !== "none" && (
-                <Text style={styles.voided}>
+                <Text style={item.reimbursement_status === "awaiting" ? styles.awaiting : styles.voided}>
                   {item.reimbursement_status === "awaiting"
                     ? "awaiting reimbursement"
                     : item.reimbursement_status === "full"
@@ -300,5 +300,6 @@ const styles = StyleSheet.create({
   date: { fontSize: typography.small, color: colors.textMuted },
   rowEnd: { alignItems: "flex-end", gap: spacing.xs },
   amount: { fontSize: typography.body, fontWeight: "700", color: colors.snapshotValue },
-  voided: { fontSize: typography.micro, color: colors.danger, textTransform: "uppercase" }
+  voided: { fontSize: typography.micro, color: colors.danger, textTransform: "uppercase" },
+  awaiting: { ...awaitingPill, fontSize: typography.micro, textTransform: "uppercase", paddingHorizontal: spacing.xs, paddingVertical: 1 }
 });

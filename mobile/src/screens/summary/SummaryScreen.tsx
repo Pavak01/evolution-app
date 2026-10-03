@@ -4,7 +4,7 @@ import { ActivityIndicator, RefreshControl, Text, View } from "react-native";
 import { getTaxSummary } from "../../api/tax";
 import { ApiError } from "../../api/client";
 import type { TaxSummary } from "../../api/types";
-import { Card, SmallAction, SnapshotTile, StatusBanner, SummaryRow } from "../../components/Controls";
+import { awaitingPill, Card, SmallAction, SnapshotTile, StatusBanner, SummaryRow } from "../../components/Controls";
 import { Screen } from "../../components/Screen";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTaxYearFromDate } from "../../utils/taxYear";
@@ -72,7 +72,14 @@ export function SummaryScreen(): React.JSX.Element {
                 Things to review
               </Text>
               {summary.warnings.map((warning) => (
-                <Text key={warning.code} style={{ color: warning.severity === "high" ? colors.danger : colors.textSecondary, marginBottom: spacing.xs }}>
+                <Text
+                  key={warning.code}
+                  style={
+                    warning.code === "AWAITING_REIMBURSEMENT"
+                      ? [awaitingPill, { fontWeight: "400", paddingVertical: spacing.xs, marginBottom: spacing.xs }]
+                      : { color: warning.severity === "high" ? colors.danger : colors.textSecondary, marginBottom: spacing.xs }
+                  }
+                >
                   • {warning.message}
                 </Text>
               ))}

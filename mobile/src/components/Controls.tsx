@@ -285,6 +285,20 @@ export function PrimaryButton({
   );
 }
 
+// One look for "awaiting reimbursement" wherever it appears (History,
+// expense detail, Summary, Capture) — amber, so it reads as "still to do"
+// rather than the red used for voided / missing receipt.
+export const awaitingPill = {
+  fontSize: typography.small,
+  fontWeight: "700",
+  color: colors.awaiting,
+  backgroundColor: colors.awaitingBg,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: 2,
+  borderRadius: radius.sm,
+  overflow: "hidden"
+} as const;
+
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,

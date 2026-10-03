@@ -9,7 +9,7 @@ import { ApiError } from "../../api/client";
 import { extractReceiptFields } from "../../api/receiptExtraction";
 import type { PaymentMethod, TaxSummary } from "../../api/types";
 import { CategoryPickerModal } from "../../components/CategoryPickerModal";
-import { Card, DateField, Field, PrimaryButton, SmallAction, SnapshotTile, StatusBanner } from "../../components/Controls";
+import { awaitingPill, Card, DateField, Field, PrimaryButton, SmallAction, SnapshotTile, StatusBanner } from "../../components/Controls";
 import { ImageViewerModal } from "../../components/ImageViewerModal";
 import { ReceiptThumbnail } from "../../components/ReceiptThumbnail";
 import { Screen } from "../../components/Screen";
@@ -329,6 +329,11 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
               <SmallAction label="No" active={!awaitingReimbursement} onPress={() => setAwaitingReimbursement(false)} />
               <SmallAction label="Yes" active={awaitingReimbursement} onPress={() => setAwaitingReimbursement(true)} />
             </View>
+            {awaitingReimbursement && (
+              <Text style={[awaitingPill, { fontWeight: "400", marginBottom: spacing.md }]}>
+                Saved as awaiting reimbursement — counts in full until you record what's paid back.
+              </Text>
+            )}
           </>
         )}
 
