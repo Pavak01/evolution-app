@@ -63,7 +63,10 @@ export type ExpenseWriteInput = z.infer<typeof expenseWriteSchema>;
 
 // The server, never the client, is the source of truth for these derived
 // amounts — mirrors the expenses_net_deductible_matches CHECK constraint.
-// status 'full' -> 0; otherwise (total - reimbursed), both x business use %.
+// The business share of the cost (total x business use %), less whatever
+// the firm reimbursed, floored at 0 — a reimbursement pays back the
+// business part of the cost, so it comes off that share, not the total.
+// 'full' (reimbursed = total) always lands on 0 through the floor.
 //
 // Done in exact integer pennies with half-up rounding, matching Postgres'
 // ROUND(numeric, 2). Floating point (Math.round(x * 100) / 100) disagrees
@@ -76,12 +79,13 @@ export function computeNetDeductible(
   reimbursedAmount: number,
   businessUsePercent: number
 ): number {
-  const bornePennies =
-    reimbursementStatus === "full" ? 0n : BigInt(Math.round(totalAmount * 100) - Math.round(reimbursedAmount * 100));
+  if (reimbursementStatus === "full") return 0;
+  const totalPennies = BigInt(Math.round(totalAmount * 100));
   const buHundredths = BigInt(Math.round(businessUsePercent * 100));
   // pennies x (percent x 100) is in units of 1/10000 of a penny.
-  const netPennies = (bornePennies * buHundredths + 5000n) / 10000n;
-  return Number(netPennies) / 100;
+  const businessSharePennies = (totalPennies * buHundredths + 5000n) / 10000n;
+  const netPennies = businessSharePennies - BigInt(Math.round(reimbursedAmount * 100));
+  return netPennies > 0n ? Number(netPennies) / 100 : 0;
 }
 
 // Create path only: reimbursement is never known at capture time — a firm

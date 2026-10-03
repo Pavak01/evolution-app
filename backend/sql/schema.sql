@@ -301,3 +301,13 @@ ALTER TABLE evolution.expenses ADD CONSTRAINT expenses_net_deductible_matches CH
     2
   )
 );
+
+-- Business share (total x business use %) less the reimbursement, floored
+-- at 0: the firm pays back the business part of the cost, so it comes off
+-- that share rather than the total. 'full' (reimbursed = total) always
+-- floors to 0. Supersedes the (total - reimbursed) x business-use version
+-- just above — identical at 100% business use, the normal case for travel.
+ALTER TABLE evolution.expenses DROP CONSTRAINT IF EXISTS expenses_net_deductible_matches;
+ALTER TABLE evolution.expenses ADD CONSTRAINT expenses_net_deductible_matches CHECK (
+  net_deductible_amount = GREATEST(0, ROUND(total_amount * business_use_percent / 100, 2) - reimbursed_amount)
+);
