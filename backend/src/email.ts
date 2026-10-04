@@ -4,8 +4,20 @@
 const DEFAULT_FROM = "Evolution <no-reply@mail.aplccommodities.com>";
 const REPLY_TO = "support@aplccommodities.com";
 
+// RFC 2606/6761 reserved names can never have a mailbox. Smoke tests and
+// throwaway test accounts use them; sending would only bounce, and bounces
+// damage the sending domain's reputation.
+function isReservedTestAddress(to: string): boolean {
+  const domain = to.split("@")[1]?.toLowerCase() ?? "";
+  return /^(.+\.)?example\.(com|org|net)$/.test(domain) || /\.(test|invalid|example|localhost)$/.test(domain);
+}
+
 export async function sendEmail({ to, subject, text, html }: { to: string; subject: string; text: string; html: string }): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
+  if (isReservedTestAddress(to)) {
+    console.log(`[email skipped: reserved test address] "${subject}" to ${to}`);
+    return;
+  }
   if (!apiKey) {
     // Only until RESEND_API_KEY is set on the service — lets sign-up be
     // tested end to end before then. Never reached once the key exists.
