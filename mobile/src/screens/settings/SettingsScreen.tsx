@@ -109,8 +109,14 @@ export function SettingsScreen(): React.JSX.Element {
           <PrimaryButton
             label="Send test reminder"
             onPress={() =>
-              void sendTestReimbursementReminder().then((ok) =>
-                setTestReminderNote(ok ? "scheduled — background the app now." : "notifications aren't allowed for this app.")
+              void sendTestReimbursementReminder().then((result) =>
+                setTestReminderNote(
+                  result === "scheduled"
+                    ? "scheduled — background the app now."
+                    : result === "denied"
+                      ? "notifications aren't allowed for this app."
+                      : "notifications can't run in Expo Go on Android — this needs a real build."
+                )
               )
             }
           />

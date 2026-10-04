@@ -1,5 +1,4 @@
 import { NavigationContainer } from "@react-navigation/native";
-import * as Notifications from "expo-notifications";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React, { useCallback, useEffect } from "react";
@@ -19,6 +18,7 @@ import { SummaryScreen } from "../screens/summary/SummaryScreen";
 import { SettingsScreen } from "../screens/settings/SettingsScreen";
 import { PlansScreen } from "../screens/settings/PlansScreen";
 import { navigationRef } from "./navigationRef";
+import { consumeLaunchReminderTap, onReminderTapped } from "../reimbursementReminders";
 import { VerifyTwoFactorScreen } from "../screens/auth/VerifyTwoFactorScreen";
 import { VerifyEmailScreen } from "../screens/auth/VerifyEmailScreen";
 import { ForgotPasswordScreen } from "../screens/auth/ForgotPasswordScreen";
@@ -92,8 +92,7 @@ function MainTabs(): React.JSX.Element {
   );
 }
 
-function openAwaitingFromReminder(response: Notifications.NotificationResponse | null): void {
-  if (response?.notification.request.content.data?.kind !== "reimbursement-reminder") return;
+function openAwaitingFromReminder(): void {
   if (!navigationRef.isReady()) return;
   navigationRef.navigate("Main", { screen: "History", params: { screen: "ExpenseHistory", params: { awaitingOnly: true } } });
 }
@@ -105,15 +104,13 @@ export function RootNavigator(): React.JSX.Element {
   // still awaiting — both while running and from a cold start (onReady).
   useEffect(() => {
     if (!user) return;
-    const subscription = Notifications.addNotificationResponseReceivedListener(openAwaitingFromReminder);
-    return () => subscription.remove();
+    return onReminderTapped(openAwaitingFromReminder);
   }, [user]);
 
   const handleReady = useCallback(() => {
     if (!user) return;
-    void Notifications.getLastNotificationResponseAsync().then((response) => {
-      openAwaitingFromReminder(response);
-      if (response) void Notifications.clearLastNotificationResponseAsync();
+    void consumeLaunchReminderTap().then((tapped) => {
+      if (tapped) openAwaitingFromReminder();
     });
   }, [user]);
 

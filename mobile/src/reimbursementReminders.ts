@@ -1,4 +1,5 @@
-import * as Notifications from "expo-notifications";
+import Constants, { ExecutionEnvironment } from "expo-constants";
+import type * as NotificationsModule from "expo-notifications";
 import { Platform } from "react-native";
 import { listExpenses } from "./api/expenses";
 import type { Expense } from "./api/types";
@@ -22,7 +23,18 @@ const MAX_NUDGES = 4;
 const NUDGE_HOUR = 9;
 const MAX_PAGES = 10;
 
-Notifications.setNotificationHandler({
+// Expo Go on Android (SDK 53+) throws as soon as expo-notifications is
+// even loaded, which crashed the whole app on start. So the module is only
+// required where it works (real builds, iOS Expo Go); in Android Expo Go
+// reminders quietly do nothing. Nothing else in the app may import
+// expo-notifications directly — go through this file.
+export const remindersSupported = !(
+  Platform.OS === "android" && Constants.executionEnvironment === ExecutionEnvironment.StoreClient
+);
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const Notifications: typeof NotificationsModule | null = remindersSupported ? require("expo-notifications") : null;
+
+Notifications?.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
     shouldShowList: true,
@@ -32,7 +44,7 @@ Notifications.setNotificationHandler({
 });
 
 async function ensureChannel(): Promise<void> {
-  if (Platform.OS !== "android") return;
+  if (!Notifications || Platform.OS !== "android") return;
   await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
     name: "Reimbursement reminders",
     importance: Notifications.AndroidImportance.DEFAULT
@@ -40,6 +52,7 @@ async function ensureChannel(): Promise<void> {
 }
 
 async function hasPermission(ask: boolean): Promise<boolean> {
+  if (!Notifications) return false;
   const current = await Notifications.getPermissionsAsync();
   if (current.granted) return true;
   if (!ask || !current.canAskAgain) return false;
@@ -61,6 +74,7 @@ async function listAwaiting(): Promise<Expense[]> {
 }
 
 export async function cancelReimbursementReminders(): Promise<void> {
+  if (!Notifications) return;
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   await Promise.all(
     scheduled
@@ -83,8 +97,9 @@ export function upcomingNudges(oldestOccurredAt: string, now: Date): Date[] {
 
 // Dev builds only (Settings) — the real cadence is days away, far too slow
 // to check by hand. Same content and tap target as a real reminder.
-export async function sendTestReimbursementReminder(): Promise<boolean> {
-  if (!(await hasPermission(true))) return false;
+export async function sendTestReimbursementReminder(): Promise<"scheduled" | "denied" | "unsupported"> {
+  if (!Notifications) return "unsupported";
+  if (!(await hasPermission(true))) return "denied";
   await ensureChannel();
   await Notifications.scheduleNotificationAsync({
     identifier: "reimbursement-test", // outside ID_PREFIX so a resync never cancels it
@@ -95,7 +110,27 @@ export async function sendTestReimbursementReminder(): Promise<boolean> {
     },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 10, channelId: CHANNEL_ID }
   });
-  return true;
+  return "scheduled";
+}
+
+const isReminderTap = (response: NotificationsModule.NotificationResponse | null): boolean =>
+  response?.notification.request.content.data?.kind === "reimbursement-reminder";
+
+// Calls `onTap` whenever a reminder is tapped while the app is running.
+export function onReminderTapped(onTap: () => void): () => void {
+  if (!Notifications) return () => undefined;
+  const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+    if (isReminderTap(response)) onTap();
+  });
+  return () => subscription.remove();
+}
+
+// True (once) if the app was opened from a cold start by tapping a reminder.
+export async function consumeLaunchReminderTap(): Promise<boolean> {
+  if (!Notifications) return false;
+  const response = await Notifications.getLastNotificationResponseAsync();
+  if (response) await Notifications.clearLastNotificationResponseAsync();
+  return isReminderTap(response);
 }
 
 // `askPermission`: only true straight after the user marks something as
@@ -104,6 +139,7 @@ export async function sendTestReimbursementReminder(): Promise<boolean> {
 // a reminder failing must never surface as an error on the screen that
 // triggered it.
 export async function syncReimbursementReminders({ askPermission = false } = {}): Promise<void> {
+  if (!Notifications) return;
   try {
     const awaiting = await listAwaiting();
     await cancelReimbursementReminders();
