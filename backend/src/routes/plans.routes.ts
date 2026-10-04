@@ -5,15 +5,12 @@ import { getAccess } from "../entitlements.js";
 import { sendError } from "../middleware/errorHandler.js";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { promoRateLimit } from "../middleware/rateLimit.js";
+import { normalizePromoCode } from "../promoCodes.js";
 
 export const plansRouter = Router();
 
 const redeemSchema = z.object({ code: z.string().min(1).max(64) });
 
-// "evo-7k3m q9td " -> "EVO-7K3MQ9TD": case and stray spaces never matter.
-export function normalizePromoCode(input: string): string {
-  return input.replace(/\s+/g, "").toUpperCase();
-}
 
 const TIER_RANK = { basic: 1, pro: 2 } as const;
 

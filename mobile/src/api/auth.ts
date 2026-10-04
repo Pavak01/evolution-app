@@ -11,7 +11,13 @@ export type Access = {
   ocr: boolean;
 };
 
-export type AuthUser = { id: string; email: string; entitlements: { ocr_upgrade_active: boolean; access?: Access } };
+export type AuthUser = {
+  id: string;
+  email: string;
+  // Shows Settings → Admin; the server checks independently on every admin call.
+  is_admin?: boolean;
+  entitlements: { ocr_upgrade_active: boolean; access?: Access };
+};
 
 // Every sign-in step answers with one of these: signed in, 2FA needed, or
 // "check your email" (no session exists until the emailed code is entered).

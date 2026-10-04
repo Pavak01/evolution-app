@@ -8,3 +8,7 @@ export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 export function openPlans(): void {
   if (navigationRef.isReady()) navigationRef.navigate("Plans");
 }
+
+export function openPromoAdmin(): void {
+  if (navigationRef.isReady()) navigationRef.navigate("PromoAdmin");
+}

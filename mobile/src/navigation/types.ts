@@ -49,6 +49,7 @@ export type IncomeStackParamList = {
 export type RootStackParamList = {
   Main: NavigatorScreenParams<MainTabParamList> | undefined;
   Plans: undefined;
+  PromoAdmin: undefined;
 };
 
 export type MainTabParamList = {

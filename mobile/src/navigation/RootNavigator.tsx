@@ -18,6 +18,7 @@ import { RecordIncomeScreen } from "../screens/income/RecordIncomeScreen";
 import { SummaryScreen } from "../screens/summary/SummaryScreen";
 import { SettingsScreen } from "../screens/settings/SettingsScreen";
 import { PlansScreen } from "../screens/settings/PlansScreen";
+import { PromoAdminScreen } from "../screens/settings/PromoAdminScreen";
 import { navigationRef } from "./navigationRef";
 import { consumeLaunchReminderTap, onReminderTapped } from "../reimbursementReminders";
 import { VerifyTwoFactorScreen } from "../screens/auth/VerifyTwoFactorScreen";
@@ -161,6 +162,7 @@ export function RootNavigator(): React.JSX.Element {
         <RootStack.Navigator screenOptions={headerOptions}>
           <RootStack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
           <RootStack.Screen name="Plans" component={PlansScreen} options={{ title: "Plans", presentation: "modal" }} />
+          <RootStack.Screen name="PromoAdmin" component={PromoAdminScreen} options={{ title: "Promo codes" }} />
         </RootStack.Navigator>
       ) : (
         <AuthStack.Navigator screenOptions={{ headerShown: false }}>

@@ -6,6 +6,7 @@ import { decryptTwoFactorSecret, verifyTotpCode } from "../auth/twoFactor.js";
 import { db } from "../db.js";
 import { checkCode, isDisposableEmail, isEmailVerified, markEmailVerified, sendCode } from "../emailCodes.js";
 import { getAccess, type Access } from "../entitlements.js";
+import { isAdmin } from "./admin.routes.js";
 import { sendError } from "../middleware/errorHandler.js";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { authRateLimit, emailCodeRateLimit, registerRateLimit } from "../middleware/rateLimit.js";
@@ -32,9 +33,9 @@ export const authRouter = Router();
 async function buildUserPayload(
   id: string,
   email: string
-): Promise<{ id: string; email: string; entitlements: { ocr_upgrade_active: boolean; access: Access } }> {
+): Promise<{ id: string; email: string; is_admin: boolean; entitlements: { ocr_upgrade_active: boolean; access: Access } }> {
   const access = await getAccess(id);
-  return { id, email, entitlements: { ocr_upgrade_active: access.ocr, access } };
+  return { id, email, is_admin: await isAdmin(id), entitlements: { ocr_upgrade_active: access.ocr, access } };
 }
 
 // The "now check your email" response. No session token — an unconfirmed

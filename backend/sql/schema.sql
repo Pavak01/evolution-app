@@ -399,3 +399,13 @@ CREATE INDEX IF NOT EXISTS idx_email_codes_user_purpose ON evolution.email_codes
 INSERT INTO evolution.email_verifications (user_id)
 SELECT user_id FROM evolution.entitlements
 ON CONFLICT (user_id) DO NOTHING;
+
+-- Who can manage promo codes from the in-app admin section. Checked by the
+-- server on every admin request (routes/admin.routes.ts).
+CREATE TABLE IF NOT EXISTS evolution.admin_users (
+  user_id UUID PRIMARY KEY REFERENCES public.users(id),
+  added_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+INSERT INTO evolution.admin_users (user_id)
+SELECT id FROM public.users WHERE email IN ('roger.nichols@gmail.com', 'rogeristhekey@yandex.com')
+ON CONFLICT (user_id) DO NOTHING;

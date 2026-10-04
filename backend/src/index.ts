@@ -10,6 +10,7 @@ import { expensesRouter } from "./routes/expenses.routes.js";
 import { healthRouter } from "./routes/health.routes.js";
 import { incomeRouter } from "./routes/income.routes.js";
 import { plansRouter } from "./routes/plans.routes.js";
+import { adminRouter } from "./routes/admin.routes.js";
 import { receiptsRouter } from "./routes/receipts.routes.js";
 import { taxRouter } from "./routes/tax.routes.js";
 
@@ -49,6 +50,7 @@ app.use(expensesRouter);
 app.use(receiptsRouter);
 app.use(incomeRouter);
 app.use(plansRouter);
+app.use(adminRouter);
 app.use(taxRouter);
 
 app.use(finalErrorHandler);

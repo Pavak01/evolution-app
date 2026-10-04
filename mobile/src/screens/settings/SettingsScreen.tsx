@@ -7,7 +7,7 @@ import { Card, DangerAction, Field, PrimaryButton, StatusBanner } from "../../co
 import { Screen } from "../../components/Screen";
 import { sendTestReimbursementReminder } from "../../reimbursementReminders";
 import { formatPlanDate, PromoCodeField } from "../../components/PlanBits";
-import { openPlans } from "../../navigation/navigationRef";
+import { openPlans, openPromoAdmin } from "../../navigation/navigationRef";
 import { useAccess, useAuth } from "../../auth/AuthContext";
 import { colors, spacing, typography } from "../../theme/tokens";
 
@@ -100,6 +100,16 @@ export function SettingsScreen(): React.JSX.Element {
         <View style={{ height: spacing.md }} />
         <PromoCodeField />
       </Card>
+
+      {user?.is_admin && (
+        <Card>
+          <Text style={{ fontSize: typography.body, fontWeight: "700", color: colors.textMain, marginBottom: spacing.xs }}>Admin</Text>
+          <Text style={{ color: colors.textSecondary, marginBottom: spacing.md }}>
+            Create free-access codes for testers and promotions, and share them.
+          </Text>
+          <PrimaryButton label="Promo codes" onPress={openPromoAdmin} />
+        </Card>
+      )}
 
       {__DEV__ && (
         <Card>
