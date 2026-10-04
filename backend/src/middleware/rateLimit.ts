@@ -62,3 +62,12 @@ export const uploadRateLimit = createRateLimitMiddleware({
   max: 300,
   message: "Too many upload attempts. Please try again later."
 });
+
+// Its own bucket (not authRateLimit's), so trying a code never eats into
+// sign-in attempts — but tight enough that codes can't be guessed.
+export const promoRateLimit = createRateLimitMiddleware({
+  key: "promo",
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: "Too many code attempts. Please try again later."
+});

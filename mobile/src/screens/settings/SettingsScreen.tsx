@@ -6,7 +6,9 @@ import { resetAllData } from "../../api/dataReset";
 import { Card, DangerAction, Field, PrimaryButton, StatusBanner } from "../../components/Controls";
 import { Screen } from "../../components/Screen";
 import { sendTestReimbursementReminder } from "../../reimbursementReminders";
-import { useAuth } from "../../auth/AuthContext";
+import { formatPlanDate, PromoCodeField } from "../../components/PlanBits";
+import { openPlans } from "../../navigation/navigationRef";
+import { useAccess, useAuth } from "../../auth/AuthContext";
 import { colors, spacing, typography } from "../../theme/tokens";
 
 const DOCS_BASE_URL = "https://pavak01.github.io/evolution-app";
@@ -20,6 +22,13 @@ function openDoc(path: string): void {
 
 export function SettingsScreen(): React.JSX.Element {
   const { user, logout } = useAuth();
+  const access = useAccess();
+  const planSummary =
+    access.tier === "trial"
+      ? `Free trial, everything included${access.trialEndsAt ? `, until ${formatPlanDate(access.trialEndsAt)}` : ""}.`
+      : access.tier === "none"
+        ? "Free trial ended. You can still view and export everything."
+        : `${access.tier === "pro" ? "Pro" : "Basic"}${access.planEndsAt ? `, until ${formatPlanDate(access.planEndsAt)}` : ""}.`;
 
   const [testReminderNote, setTestReminderNote] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -82,6 +91,14 @@ export function SettingsScreen(): React.JSX.Element {
           {user?.email}
         </Text>
         <PrimaryButton label="Log out" onPress={logout} />
+      </Card>
+
+      <Card>
+        <Text style={{ fontSize: typography.body, fontWeight: "700", color: colors.textMain, marginBottom: spacing.xs }}>Plan</Text>
+        <Text style={{ color: colors.textSecondary, marginBottom: spacing.md }}>{planSummary}</Text>
+        <PrimaryButton label="See plans" onPress={openPlans} />
+        <View style={{ height: spacing.md }} />
+        <PromoCodeField />
       </Card>
 
       {__DEV__ && (

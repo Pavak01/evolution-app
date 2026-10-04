@@ -1,4 +1,4 @@
-import { createNavigationContainerRef, NavigationContainer } from "@react-navigation/native";
+import { NavigationContainer } from "@react-navigation/native";
 import * as Notifications from "expo-notifications";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -17,15 +17,25 @@ import { IncomeHistoryScreen } from "../screens/income/IncomeHistoryScreen";
 import { RecordIncomeScreen } from "../screens/income/RecordIncomeScreen";
 import { SummaryScreen } from "../screens/summary/SummaryScreen";
 import { SettingsScreen } from "../screens/settings/SettingsScreen";
+import { PlansScreen } from "../screens/settings/PlansScreen";
+import { navigationRef } from "./navigationRef";
 import { VerifyTwoFactorScreen } from "../screens/auth/VerifyTwoFactorScreen";
 import { colors } from "../theme/tokens";
-import type { AuthStackParamList, CaptureStackParamList, ExpensesStackParamList, IncomeStackParamList, MainTabParamList } from "./types";
+import type {
+  AuthStackParamList,
+  CaptureStackParamList,
+  ExpensesStackParamList,
+  IncomeStackParamList,
+  MainTabParamList,
+  RootStackParamList
+} from "./types";
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const CaptureStack = createNativeStackNavigator<CaptureStackParamList>();
 const ExpensesStack = createNativeStackNavigator<ExpensesStackParamList>();
 const IncomeStack = createNativeStackNavigator<IncomeStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
+const RootStack = createNativeStackNavigator<RootStackParamList>();
 
 const headerOptions = { headerStyle: { backgroundColor: colors.navBg }, headerTintColor: colors.navText };
 
@@ -80,12 +90,10 @@ function MainTabs(): React.JSX.Element {
   );
 }
 
-const navigationRef = createNavigationContainerRef<MainTabParamList>();
-
 function openAwaitingFromReminder(response: Notifications.NotificationResponse | null): void {
   if (response?.notification.request.content.data?.kind !== "reimbursement-reminder") return;
   if (!navigationRef.isReady()) return;
-  navigationRef.navigate("History", { screen: "ExpenseHistory", params: { awaitingOnly: true } });
+  navigationRef.navigate("Main", { screen: "History", params: { screen: "ExpenseHistory", params: { awaitingOnly: true } } });
 }
 
 export function RootNavigator(): React.JSX.Element {
@@ -118,7 +126,10 @@ export function RootNavigator(): React.JSX.Element {
   return (
     <NavigationContainer ref={navigationRef} onReady={handleReady}>
       {user ? (
-        <MainTabs />
+        <RootStack.Navigator screenOptions={headerOptions}>
+          <RootStack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
+          <RootStack.Screen name="Plans" component={PlansScreen} options={{ title: "Plans", presentation: "modal" }} />
+        </RootStack.Navigator>
       ) : (
         <AuthStack.Navigator screenOptions={{ headerShown: false }}>
           <AuthStack.Screen name="Login" component={LoginScreen} />

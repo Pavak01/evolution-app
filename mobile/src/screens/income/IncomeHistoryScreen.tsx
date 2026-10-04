@@ -2,6 +2,7 @@ import React, { useCallback, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { listIncomeInvoices, voidIncomeInvoice } from "../../api/income";
+import { useAccess } from "../../auth/AuthContext";
 import { ApiError } from "../../api/client";
 import type { IncomeInvoice } from "../../api/types";
 import { DangerAction, Field, SmallAction, StatusBanner } from "../../components/Controls";
@@ -17,6 +18,8 @@ function InvoiceRow({ invoice, onVoided }: { invoice: IncomeInvoice; onVoided: (
   const [isExpanded, setIsExpanded] = useState(false);
   const [reason, setReason] = useState("");
   const [isVoiding, setIsVoiding] = useState(false);
+  // No plan after the trial: records stay viewable, but can't be changed.
+  const { canWrite } = useAccess();
   const [error, setError] = useState<string | null>(null);
 
   const [isOpeningFile, setIsOpeningFile] = useState(false);
@@ -82,7 +85,7 @@ function InvoiceRow({ invoice, onVoided }: { invoice: IncomeInvoice; onVoided: (
         {invoice.voided_at ? (
           <Text style={styles.voided}>voided</Text>
         ) : (
-          <SmallAction label="Void" onPress={() => setIsExpanded((v) => !v)} />
+          canWrite && <SmallAction label="Void" onPress={() => setIsExpanded((v) => !v)} />
         )}
       </View>
       {invoice.file_download_url && (

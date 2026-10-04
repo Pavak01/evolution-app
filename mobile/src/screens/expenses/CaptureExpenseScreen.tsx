@@ -2,7 +2,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, Text, View, type ScrollView } from "react-native";
-import { useAuth } from "../../auth/AuthContext";
+import { useAccess, useAuth } from "../../auth/AuthContext";
 import { createExpense } from "../../api/expenses";
 import { getTaxSummary } from "../../api/tax";
 import { ApiError } from "../../api/client";
@@ -16,6 +16,7 @@ import { Screen } from "../../components/Screen";
 import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCapture";
 import { enqueueExpense, generateLocalId, syncQueue } from "../../offlineQueue";
 import { syncReimbursementReminders } from "../../reimbursementReminders";
+import { PlanRequiredCard, ProUpsell, TrialBanner } from "../../components/PlanBits";
 import type { CaptureStackParamList } from "../../navigation/types";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTaxYearFromDate, getTodayIso } from "../../utils/taxYear";
@@ -23,9 +24,10 @@ import { getTaxYearFromDate, getTodayIso } from "../../utils/taxYear";
 type Props = NativeStackScreenProps<CaptureStackParamList, "CaptureForm">;
 
 export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.Element {
-  const { user } = useAuth();
+  const { refreshUser } = useAuth();
   const { captureFromCamera, pickFromFiles } = useReceiptCapture();
-  const hasOcrUpgrade = user?.entitlements.ocr_upgrade_active ?? false;
+  // Trial or Pro — anything that reads a photo/PDF for you.
+  const { ocr: hasOcrUpgrade, canWrite } = useAccess();
 
   const [category, setCategory] = useState("");
   const [occurredAt, setOccurredAt] = useState(getTodayIso());
@@ -245,6 +247,8 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
       if (error instanceof ApiError) {
         console.error("Expense submit failed:", error);
         showStatus({ kind: "error", text: error.message });
+        // Trial ended since the app last checked — swap the form for the plan card.
+        if (error.status === 402) void refreshUser();
       } else {
         // Not a real server response — treat as a connectivity failure and
         // queue it. This is meant to feel like success: the point-of-sale
@@ -263,6 +267,10 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
     <Screen ref={scrollRef}>
       <Text style={{ fontSize: typography.h1, fontWeight: "700", color: colors.textMain }}>Log a receipt</Text>
       {status && <StatusBanner kind={status.kind} text={status.text} />}
+      <TrialBanner />
+      {!canWrite && <PlanRequiredCard />}
+      {canWrite && (
+      <>
       {hasOcrUpgrade && (
         <Text style={{ color: colors.accent, textAlign: "center" }} onPress={() => navigation.navigate("ImportReceipts")}>
           Import past receipts
@@ -290,9 +298,7 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
             {hasOcrUpgrade ? (
               <PrimaryButton label="Auto-fill from receipt ✨" onPress={handleAutoFill} isLoading={isExtracting} />
             ) : (
-              <Text style={{ color: colors.textMuted, fontSize: typography.small, textAlign: "center" }}>
-                ✨ Auto-fill from receipt — paid upgrade, coming soon
-              </Text>
+              <ProUpsell what="Auto-fill from receipt" />
             )}
           </>
         ) : (
@@ -361,6 +367,8 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
         <View style={{ height: spacing.sm }} />
         <PrimaryButton label="Save expense" onPress={handleSubmit} isLoading={isSubmitting} />
       </Card>
+      </>
+      )}
 
       {lastSummary && (
         <Card>

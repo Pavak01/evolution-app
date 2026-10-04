@@ -116,6 +116,9 @@ async function cleanup(): Promise<void> {
     await pool.query("DELETE FROM receipts WHERE user_id = $1", [createdUserId]);
     await pool.query("DELETE FROM expenses WHERE user_id = $1", [createdUserId]);
     await pool.query("DELETE FROM tax_summaries WHERE user_id = $1", [createdUserId]);
+    // Every Evolution sign-in now creates an entitlements row (trial start).
+    await pool.query("DELETE FROM promo_redemptions WHERE user_id = $1", [createdUserId]);
+    await pool.query("DELETE FROM entitlements WHERE user_id = $1", [createdUserId]);
     await pool.query("DELETE FROM public.users WHERE id = $1", [createdUserId]);
     console.log(`Cleaned up smoke-test account (${email}).`);
   } catch (error) {

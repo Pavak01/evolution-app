@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import { getInvoiceDownloadUrl, getJwtSecret } from "../auth/tokens.js";
 import { db } from "../db.js";
-import { isOcrUpgradeActive } from "../entitlements.js";
+import { isOcrUpgradeActive, requireWriteAccess } from "../entitlements.js";
 import { extractInvoiceFields } from "../invoiceExtraction.js";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { sendError } from "../middleware/errorHandler.js";
@@ -67,6 +67,7 @@ const invoiceColumns = `id, period_start::text, period_end::text, source, total_
 incomeRouter.post(
   "/income-invoices",
   requireAuth,
+  requireWriteAccess,
   uploadRateLimit,
   upload.single("invoice_file"),
   async (req: Request, res: Response) => {
@@ -182,7 +183,7 @@ incomeRouter.post(
     try {
       const entitled = await isOcrUpgradeActive(authReq.userId);
       if (!entitled) {
-        return res.status(403).json({ error: "Auto-fill is a paid upgrade and isn't enabled on this account." });
+        return res.status(403).json({ error: "Auto-fill is part of Pro. Choose Pro in Settings → Plan to use it." });
       }
 
       if (!receiptContentMatchesDeclaredType(req.file.buffer, req.file.mimetype)) {
@@ -264,7 +265,7 @@ incomeRouter.get("/income-invoices/:id", requireAuth, async (req: Request, res: 
   }
 });
 
-incomeRouter.post("/income-invoices/:id/void", requireAuth, async (req: Request, res: Response) => {
+incomeRouter.post("/income-invoices/:id/void", requireAuth, requireWriteAccess, async (req: Request, res: Response) => {
   const authReq = req as AuthenticatedRequest;
   const parsed = voidSchema.safeParse(req.body);
   if (!parsed.success) {

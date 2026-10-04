@@ -331,3 +331,43 @@ ALTER TABLE evolution.expenses ADD CONSTRAINT expenses_reimbursement_consistency
 );
 CREATE INDEX IF NOT EXISTS idx_expenses_awaiting_reimbursement
   ON evolution.expenses(user_id, tax_year) WHERE reimbursement_status = 'awaiting' AND voided_at IS NULL;
+
+-- Free trial + Basic/Pro plans (see entitlements.ts). One row per user,
+-- created on first Evolution use — never derived from users.created_at,
+-- since public.users is shared with Qbit's old test accounts.
+--   trial_started_at: first Evolution use; the trial is 1 calendar month.
+--   plan / plan_expires_at: an active plan always wins over the trial;
+--     NULL expiry = no end (manual grants, no-end promo codes).
+--   plan_source: 'manual' (comped), 'promo' (code), 'revenuecat' (store).
+-- ocr_upgrade_* are superseded (Pro = OCR) but kept, no longer read.
+ALTER TABLE evolution.entitlements ADD COLUMN IF NOT EXISTS trial_started_at TIMESTAMP;
+ALTER TABLE evolution.entitlements ADD COLUMN IF NOT EXISTS plan TEXT CHECK (plan IN ('basic', 'pro'));
+ALTER TABLE evolution.entitlements ADD COLUMN IF NOT EXISTS plan_source TEXT CHECK (plan_source IN ('manual', 'promo', 'revenuecat'));
+ALTER TABLE evolution.entitlements ADD COLUMN IF NOT EXISTS plan_expires_at TIMESTAMP;
+
+-- The two manual OCR grants (Roger's own accounts) become manual Pro.
+UPDATE evolution.entitlements
+   SET plan = 'pro', plan_source = 'manual', plan_expires_at = ocr_upgrade_expires_at, updated_at = NOW()
+ WHERE ocr_upgrade_active AND ocr_upgrade_source = 'manual' AND plan IS NULL;
+
+-- Free-access codes for testers and promotions. Given away, never sold —
+-- selling access outside Play billing would break Play's payments policy.
+CREATE TABLE IF NOT EXISTS evolution.promo_codes (
+  code TEXT PRIMARY KEY CHECK (code = UPPER(code)),
+  tier TEXT NOT NULL CHECK (tier IN ('basic', 'pro')),
+  duration_days INTEGER CHECK (duration_days > 0),   -- NULL = no end
+  max_redemptions INTEGER CHECK (max_redemptions > 0), -- NULL = unlimited
+  redeemed_count INTEGER NOT NULL DEFAULT 0,
+  expires_at TIMESTAMP,                               -- when the code itself stops working
+  disabled_at TIMESTAMP,
+  note TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS evolution.promo_redemptions (
+  code TEXT NOT NULL REFERENCES evolution.promo_codes(code),
+  user_id UUID NOT NULL REFERENCES public.users(id),
+  redeemed_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (code, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_promo_redemptions_user ON evolution.promo_redemptions(user_id);

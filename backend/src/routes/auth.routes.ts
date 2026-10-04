@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import { getJwtSecret, signToken, signTwoFactorChallengeToken } from "../auth/tokens.js";
 import { decryptTwoFactorSecret, verifyTotpCode } from "../auth/twoFactor.js";
 import { db } from "../db.js";
-import { isOcrUpgradeActive } from "../entitlements.js";
+import { getAccess, type Access } from "../entitlements.js";
 import { sendError } from "../middleware/errorHandler.js";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { authRateLimit } from "../middleware/rateLimit.js";
@@ -16,8 +16,15 @@ export const authRouter = Router();
 // verify-2fa, /auth/me) — not just /auth/me — so the mobile app has current
 // entitlement state immediately after signing in, not only after an app
 // restart that re-hits /auth/me.
-async function buildUserPayload(id: string, email: string): Promise<{ id: string; email: string; entitlements: { ocr_upgrade_active: boolean } }> {
-  return { id, email, entitlements: { ocr_upgrade_active: await isOcrUpgradeActive(id) } };
+//
+// getAccess also starts the free trial on first Evolution use. Build 110
+// only reads ocr_upgrade_active, so it stays alongside the newer `access`.
+async function buildUserPayload(
+  id: string,
+  email: string
+): Promise<{ id: string; email: string; entitlements: { ocr_upgrade_active: boolean; access: Access } }> {
+  const access = await getAccess(id);
+  return { id, email, entitlements: { ocr_upgrade_active: access.ocr, access } };
 }
 
 authRouter.post("/auth/register", authRateLimit, async (req: Request, res: Response) => {

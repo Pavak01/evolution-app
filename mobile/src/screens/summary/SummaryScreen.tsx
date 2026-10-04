@@ -6,6 +6,7 @@ import { ApiError } from "../../api/client";
 import type { TaxSummary } from "../../api/types";
 import { awaitingPill, Card, SmallAction, SnapshotTile, StatusBanner, SummaryRow } from "../../components/Controls";
 import { Screen } from "../../components/Screen";
+import { TrialBanner } from "../../components/PlanBits";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTaxYearFromDate } from "../../utils/taxYear";
 
@@ -40,6 +41,7 @@ export function SummaryScreen(): React.JSX.Element {
   return (
     <Screen refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => load(taxYear)} />}>
       <Text style={{ fontSize: typography.h1, fontWeight: "700", color: colors.textMain }}>{taxYear} summary</Text>
+      <TrialBanner />
 
       {taxYear !== previousTaxYear && (
         <View style={{ flexDirection: "row", gap: spacing.xs }}>

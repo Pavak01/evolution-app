@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { getReceiptDownloadUrl } from "../auth/tokens.js";
 import { humanizeCategory } from "../categoryDisplay.js";
 import { db } from "../db.js";
-import { isOcrUpgradeActive } from "../entitlements.js";
+import { isOcrUpgradeActive, requireWriteAccess } from "../entitlements.js";
 import { sendError } from "../middleware/errorHandler.js";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { uploadRateLimit } from "../middleware/rateLimit.js";
@@ -237,6 +237,7 @@ async function loadExpenseResponse(
 expensesRouter.post(
   "/expenses",
   requireAuth,
+  requireWriteAccess,
   uploadRateLimit,
   upload.single("receipt"),
   async (req: Request, res: Response) => {
@@ -438,6 +439,7 @@ expensesRouter.post(
 expensesRouter.post(
   "/expenses/:id/receipt",
   requireAuth,
+  requireWriteAccess,
   uploadRateLimit,
   upload.single("receipt"),
   async (req: Request, res: Response) => {
@@ -552,7 +554,7 @@ expensesRouter.post(
     try {
       const entitled = await isOcrUpgradeActive(authReq.userId);
       if (!entitled) {
-        return res.status(403).json({ error: "OCR auto-fill is a paid upgrade and isn't enabled on this account." });
+        return res.status(403).json({ error: "Auto-fill is part of Pro. Choose Pro in Settings → Plan to use it." });
       }
 
       if (!receiptContentMatchesDeclaredType(req.file.buffer, req.file.mimetype)) {
@@ -739,7 +741,7 @@ expensesRouter.get("/expenses/:id", requireAuth, async (req: Request, res: Respo
   }
 });
 
-expensesRouter.post("/expenses/:id/void", requireAuth, async (req: Request, res: Response) => {
+expensesRouter.post("/expenses/:id/void", requireAuth, requireWriteAccess, async (req: Request, res: Response) => {
   const authReq = req as AuthenticatedRequest;
   const parsed = voidSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -768,7 +770,7 @@ expensesRouter.post("/expenses/:id/void", requireAuth, async (req: Request, res:
 
 // Filled in after the fact — the reimbursed amount is only known once the
 // firm pays it, separately from any invoice, so it's never set at capture.
-expensesRouter.post("/expenses/:id/reimbursement", requireAuth, async (req: Request, res: Response) => {
+expensesRouter.post("/expenses/:id/reimbursement", requireAuth, requireWriteAccess, async (req: Request, res: Response) => {
   const authReq = req as AuthenticatedRequest;
   const parsed = reimbursementUpdateSchema.safeParse(req.body);
   if (!parsed.success) {

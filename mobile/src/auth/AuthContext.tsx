@@ -12,6 +12,8 @@ type AuthContextValue = {
   verifyTwoFactor: (challengeToken: string, code: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  // Re-reads plan/trial state — after a redeem, a 402, or coming back to the app.
+  refreshUser: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -38,7 +40,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
       void cancelReimbursementReminders().catch(() => undefined);
       return;
     }
-    const syncAll = () => void syncQueue().finally(() => syncReimbursementReminders());
+    const syncAll = () => {
+      void syncQueue().finally(() => syncReimbursementReminders());
+      // Keeps the trial/plan state current (e.g. a trial that ended overnight).
+      void fetchMe().then(setUser).catch(() => undefined);
+    };
     syncAll();
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") {
@@ -78,13 +84,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     setUser(await apiRegister(email, password));
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    try {
+      setUser(await fetchMe());
+    } catch {
+      // Best-effort — the next foreground refresh will catch up.
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     await clearToken();
     setUser(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, verifyTwoFactor, register, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, isLoading, login, verifyTwoFactor, register, logout, refreshUser }}>{children}</AuthContext.Provider>
   );
 }
 
@@ -94,4 +108,33 @@ export function useAuth(): AuthContextValue {
     throw new Error("useAuth must be used within AuthProvider");
   }
   return ctx;
+}
+
+// Plan/trial state for screens. Before the first /auth/me that carries
+// `access`, falls back to "can write, OCR as before" rather than locking
+// anyone out on a stale session.
+export function useAccess(): {
+  tier: "trial" | "basic" | "pro" | "none";
+  canWrite: boolean;
+  ocr: boolean;
+  trialEndsAt: Date | null;
+  planEndsAt: Date | null;
+  daysLeftInTrial: number | null;
+} {
+  const { user } = useAuth();
+  const access = user?.entitlements.access;
+  if (!access) {
+    const ocr = user?.entitlements.ocr_upgrade_active ?? false;
+    return { tier: ocr ? "pro" : "trial", canWrite: true, ocr, trialEndsAt: null, planEndsAt: null, daysLeftInTrial: null };
+  }
+  const trialEndsAt = access.trial_ends_at ? new Date(access.trial_ends_at) : null;
+  return {
+    tier: access.tier,
+    canWrite: access.can_write,
+    ocr: access.ocr,
+    trialEndsAt,
+    planEndsAt: access.plan_ends_at ? new Date(access.plan_ends_at) : null,
+    daysLeftInTrial:
+      access.tier === "trial" && trialEndsAt ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86_400_000)) : null
+  };
 }

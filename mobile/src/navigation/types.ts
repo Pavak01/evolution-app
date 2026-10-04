@@ -43,6 +43,12 @@ export type IncomeStackParamList = {
   ImportIncomeCsv: undefined;
 };
 
+// Plans sits above the tabs so it can be opened from any of them.
+export type RootStackParamList = {
+  Main: NavigatorScreenParams<MainTabParamList> | undefined;
+  Plans: undefined;
+};
+
 export type MainTabParamList = {
   // NavigatorScreenParams (not `undefined`) so a screen outside this tab can
   // navigate straight into one of Capture's nested screens with params —

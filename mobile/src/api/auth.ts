@@ -1,6 +1,17 @@
 import { apiJson, clearToken, setToken } from "./client";
 
-export type AuthUser = { id: string; email: string; entitlements: { ocr_upgrade_active: boolean } };
+// Mirrors backend/src/entitlements.ts. Optional only because a session
+// restored from before this field existed may not have it until /auth/me.
+export type Access = {
+  tier: "trial" | "basic" | "pro" | "none";
+  trial_ends_at: string | null;
+  plan_ends_at: string | null; // null with an active plan = no end
+  plan_source: "manual" | "promo" | "revenuecat" | null;
+  can_write: boolean;
+  ocr: boolean;
+};
+
+export type AuthUser = { id: string; email: string; entitlements: { ocr_upgrade_active: boolean; access?: Access } };
 
 export async function register(email: string, password: string): Promise<AuthUser> {
   const result = await apiJson<{ token: string; user: AuthUser }>("/auth/register", {

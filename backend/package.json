@@ -8,7 +8,9 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "check-env": "tsx scripts/check-env.ts",
-    "smoke-test": "tsx scripts/smoke-test.ts"
+    "smoke-test": "tsx scripts/smoke-test.ts",
+    "promo-code": "tsx scripts/promo-code.ts",
+    "grant-plan": "tsx scripts/grant-plan.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",

@@ -1,7 +1,8 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React, { useRef, useState } from "react";
 import { Alert, Modal, Pressable, StyleSheet, Text, View, type ScrollView } from "react-native";
-import { useAuth } from "../../auth/AuthContext";
+import { useAccess, useAuth } from "../../auth/AuthContext";
+import { PlanRequiredCard, ProUpsell, TrialBanner } from "../../components/PlanBits";
 import { createIncomeInvoice } from "../../api/income";
 import { extractInvoiceFields } from "../../api/invoiceExtraction";
 import { ApiError } from "../../api/client";
@@ -18,9 +19,10 @@ import type { IncomeStackParamList } from "../../navigation/types";
 type Props = NativeStackScreenProps<IncomeStackParamList, "RecordIncome">;
 
 export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
-  const { user } = useAuth();
+  const { refreshUser } = useAuth();
   const { pickFromFiles, pickDocument } = useReceiptCapture();
-  const hasOcrUpgrade = user?.entitlements.ocr_upgrade_active ?? false;
+  // Trial or Pro — anything that reads a photo/PDF for you.
+  const { ocr: hasOcrUpgrade, canWrite } = useAccess();
   const [isExtracting, setIsExtracting] = useState(false);
 
   const [periodStart, setPeriodStart] = useState(getTodayIso());
@@ -141,6 +143,7 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
       if (error instanceof ApiError) {
         console.error("Income submit failed:", error);
         showStatus({ kind: "error", text: error.message });
+        if (error.status === 402) void refreshUser();
       } else {
         await enqueueIncome(fields, file?.uri, file?.name, file?.mimeType, idempotencyKey);
         showStatus({ kind: "info", text: "No connection — saved on your device. It'll upload automatically once you're back online." });
@@ -159,7 +162,10 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
     <Screen ref={scrollRef}>
       <Text style={{ fontSize: typography.h1, fontWeight: "700", color: colors.textMain }}>Record income</Text>
       {status && <StatusBanner kind={status.kind} text={status.text} />}
+      <TrialBanner />
+      {!canWrite && <PlanRequiredCard />}
 
+      {canWrite && (
       <Card>
         <Field label="Who paid you" value={source} onChange={setSource} placeholder="Client or company name" />
         <DateField label="Period start" value={periodStart} onChange={setPeriodStart} />
@@ -191,9 +197,7 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
             {hasOcrUpgrade ? (
               <PrimaryButton label="Auto-fill from invoice ✨" onPress={handleAutoFillInvoice} isLoading={isExtracting} />
             ) : (
-              <Text style={{ color: colors.textMuted, fontSize: typography.small, textAlign: "center" }}>
-                ✨ Auto-fill from invoice — paid upgrade, coming soon
-              </Text>
+              <ProUpsell what="Auto-fill from invoice" />
             )}
           </>
         )}
@@ -201,6 +205,7 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
         <View style={{ height: spacing.sm }} />
         <PrimaryButton label="Save income" onPress={handleSubmit} isLoading={isSubmitting} />
       </Card>
+      )}
 
       {lastSummary && (
         <Card>
@@ -217,9 +222,11 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
       <Text style={{ color: colors.textMuted, textAlign: "center" }} onPress={() => navigation.navigate("IncomeHistory")}>
         View income history
       </Text>
-      <Text style={{ color: colors.textMuted, textAlign: "center" }} onPress={() => navigation.navigate("ImportIncomeCsv")}>
-        Import income from CSV
-      </Text>
+      {canWrite && (
+        <Text style={{ color: colors.textMuted, textAlign: "center" }} onPress={() => navigation.navigate("ImportIncomeCsv")}>
+          Import income from CSV
+        </Text>
+      )}
     </Screen>
   );
 }

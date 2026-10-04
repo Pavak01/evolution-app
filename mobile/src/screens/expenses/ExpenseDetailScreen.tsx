@@ -9,6 +9,7 @@ import type { Expense, ReimbursementStatus } from "../../api/types";
 import { awaitingPill, Card, DangerAction, Field, PrimaryButton, SmallAction, StatusBanner, SummaryRow } from "../../components/Controls";
 import { ImageViewerModal } from "../../components/ImageViewerModal";
 import { syncReimbursementReminders } from "../../reimbursementReminders";
+import { useAccess, useAuth } from "../../auth/AuthContext";
 import { Screen } from "../../components/Screen";
 import { useReceiptCapture } from "../../hooks/useReceiptCapture";
 import { colors, spacing, typography } from "../../theme/tokens";
@@ -35,6 +36,9 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
   const [isAttaching, setIsAttaching] = useState(false);
   const [isResubmitting, setIsResubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // No plan after the trial: records stay viewable, but can't be changed.
+  const { canWrite } = useAccess();
+  const { refreshUser } = useAuth();
   const [reimbStatus, setReimbStatus] = useState<ReimbursementStatus>("none");
   const [reimbAmount, setReimbAmount] = useState("");
   const [isUpdatingReimb, setIsUpdatingReimb] = useState(false);
@@ -92,6 +96,7 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
       await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not attach the receipt.");
+      if (err instanceof ApiError && err.status === 402) void refreshUser();
     } finally {
       setIsAttaching(false);
     }
@@ -153,6 +158,7 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
       navigation.goBack();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not void this expense.");
+      if (err instanceof ApiError && err.status === 402) void refreshUser();
     } finally {
       setIsVoiding(false);
     }
@@ -170,6 +176,7 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
       closeTimer.current = setTimeout(() => navigation.goBack(), 800);
     } catch (err) {
       setReimbError(err instanceof ApiError ? err.message : "Could not update the reimbursement.");
+      if (err instanceof ApiError && err.status === 402) void refreshUser();
     } finally {
       setIsUpdatingReimb(false);
     }
@@ -207,7 +214,7 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
         )}
       </Card>
 
-      {expense.voided_at && (
+      {expense.voided_at && canWrite && (
         <PrimaryButton label="Resubmit" onPress={handleResubmit} isLoading={isResubmitting} />
       )}
 
@@ -244,6 +251,7 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
       {expense.receipt_download_url ? (
         <PrimaryButton label="View receipt" onPress={handleViewReceipt} />
       ) : (
+        canWrite && (
         <Card>
           <Text style={{ fontSize: typography.body, fontWeight: "700", color: colors.danger, marginBottom: spacing.sm }}>
             Missing receipt
@@ -261,6 +269,7 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
             </View>
           </View>
         </Card>
+        )
       )}
       <ImageViewerModal
         visible={viewerVisible}
@@ -270,7 +279,7 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
         onShare={viewerUri ? () => shareLocalUri(viewerUri) : undefined}
       />
 
-      {!expense.voided_at && (
+      {!expense.voided_at && canWrite && (
         <Card>
           <Text style={{ fontSize: typography.body, fontWeight: "700", color: colors.textMain, marginBottom: spacing.xs }}>
             Reimbursement
@@ -319,7 +328,7 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
         </Card>
       )}
 
-      {!expense.voided_at && (
+      {!expense.voided_at && canWrite && (
         <Card>
           <Text style={{ fontSize: typography.body, fontWeight: "700", color: colors.danger, marginBottom: spacing.sm }}>
             Void this expense
