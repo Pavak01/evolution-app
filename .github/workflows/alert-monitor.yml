@@ -1,0 +1,58 @@
+name: Alert monitor
+
+# Every 10 minutes: emails Roger if evolution-backend is down, erroring,
+# being password-guessed, flooded with sign-ups, or hammered by one client.
+# See ops/scripts/alert-monitor.mjs.
+#
+# Needs 3 repository secrets (Settings → Secrets and variables → Actions):
+#   RAILWAY_TOKEN   a Railway *project* token for the production environment
+#   RESEND_API_KEY  sending key for mail.aplccommodities.com
+#   ALERT_TO_EMAIL  where alerts go
+#
+# Note: GitHub pauses scheduled workflows in a repo with no activity for 60
+# days — re-enable it from the Actions tab if that ever happens.
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alert-monitor
+  cancel-in-progress: false
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Restore monitor state
+        uses: actions/cache/restore@v4
+        with:
+          path: .alert-state
+          key: alert-monitor-state-${{ github.run_id }}
+          restore-keys: alert-monitor-state-
+
+      - name: Check production
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_CLI: npx --yes @railway/cli
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_TO_EMAIL: ${{ secrets.ALERT_TO_EMAIL }}
+        run: node ops/scripts/alert-monitor.mjs
+
+      - name: Save monitor state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .alert-state
+          key: alert-monitor-state-${{ github.run_id }}
