@@ -1,4 +1,5 @@
 import { NavigationContainer } from "@react-navigation/native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React, { useCallback, useEffect } from "react";
@@ -69,6 +70,36 @@ function IncomeStackScreen(): React.JSX.Element {
   );
 }
 
+// Filled icon for the selected tab, outline for the rest, with a soft
+// rounded "wrapper" behind the selected one so the current page is obvious.
+type IconName = React.ComponentProps<typeof Ionicons>["name"];
+const TAB_ICONS: Record<keyof MainTabParamList, IconName> = {
+  Capture: "camera",
+  Income: "cash",
+  Summary: "pie-chart",
+  History: "time",
+  Export: "share-social",
+  Settings: "settings"
+};
+
+function TabIcon({ name, focused, color }: { name: keyof MainTabParamList; focused: boolean; color: string }): React.JSX.Element {
+  const icon = (focused ? TAB_ICONS[name] : `${TAB_ICONS[name]}-outline`) as IconName;
+  return (
+    <View
+      style={{
+        width: 52,
+        height: 30,
+        borderRadius: 15,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: focused ? colors.accentSoft : "transparent"
+      }}
+    >
+      <Ionicons name={icon} size={20} color={color} />
+    </View>
+  );
+}
+
 // Capture is the initial/default tab — it's now the primary, highest-frequency
 // action, unlike Qbit where the equivalent "week" screen was just one of
 // several equally-weighted entries in a button row.
@@ -76,11 +107,13 @@ function MainTabs(): React.JSX.Element {
   return (
     <Tab.Navigator
       initialRouteName="Capture"
-      screenOptions={{
+      screenOptions={({ route }) => ({
         ...headerOptions,
         tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.textMuted
-      }}
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+        tabBarIcon: ({ focused, color }) => <TabIcon name={route.name} focused={focused} color={color} />
+      })}
     >
       <Tab.Screen name="Capture" component={CaptureStackScreen} options={{ headerShown: false }} />
       <Tab.Screen name="Income" component={IncomeStackScreen} options={{ headerShown: false }} />
