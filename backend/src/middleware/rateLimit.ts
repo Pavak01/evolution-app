@@ -72,18 +72,22 @@ export const promoRateLimit = createRateLimitMiddleware({
   message: "Too many code attempts. Please try again later."
 });
 
-// Sign-ups get their own, much tighter budget than sign-in.
+// Sign-ups get their own, tighter budget than sign-in. Not lower than 10:
+// mobile networks put many customers behind one shared IP (CGNAT). Email
+// confirmation and the disposable-domain block do the real anti-bot work.
 export const registerRateLimit = createRateLimitMiddleware({
   key: "register",
   windowMs: 60 * 60 * 1000,
-  max: 5,
+  max: 10,
   message: "Too many sign-up attempts. Please try again later."
 });
 
-// Shared by every emailed-code endpoint (confirm email, resend, password reset).
+// Shared by every emailed-code endpoint (confirm email, resend, password
+// reset). Generous because of shared mobile IPs — guessing is already
+// stopped per code (5 tries) and per account (5 sends an hour).
 export const emailCodeRateLimit = createRateLimitMiddleware({
   key: "email-code",
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 30,
   message: "Too many attempts. Please try again later."
 });
