@@ -92,7 +92,7 @@ We may share data with infrastructure providers that run core app infrastructure
 
 To send sign-up and password-reset codes, your email address and the code are passed to Resend, our email delivery provider, solely to deliver that email.
 
-If you use the optional "Auto-fill from receipt" or "Import past receipts" features (a paid upgrade), the receipt photo you pick is sent to Anthropic (the provider of the underlying AI model) to extract the category, amount, date, and merchant. This only happens when you actively use these features on a receipt you choose — it is not automatic for every receipt you save. This use is governed by Anthropic's own commercial API terms, under which API data is not used to train their models (see Anthropic's published privacy and terms documentation for their current policy).
+If you use the optional "Auto-fill from receipt", "Import past receipts" or "Auto-fill from invoice" features (part of Pro, and included in the free trial), the receipt photo, or the invoice photo or PDF, that you pick is sent to Anthropic (the provider of the underlying AI model) to read the details from it: for a receipt, the category, amount, date and merchant; for an invoice, who paid you, the total and the date. This only happens when you actively use these features on a file you choose — it is not automatic for every receipt or invoice you save. This use is governed by Anthropic's own commercial API terms, under which API data is not used to train their models (see Anthropic's published privacy and terms documentation for their current policy).
 
 We may disclose data if required by law or valid legal process.
 

@@ -10,22 +10,29 @@ Reference material for filling out Play Console's forms — drafted from what th
 ### Data types collected
 
 **Personal info**
-- Email address — collected. Purpose: Account management. Required, not optional. Not processed ephemerally.
+- Email address — collected. Purpose: Account management (sign-in, plus one-time codes emailed to confirm the address at sign-up and to reset a password; no marketing email). Required, not optional. Not processed ephemerally.
 
 **Financial info**
-- Other financial info — collected (the expense/income records you enter: category, amount, payment method, reimbursement status, income source, period, total). Purpose: App functionality (this is the core purpose of the app — tracking your own expenses/income for Self Assessment). Required, not optional.
+- Other financial info — collected (the expense/income records you enter: category, amount, payment method, business use %, reimbursement status and amount reimbursed, income source, period, total). Purpose: App functionality (this is the core purpose of the app — tracking your own expenses/income for Self Assessment). Required, not optional.
 
 **Photos**
 - Photos — collected (receipt and invoice photos you attach). Purpose: App functionality. Required only for non-`travel` expense categories; optional for `travel` and for income invoices.
 
 **Files and docs**
-- Files and docs — collected (PDF receipts/invoices, once the PDF attachment feature ships). Same purpose/requirement as Photos above.
+- Files and docs — collected: PDF invoices attached to income records, and CSV earnings reports used for "Import income from CSV" (the original file is stored with each imported record). Receipts are photos only. Purpose: App functionality. Optional.
+
+**Financial info → Purchase history** (only once Phase B ships)
+- Not collected yet. When Play billing via RevenueCat ships, subscription status/purchase history becomes collected (Purpose: App functionality / account management). Promo codes give free access and aren't purchases.
 
 **App activity**
 - App interactions — arguably collected in the loose sense of "you use the app's features," but there's no analytics/telemetry SDK, no event tracking, no crash reporting service integrated. **I'd answer "not collected" here** unless something changes — there's genuinely nothing in the codebase collecting usage analytics.
 
 **Device or other identifiers**
 - None collected. No advertising ID, no device ID tracking.
+
+### Permissions to be ready to explain (not Data Safety questions)
+- **Notifications** (Android 13+ `POST_NOTIFICATIONS`, new in the build after 110): reimbursement reminders, scheduled on the phone itself. No data leaves the phone for this, and no push service is used.
+- Camera / photos: receipt and invoice capture.
 
 ### Is all of the user data collected by your app encrypted in transit?
 **Yes** — all API traffic is HTTPS (Railway-hosted backend), all file storage access via S3 uses signed HTTPS URLs.
@@ -35,7 +42,8 @@ Reference material for filling out Play Console's forms — drafted from what th
 
 ### Data sharing with third parties
 This is the one place to be deliberate, not just tick "no":
-- **Anthropic** — receipt/invoice photos are sent to Anthropic's API when you actively use "Auto-fill from receipt" or "Import past receipts" (the OCR paid upgrade). This is a real third-party data transfer and should be disclosed. Purpose: App functionality. Not for advertising or marketing.
+- **Anthropic** — receipt photos, and invoice photos/PDFs, are sent to Anthropic's API when the user actively uses "Auto-fill from receipt", "Import past receipts" or "Auto-fill from invoice" (Pro, and the free trial). Disclose it. Purpose: App functionality. Not for advertising or marketing.
+- **Resend** — the email address and a one-time code are passed to Resend solely to deliver sign-up confirmation and password-reset emails. A service provider acting on Evolution's behalf (like hosting), so normally not "sharing" in Play's sense — check Play's current help text.
 - **AWS (S3-compatible storage) / Railway (hosting, Postgres)** — these run the app's own infrastructure under contract, processing data on Evolution's behalf rather than for their own independent purposes. Most privacy frameworks (and Play's own guidance) treat a processor operating under a data processing agreement differently from "sharing" with a third party — I'd list these under "how data is stored/processed" rather than the "shared with third parties" section, but this is worth double-checking against Play's current help text yourself, since the exact line can shift.
 
 ## Content rating questionnaire
