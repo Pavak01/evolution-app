@@ -44,24 +44,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   // Reimbursement reminders are rebuilt on the same trigger, after the queue
   // (a just-synced "awaiting" expense should count), and cleared on sign-out
   // so a signed-out device never nags about someone's expenses.
+  //
+  // Keyed on the signed-in account's id, NOT the user object: the
+  // foreground refresh below replaces the user object, and depending on it
+  // re-ran this effect, which refreshed again — an endless /auth/me loop
+  // (~3 requests a second, found 2026-10-04).
+  const signedInId = user?.id ?? null;
   useEffect(() => {
-    if (!user) {
+    if (!signedInId) {
       void cancelReimbursementReminders().catch(() => undefined);
       return;
     }
-    const syncAll = () => {
-      void syncQueue().finally(() => syncReimbursementReminders());
-      // Keeps the trial/plan state current (e.g. a trial that ended overnight).
-      void fetchMe().then(setUser).catch(() => undefined);
-    };
-    syncAll();
+    const syncWork = () => void syncQueue().finally(() => syncReimbursementReminders());
+    syncWork();
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") {
-        syncAll();
+        syncWork();
+        // Keeps the trial/plan state current (e.g. a trial that ended overnight).
+        // Not needed on sign-in itself — the user was fetched moments ago.
+        void fetchMe().then(setUser).catch(() => undefined);
       }
     });
     return () => subscription.remove();
-  }, [user]);
+  }, [signedInId]);
 
   useEffect(() => {
     (async () => {
