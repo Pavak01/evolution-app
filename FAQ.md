@@ -4,6 +4,15 @@ See the [User Guide](USER-GUIDE.md) for a full screen-by-screen walkthrough.
 
 ## Account and sign-in
 
+**Why do I have to confirm my email?**
+It proves the email address is really yours, so nobody can open an account in your name, and it means we can always reach you to reset your password. Temporary "throwaway" inboxes can't be used to sign up.
+
+**I didn't get the code.**
+Check your spam or junk folder first; it comes from no-reply@mail.aplccommodities.com. You can tap **Resend code** after a minute (up to 5 times an hour), and only the newest code works. Codes last 15 minutes. If you typed your email wrong, tap **Wrong email? Start again**. Still stuck? Email support@aplccommodities.com.
+
+**I've forgotten my password.**
+Tap **Forgot password?** on the sign-in screen and follow the steps: we email you a code, and you choose a new password. For your security, resetting signs you out on every other device.
+
 **I have 2FA enabled — how does that work in Evolution?**
 After your password, you'll be asked for the 6-digit code from your authenticator app. There's no in-app screen for turning 2FA on or off yet — that's planned for a future update, and can currently only be verified at sign-in, not configured.
 

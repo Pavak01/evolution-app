@@ -38,6 +38,7 @@ This policy applies to users of Evolution, including the mobile app and its back
 ### A. Account and sign-in information
 - Email address
 - Password (stored as a bcrypt hash, never in plain text)
+- Whether you've confirmed your email address, and short-lived one-time codes we email you to confirm it or reset your password (stored only as a one-way hash, valid for 15 minutes)
 - Optional two-factor authentication state (Evolution verifies, but does not itself generate, a two-factor code against an encrypted secret already stored on the account)
 
 ### B. Expense information you enter
@@ -61,7 +62,7 @@ On your device, the app stores your session token in secure device storage (`exp
 ## 3. How we use your information
 
 We use data to:
-- Create and secure your account
+- Create and secure your account, including emailing you codes to confirm your email address and to reset your password (we don't send marketing email)
 - Authenticate sign-in, including two-factor verification where enabled
 - Record and store your expenses and income
 - Calculate tax and National Insurance estimates
@@ -88,6 +89,8 @@ Receipt and invoice files are stored in S3-compatible object storage. The app st
 We do not sell personal information.
 
 We may share data with infrastructure providers that run core app infrastructure (hosting, database, and object storage) only as needed to provide the service.
+
+To send sign-up and password-reset codes, your email address and the code are passed to Resend, our email delivery provider, solely to deliver that email.
 
 If you use the optional "Auto-fill from receipt" or "Import past receipts" features (a paid upgrade), the receipt photo you pick is sent to Anthropic (the provider of the underlying AI model) to extract the category, amount, date, and merchant. This only happens when you actively use these features on a receipt you choose — it is not automatic for every receipt you save. This use is governed by Anthropic's own commercial API terms, under which API data is not used to train their models (see Anthropic's published privacy and terms documentation for their current policy).
 

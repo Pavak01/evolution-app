@@ -20,6 +20,10 @@ This guide walks through every screen. For quick answers, see the [FAQ](FAQ.md).
 
 Sign in with your email and password, or tap **Create an account** if you're new.
 
+**Confirming your email.** When you create an account, we email you a 6-digit code. Enter it on the **Check your email** screen to finish. Your free trial starts at that moment. The code lasts 15 minutes. Can't see it? Check your spam or junk folder, or tap **Resend code** (available after a minute). Only the newest code works. If you typed the wrong email, tap **Wrong email? Start again**.
+
+**Forgot your password?** Tap **Forgot password?** on the sign-in screen, enter your email and tap **Send code**. Then enter the code from the email and your new password (at least 8 characters) twice. You'll be signed straight in, and signed out on any other phone.
+
 If your account has two-factor authentication (2FA) turned on, after entering your password you'll be asked for the 6-digit code from your authenticator app. (2FA can be verified at sign-in, but there isn't yet an in-app screen for turning it on — that's coming in a future update.)
 
 ## Log a receipt (Capture)
