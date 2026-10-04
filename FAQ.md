@@ -61,10 +61,10 @@ No. Every submission carries a one-time ID behind the scenes, so if a save actua
 Usually, yes. If a new expense uses the exact same receipt photo as one you've already logged, or shares the same category, amount, and date as another (sharpened to an exact time match when a receipt's printed transaction time was read automatically), you'll see a note right after saving pointing at the earlier entry. This isn't just a one-off notice — both entries stay marked **"possible duplicate"** in History (next to "voided" or "missing receipt") until you act on it, and the expense's own detail page links straight to the other one. It never blocks the save or asks you to confirm first — open the one you don't need and void it with a reason, same as any other correction; once you do, the flag clears on its own.
 
 **What is "Auto-fill from receipt"?**
-A paid upgrade, currently in preview, that reads a receipt photo and fills in the category, amount, and date automatically — you still review and can edit everything before saving. It's not purchasable yet; manual entry is always free and always works, and stays that way as the fallback even once auto-fill ships properly.
+Part of Pro (and included in the free trial). It reads a receipt photo and fills in the category, amount, and date automatically; you still review and can edit everything before saving. Typing it in yourself always works on either plan.
 
 **What is "Import past receipts"?**
-For accounts with early access to auto-fill: a way to bulk-add receipts you already had before you started using Evolution. Pick several photos at once from Capture's "Import past receipts" link, each one gets auto-read the same way single-receipt auto-fill does, and you review and correct every row before importing. Each receipt is attributed to its own actual date, so an old receipt from an earlier tax year lands in that year's summary, not the current one — after importing, the running total shown is for the current tax year, with a note if some of what you just imported actually landed elsewhere.
+Part of Pro (and included in the free trial): a way to bulk-add receipts you already had before you started using Evolution. Pick several photos at once from Capture's "Import past receipts" link, each one gets auto-read the same way single-receipt auto-fill does, and you review and correct every row before importing. Each receipt is attributed to its own actual date, so an old receipt from an earlier tax year lands in that year's summary, not the current one — after importing, the running total shown is for the current tax year, with a note if some of what you just imported actually landed elsewhere.
 
 **Can I still claim a receipt from a previous tax year?**
 Often, yes — a UK Self Assessment return is due 31 January following the end of its tax year, and can still be amended up to 12 months after that. So a receipt from a year that hasn't been filed yet, or is still within its amendment window, is genuinely still claimable. During Import past receipts, a receipt dated in a year that's likely past that window gets a warning (not a block) — it's still your call whether to include it.
@@ -84,7 +84,7 @@ No — attaching a file to an income record is optional.
 Yes. Real invoices routinely arrive as PDFs, unlike point-of-sale receipts, so income invoices support both — tap the attach button on Record income and choose **Photo** or **PDF** from the dropdown.
 
 **What is "Auto-fill from invoice"?**
-A paid upgrade, currently in preview, that reads an attached invoice (photo or PDF) and fills in who paid you, the total amount, and the received date automatically — you still review and can edit everything before saving. It never fills in the period dates, since most real invoices don't state an explicit period. It's not purchasable yet; manual entry is always free and always works.
+Part of Pro (and included in the free trial). It reads an attached invoice (photo or PDF) and fills in who paid you, the total amount, and the received date automatically; you still review and can edit everything before saving. It never fills in the period dates, since most real invoices don't state an explicit period. Typing it in yourself always works on either plan.
 
 **How do I view an invoice file I've attached?**
 Open the record in Income history and tap **View invoice**. A photo opens in an in-app viewer; a PDF or CSV is handed to your device's share sheet instead, so you can open it in whatever app makes sense (a PDF viewer, a spreadsheet app).
@@ -102,6 +102,23 @@ They're estimates based on current UK tax rules, meant to help you set aside the
 
 **What shows up under "Things to review"?**
 Automated warnings the app generates when something about your figures looks worth a second look (for example, an unusual pattern in a category). They're prompts to check your own records, not errors. One, shown in amber, lists expenses still awaiting reimbursement. It disappears once you've recorded what was paid back, or marked them as not reimbursed.
+
+## Plans and free trial
+
+**Is Evolution free?**
+Every new account gets one month free with everything included, from your first sign-in. After that there are two paid plans: **Basic** (everything you enter yourself) and **Pro** (Basic plus auto-fill and Import past receipts). The rule is simple: anything that reads a photo or PDF for you is Pro. A subscription is an allowable business expense.
+
+**Is importing income from a CSV file Basic or Pro?**
+Basic. The app reads the file itself, with no auto-fill involved.
+
+**What happens to my records if my trial ends and I don't choose a plan?**
+Nothing is deleted or hidden. You can still view everything, export it, lock a filed tax year, reset your data or delete your account. You just can't add or change records until you choose a plan.
+
+**I've been given a code. How do I use it?**
+Go to **Settings → Have a code?** (or the Plans screen), enter it and tap **Redeem code**. Capitals and spaces don't matter. A code never takes away a better plan you already have; if it wouldn't improve yours, nothing changes and the code isn't used up. Each code can only be used once per account.
+
+**How much do the plans cost?**
+Prices haven't been set yet, and subscriptions can't be bought in the app just yet. The aim is to keep both plans affordable.
 
 ## Data, storage, and security
 

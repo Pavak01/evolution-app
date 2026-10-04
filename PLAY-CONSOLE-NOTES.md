@@ -71,5 +71,6 @@ This is a finance/productivity utility with no user-generated public content, no
 ## Known pending items (not blockers, worth tracking)
 
 - iOS: blocked on Apple Developer Program enrollment (not yet done) — Android-only for now.
-- OCR Phase B (real RevenueCat purchase flow) not built — the upgrade is currently manually granted per-account, so don't advertise it as self-service purchasable in the listing yet.
+- Plans (2026-10-04): 1-month free trial, then Basic or Pro (Pro = anything that reads a photo/PDF). Phase A shipped: trial, enforcement, Plans screen, free promo codes. **Phase B (Play billing via RevenueCat) not built** — don't advertise subscriptions as purchasable in the listing yet. When it ships: Data Safety gains purchase history (collected via Google Play/RevenueCat), and the listing should state "Free trial, then subscription". Promo codes are given away only, never sold outside Play billing (Play payments policy).
+- Notifications (2026-10-03): the next build requests the Android 13+ notification permission (reimbursement reminders, on-device only, no data leaves the phone for this).
 - PDF attachment just wired up this session (`3a7d2d9`) — unverified on a real device as of this build. Confirm it actually works before claiming "PDF support" anywhere in the listing or updating the FAQ.

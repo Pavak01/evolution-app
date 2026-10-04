@@ -14,6 +14,7 @@ This guide walks through every screen. For quick answers, see the [FAQ](FAQ.md).
   - [Recording a reimbursement](#recording-a-reimbursement)
 - [Export](#export)
 - [Settings](#settings)
+- [Plans and free trial](#plans-and-free-trial)
 
 ## Signing in
 
@@ -48,11 +49,11 @@ The first time you do this, the app asks whether it can send you notifications. 
 
 **A note on other file types**: photo capture and photo-library selection both work reliably. Picking a PDF or a "Files" document doesn't currently work — a photo or screenshot of the PDF works as a substitute.
 
-**Auto-fill from receipt**: a paid upgrade, currently in preview, that reads a picked receipt photo and fills in the category, amount, and date for you — still fully editable before you save. Not yet purchasable; accounts with early access see an **Auto-fill from receipt** button once a photo is added, everyone else sees a "coming soon" note in its place.
+**Auto-fill from receipt** (Pro, and included in the free trial): reads a picked receipt photo and fills in the category, amount, and date for you, still fully editable before you save. Once a photo is added you'll see an **Auto-fill from receipt** button, or on Basic a note that it's part of Pro.
 
 **Fuel card warning**: if auto-fill spots signs of a commercial/fleet fuel card on a receipt (a named scheme like Allstar or BP Plus, or "FUEL CARD" printed on it), it shows a warning — fuel paid for on a company-owned card wasn't paid for by you, so it shouldn't be claimed as a deductible expense. This is a best-effort signal, not exhaustive, so it's always your own call whether to include a flagged receipt.
 
-**Import past receipts**: for accounts with early access to auto-fill, a link above the capture form opens a bulk-import flow for receipts you already had before you started using Evolution — pick several photos at once, each gets auto-read, then you review and correct before importing them all. Each receipt lands in whichever tax year its own date actually falls in, which is often not the current one — after importing, you'll see the current year's running total, plus a note if some of what you just imported went to a different year instead. If a receipt's date is likely past HMRC's amendment deadline for its tax year, you'll see a warning next to it — it's not blocked, just flagged, since it's still your call whether to include it.
+**Import past receipts** (Pro, and included in the free trial): a link above the capture form opens a bulk-import flow for receipts you already had before you started using Evolution — pick several photos at once, each gets auto-read, then you review and correct before importing them all. Each receipt lands in whichever tax year its own date actually falls in, which is often not the current one — after importing, you'll see the current year's running total, plus a note if some of what you just imported went to a different year instead. If a receipt's date is likely past HMRC's amendment deadline for its tax year, you'll see a warning next to it — it's not blocked, just flagged, since it's still your call whether to include it.
 
 ## Record income
 
@@ -69,7 +70,7 @@ You'll see the updated running total for total income and net profit. Tap **View
 
 Income periods can overlap between different clients (two people paying you for the same week is normal) — the app deduplicates the overlap automatically when calculating your weeks-logged figure for National Insurance, so you don't need to worry about double-counting.
 
-**Auto-fill from invoice**: a paid upgrade, currently in preview, that reads an attached invoice (photo or PDF) and fills in who paid you, the total amount, and the received date — still fully editable before you save. It never fills in the period dates. Accounts with early access see an **Auto-fill from invoice** button once a file is attached; everyone else sees a "coming soon" note in its place.
+**Auto-fill from invoice** (Pro, and included in the free trial): reads an attached invoice (photo or PDF) and fills in who paid you, the total amount, and the received date, still fully editable before you save. It never fills in the period dates.
 
 **Viewing an attached invoice**: from Income history, tap **View invoice** on any entry that has one. A photo opens in an in-app viewer; a PDF or CSV is handed to your device's share sheet instead, since those can't be shown in-app the same way.
 
@@ -116,6 +117,32 @@ The file has three parts: your totals, category totals grouped into HMRC's SA103
 
 - See which account you're signed in as.
 - **Log out**.
+- **Plan**: your current plan and when it ends, **See plans**, and **Have a code?** (see [Plans and free trial](#plans-and-free-trial)).
 - **Help** — links to this User Guide, the FAQ, and the Privacy Policy, opened in your browser.
 - **Reset all data** — clears every expense, income record, and receipt, immediately, without touching your account or login. Type `RESET` to confirm. If some of that data is from a tax year that's both past HMRC's filing deadline and has already been exported once — a sign it may have been used for a submitted return — you'll see a warning instead of an instant reset, naming the year in question; confirm again ("Reset anyway") if you want to proceed regardless. A tax year you've **locked** (see Export) is the one exception — it's always skipped, with no override, until you unlock it. This can't be undone.
 - **Delete account** — permanently deletes your account and all your data: expenses, receipts, income records, and tax summaries. Type `DELETE` to confirm. This can't be undone, and processing completes within 30 days. See [Account deletion](ACCOUNT-DELETION.html) for the version of this you can use without the app installed, and the [Privacy Policy](PRIVACY-POLICY.md) for exactly what is removed.
+
+## Plans and free trial
+
+Every new account starts with a **free one-month trial with everything included**, from the first time you sign in to Evolution. That's time enough to see whether it's useful before deciding.
+
+After the trial there are two plans:
+
+| | **Basic** | **Pro** |
+|---|---|---|
+| Log receipts and income by hand, Summary, History, Export | ✓ | ✓ |
+| Reimbursements, reminders, offline saving, duplicate checks | ✓ | ✓ |
+| Import income from CSV | ✓ | ✓ |
+| Auto-fill from receipt | | ✓ |
+| Import past receipts | | ✓ |
+| Auto-fill from invoice | | ✓ |
+
+The simple rule: anything that reads a photo or PDF for you is Pro. A subscription is an allowable business expense.
+
+During the last week of your trial you'll see a reminder on Log a receipt and Summary with how many days are left. Tap it, or go to **Settings → See plans**, to compare plans.
+
+**If your trial ends without choosing a plan**, nothing is deleted or hidden. You can still view everything, export it, lock a filed tax year, reset your data or delete your account. You just can't add or change records until you choose a plan.
+
+**Have a code?** If you've been given a code (for testing or a promotion), enter it under **Settings → Have a code?** or on the Plans screen. It unlocks the plan it's for, either for a set time or with no end date. A code never takes away a better plan you already have; if it wouldn't improve your plan, nothing changes and the code isn't used up.
+
+Subscriptions can't be bought in the app just yet. That's coming soon.
