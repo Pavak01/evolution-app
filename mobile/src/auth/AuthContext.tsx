@@ -1,6 +1,14 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { AppState } from "react-native";
-import { fetchMe, login as apiLogin, register as apiRegister, verifyTwoFactor as apiVerifyTwoFactor, type AuthUser, type LoginResult } from "../api/auth";
+import {
+  fetchMe,
+  login as apiLogin,
+  register as apiRegister,
+  verifyEmail as apiVerifyEmail,
+  verifyTwoFactor as apiVerifyTwoFactor,
+  type AuthUser,
+  type LoginResult
+} from "../api/auth";
 import { clearToken, getToken, setUnauthorizedListener } from "../api/client";
 import { syncQueue } from "../offlineQueue";
 import { cancelReimbursementReminders, syncReimbursementReminders } from "../reimbursementReminders";
@@ -10,7 +18,8 @@ type AuthContextValue = {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<LoginResult>;
   verifyTwoFactor: (challengeToken: string, code: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string) => Promise<LoginResult>;
+  verifyEmail: (verificationToken: string, code: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
   // Re-reads plan/trial state — after a redeem, a 402, or coming back to the app.
   refreshUser: () => Promise<void>;
@@ -80,8 +89,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     setUser(await apiVerifyTwoFactor(challengeToken, code));
   }, []);
 
-  const register = useCallback(async (email: string, password: string) => {
-    setUser(await apiRegister(email, password));
+  const register = useCallback(async (email: string, password: string): Promise<LoginResult> => {
+    const result = await apiRegister(email, password);
+    if (result.status === "success") setUser(result.user);
+    return result;
+  }, []);
+
+  const verifyEmail = useCallback(async (verificationToken: string, code: string): Promise<LoginResult> => {
+    const result = await apiVerifyEmail(verificationToken, code);
+    if (result.status === "success") setUser(result.user);
+    return result;
   }, []);
 
   const refreshUser = useCallback(async () => {
@@ -98,7 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, verifyTwoFactor, register, logout, refreshUser }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, isLoading, login, verifyTwoFactor, register, verifyEmail, logout, refreshUser }}>{children}</AuthContext.Provider>
   );
 }
 

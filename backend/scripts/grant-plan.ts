@@ -4,13 +4,14 @@
 //   npm run -s grant-plan -- someone@example.com none         (remove plan; trial rules apply)
 //   npm run -s grant-plan -- someone@example.com end-trial    (test the "trial ended" state)
 //   npm run -s grant-plan -- someone@example.com restart-trial
+//   npm run -s grant-plan -- someone@example.com verify         (confirm email for a tester who can't receive mail)
 import "dotenv/config";
 import { Pool } from "pg";
 
 async function main(): Promise<void> {
   const [email, action, days] = process.argv.slice(2);
-  if (!email || !["basic", "pro", "none", "end-trial", "restart-trial"].includes(action ?? "")) {
-    console.log("Usage: grant-plan EMAIL basic|pro [DAYS] | none | end-trial | restart-trial");
+  if (!email || !["basic", "pro", "none", "end-trial", "restart-trial", "verify"].includes(action ?? "")) {
+    console.log("Usage: grant-plan EMAIL basic|pro [DAYS] | none | end-trial | restart-trial | verify");
     process.exitCode = 1;
     return;
   }
@@ -19,6 +20,11 @@ async function main(): Promise<void> {
     const user = await pool.query<{ id: string }>("SELECT id FROM public.users WHERE LOWER(email) = LOWER($1)", [email]);
     if (user.rows.length === 0) throw new Error(`No account for ${email}`);
     const id = user.rows[0].id;
+    if (action === "verify") {
+      await pool.query("INSERT INTO email_verifications (user_id) VALUES ($1) ON CONFLICT DO NOTHING", [id]);
+      console.log(`${email}: email marked confirmed.`);
+      return;
+    }
     await pool.query(
       `INSERT INTO entitlements (user_id, trial_started_at, updated_at) VALUES ($1, NOW(), NOW()) ON CONFLICT (user_id) DO NOTHING`,
       [id]

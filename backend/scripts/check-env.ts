@@ -35,5 +35,9 @@ if (process.env.DATABASE_URL) {
   }
 }
 
+// Optional: without it, sign-up/reset codes are written to the server log
+// instead of being emailed (fine for testing, not for real users).
+console.log(`${process.env.RESEND_API_KEY ? "OK  " : "WARN"} RESEND_API_KEY${process.env.RESEND_API_KEY ? "" : " (codes will be logged, not emailed)"}`);
+
 console.log(ok ? "\nAll checks passed." : "\nSome checks failed — see MISS/FAIL lines above.");
 process.exit(ok ? 0 : 1);

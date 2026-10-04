@@ -32,6 +32,8 @@ export async function processEvolutionAccountDeletions(): Promise<void> {
         await client.query("DELETE FROM income_invoices WHERE user_id = $1", [user.id]);
         await client.query("DELETE FROM tax_summaries WHERE user_id = $1", [user.id]);
         await client.query("DELETE FROM promo_redemptions WHERE user_id = $1", [user.id]);
+        await client.query("DELETE FROM email_codes WHERE user_id = $1", [user.id]);
+        await client.query("DELETE FROM email_verifications WHERE user_id = $1", [user.id]);
         await client.query("COMMIT");
         console.log(`[Deletion] Purged Evolution data for ${user.email}`);
       } catch (error) {

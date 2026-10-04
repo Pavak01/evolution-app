@@ -371,3 +371,31 @@ CREATE TABLE IF NOT EXISTS evolution.promo_redemptions (
   PRIMARY KEY (code, user_id)
 );
 CREATE INDEX IF NOT EXISTS idx_promo_redemptions_user ON evolution.promo_redemptions(user_id);
+
+-- Email confirmation + password reset (see emailCodes.ts). Evolution's own
+-- record — Qbit's unused password_reset_* columns on the shared users
+-- table are deliberately left alone.
+CREATE TABLE IF NOT EXISTS evolution.email_verifications (
+  user_id UUID PRIMARY KEY REFERENCES public.users(id),
+  verified_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- 6-digit codes, stored only as an HMAC. Only the newest unconsumed code
+-- per (user, purpose) is honoured; 5 wrong tries kills it.
+CREATE TABLE IF NOT EXISTS evolution.email_codes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id),
+  purpose TEXT NOT NULL CHECK (purpose IN ('verify', 'reset')),
+  code_hash TEXT NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  consumed_at TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_email_codes_user_purpose ON evolution.email_codes(user_id, purpose, created_at DESC);
+
+-- Accounts that already used Evolution (only Roger's two, as of
+-- 2026-10-04) count as confirmed; everyone else confirms on next sign-in.
+INSERT INTO evolution.email_verifications (user_id)
+SELECT user_id FROM evolution.entitlements
+ON CONFLICT (user_id) DO NOTHING;

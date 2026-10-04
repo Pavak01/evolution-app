@@ -71,3 +71,19 @@ export const promoRateLimit = createRateLimitMiddleware({
   max: 10,
   message: "Too many code attempts. Please try again later."
 });
+
+// Sign-ups get their own, much tighter budget than sign-in.
+export const registerRateLimit = createRateLimitMiddleware({
+  key: "register",
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: "Too many sign-up attempts. Please try again later."
+});
+
+// Shared by every emailed-code endpoint (confirm email, resend, password reset).
+export const emailCodeRateLimit = createRateLimitMiddleware({
+  key: "email-code",
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: "Too many attempts. Please try again later."
+});

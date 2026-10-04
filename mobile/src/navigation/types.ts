@@ -4,6 +4,8 @@ export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
   VerifyTwoFactor: { challengeToken: string };
+  VerifyEmail: { verificationToken: string; email: string; notice?: string };
+  ForgotPassword: { email?: string } | undefined;
 };
 
 export type ExpensesStackParamList = {

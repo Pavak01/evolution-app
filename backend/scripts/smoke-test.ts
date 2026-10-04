@@ -36,12 +36,21 @@ async function main(): Promise<void> {
     body: JSON.stringify({ email, password })
   });
   check("POST /auth/register", registerRes.status === 201);
-  const registerBody = (await registerRes.json()) as { token: string; user: { id: string } };
-  const token = registerBody.token;
-  createdUserId = registerBody.user?.id ?? null;
-  check("register returned a token", Boolean(token));
+  const registerBody = (await registerRes.json()) as { email_verification_required?: boolean; verification_token?: string };
+  check("register asks for email confirmation (no session yet)", registerBody.email_verification_required === true && Boolean(registerBody.verification_token));
 
-  const authHeaders = { Authorization: `Bearer ${token}` };
+  // The emailed code can't be read from here, so confirm the throwaway
+  // account directly — the same thing a correct code does.
+  if (process.env.DATABASE_URL) {
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL, options: "-c search_path=evolution,public" });
+    try {
+      const found = await pool.query<{ id: string }>("SELECT id FROM public.users WHERE email = $1", [email]);
+      createdUserId = found.rows[0]?.id ?? null;
+      if (createdUserId) await pool.query("INSERT INTO email_verifications (user_id) VALUES ($1) ON CONFLICT DO NOTHING", [createdUserId]);
+    } finally {
+      await pool.end();
+    }
+  }
 
   const loginRes = await fetch(`${baseUrl}/auth/login`, {
     method: "POST",
@@ -49,6 +58,10 @@ async function main(): Promise<void> {
     body: JSON.stringify({ email, password })
   });
   check("POST /auth/login", loginRes.status === 200);
+  const token = ((await loginRes.json()) as { token?: string }).token;
+  check("login returned a token", Boolean(token));
+
+  const authHeaders = { Authorization: `Bearer ${token}` };
 
   // Minimal buffer satisfying the JPEG magic-byte check (0xFF 0xD8 0xFF) —
   // the app validates content bytes, not that this decodes as a real image.
@@ -119,6 +132,8 @@ async function cleanup(): Promise<void> {
     // Every Evolution sign-in now creates an entitlements row (trial start).
     await pool.query("DELETE FROM promo_redemptions WHERE user_id = $1", [createdUserId]);
     await pool.query("DELETE FROM entitlements WHERE user_id = $1", [createdUserId]);
+    await pool.query("DELETE FROM email_codes WHERE user_id = $1", [createdUserId]);
+    await pool.query("DELETE FROM email_verifications WHERE user_id = $1", [createdUserId]);
     await pool.query("DELETE FROM public.users WHERE id = $1", [createdUserId]);
     console.log(`Cleaned up smoke-test account (${email}).`);
   } catch (error) {

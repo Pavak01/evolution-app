@@ -7,6 +7,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { ApiError } from "../../api/client";
 import { colors, spacing, typography } from "../../theme/tokens";
 import type { AuthStackParamList } from "../../navigation/types";
+import { routeAuthResult } from "./routeAuthResult";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Register">;
 
@@ -26,7 +27,7 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
     setError(null);
     setIsSubmitting(true);
     try {
-      await register(email.trim().toLowerCase(), password);
+      routeAuthResult(navigation, await register(email.trim().toLowerCase(), password));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not create your account. Check your connection.");
     } finally {

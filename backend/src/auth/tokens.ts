@@ -37,6 +37,25 @@ export function signTwoFactorChallengeToken(userId: string): string {
   });
 }
 
+// Carries a just-registered (or not-yet-confirmed) account from the
+// password step to the emailed-code step — no session exists until the
+// code is entered, so an unconfirmed account can't use the app at all.
+export function signEmailVerificationToken(userId: string): string {
+  return jwt.sign({ sub: userId, purpose: "email-verification" }, getJwtSecret(), { expiresIn: "30m" });
+}
+
+// Returns the user id from a purpose-bound challenge token, or null.
+export function readPurposeToken(token: string, purpose: string): string | null {
+  try {
+    const decoded = jwt.verify(token, getJwtSecret());
+    if (typeof decoded !== "object" || decoded === null) return null;
+    const payload = decoded as jwt.JwtPayload;
+    return payload.purpose === purpose && typeof payload.sub === "string" ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+
 export function signReceiptDownloadToken(userId: string, receiptId: string): string {
   return jwt.sign({ sub: userId, rid: receiptId, purpose: "receipt-download" }, getJwtSecret(), {
     expiresIn: receiptDownloadTtlSeconds

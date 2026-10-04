@@ -20,6 +20,8 @@ import { SettingsScreen } from "../screens/settings/SettingsScreen";
 import { PlansScreen } from "../screens/settings/PlansScreen";
 import { navigationRef } from "./navigationRef";
 import { VerifyTwoFactorScreen } from "../screens/auth/VerifyTwoFactorScreen";
+import { VerifyEmailScreen } from "../screens/auth/VerifyEmailScreen";
+import { ForgotPasswordScreen } from "../screens/auth/ForgotPasswordScreen";
 import { colors } from "../theme/tokens";
 import type {
   AuthStackParamList,
@@ -135,6 +137,8 @@ export function RootNavigator(): React.JSX.Element {
           <AuthStack.Screen name="Login" component={LoginScreen} />
           <AuthStack.Screen name="Register" component={RegisterScreen} />
           <AuthStack.Screen name="VerifyTwoFactor" component={VerifyTwoFactorScreen} options={{ headerShown: true, title: "Verify" }} />
+          <AuthStack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{ headerShown: true, title: "Confirm email" }} />
+          <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ headerShown: true, title: "Forgot password" }} />
         </AuthStack.Navigator>
       )}
     </NavigationContainer>

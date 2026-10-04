@@ -7,6 +7,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { ApiError } from "../../api/client";
 import { colors, spacing, typography } from "../../theme/tokens";
 import type { AuthStackParamList } from "../../navigation/types";
+import { routeAuthResult } from "./routeAuthResult";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
 
@@ -21,10 +22,7 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
     setError(null);
     setIsSubmitting(true);
     try {
-      const result = await login(email.trim().toLowerCase(), password);
-      if (result.status === "two_factor_required") {
-        navigation.navigate("VerifyTwoFactor", { challengeToken: result.challengeToken });
-      }
+      routeAuthResult(navigation, await login(email.trim().toLowerCase(), password));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not sign in. Check your connection.");
     } finally {
@@ -41,6 +39,13 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
         {error && <StatusBanner kind="error" text={error} />}
         <View style={{ height: spacing.sm }} />
         <PrimaryButton label="Sign in" onPress={handleSubmit} isLoading={isSubmitting} disabled={!email || !password} />
+        <View style={{ height: spacing.sm }} />
+        <Text
+          style={{ color: colors.accent, textAlign: "center" }}
+          onPress={() => navigation.navigate("ForgotPassword", { email: email.trim().toLowerCase() || undefined })}
+        >
+          Forgot password?
+        </Text>
       </Card>
       <Text style={{ color: colors.textMuted, textAlign: "center" }} onPress={() => navigation.navigate("Register")}>
         New here? Create an account
