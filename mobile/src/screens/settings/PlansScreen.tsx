@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { Text, View } from "react-native";
 import { useAccess } from "../../auth/AuthContext";
-import { Card, PrimaryButton } from "../../components/Controls";
+import { Card, PrimaryButton, StatusBanner } from "../../components/Controls";
 import { formatPlanDate, PromoCodeField } from "../../components/PlanBits";
 import { Screen } from "../../components/Screen";
 import { colors, spacing, typography } from "../../theme/tokens";
@@ -31,8 +31,35 @@ function currentPlanLine(access: ReturnType<typeof useAccess>): string {
   return access.planEndsAt ? `${name}, until ${formatPlanDate(access.planEndsAt)}.` : `${name}.`;
 }
 
+// One card per plan, so the choice itself is visible. Until Play billing
+// (Phase B) exists, choosing explains that and points to a code; Phase B
+// turns these same buttons into the real purchase.
+function PlanChoice({
+  name,
+  summary,
+  isCurrent,
+  onChoose
+}: {
+  name: string;
+  summary: string;
+  isCurrent: boolean;
+  onChoose: () => void;
+}): React.JSX.Element {
+  return (
+    <Card>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.xs }}>
+        <Text style={{ fontSize: typography.body, fontWeight: "700", color: colors.textMain }}>{name}</Text>
+        <Text style={{ color: colors.textMuted }}>£— a month</Text>
+      </View>
+      <Text style={{ color: colors.textSecondary, marginBottom: spacing.md }}>{summary}</Text>
+      <PrimaryButton label={isCurrent ? `${name} is your plan` : `Choose ${name}`} onPress={onChoose} disabled={isCurrent} />
+    </Card>
+  );
+}
+
 export function PlansScreen(): React.JSX.Element {
   const access = useAccess();
+  const [chosen, setChosen] = useState<string | null>(null);
 
   return (
     <Screen>
@@ -61,12 +88,27 @@ export function PlansScreen(): React.JSX.Element {
         </View>
       </Card>
 
-      <Card>
-        <PrimaryButton label="Subscriptions open soon" onPress={() => undefined} disabled />
-        <Text style={{ color: colors.textMuted, fontSize: typography.small, marginTop: spacing.sm, textAlign: "center" }}>
-          A subscription is an allowable business expense.
-        </Text>
-      </Card>
+      {chosen && (
+        <StatusBanner
+          kind="info"
+          text={`Subscribing to ${chosen} opens soon, through Google Play. Until then you keep everything you have now — and if you've been given a code, enter it below.`}
+        />
+      )}
+      <PlanChoice
+        name="Basic"
+        summary="Everything you enter yourself: receipts, income, CSV import, reimbursements, Summary, History and Export."
+        isCurrent={access.tier === "basic"}
+        onChoose={() => setChosen("Basic")}
+      />
+      <PlanChoice
+        name="Pro"
+        summary="Everything in Basic, plus auto-fill from receipts and invoices, and Import past receipts."
+        isCurrent={access.tier === "pro"}
+        onChoose={() => setChosen("Pro")}
+      />
+      <Text style={{ color: colors.textMuted, fontSize: typography.small, textAlign: "center" }}>
+        A subscription is an allowable business expense.
+      </Text>
 
       <Card>
         <PromoCodeField />
