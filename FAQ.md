@@ -37,7 +37,7 @@ No — `travel` is the one category where you can save the expense with no recei
 A screenshot of the payment confirmation, app receipt, or email counts as a receipt — take a photo of your screen, or use "Choose photo" to pick a saved screenshot from your photo library.
 
 **Can I attach a PDF receipt?**
-Yes. Tap **Choose a file (PDF or image)** under the photo buttons and pick the PDF from Downloads, Google Drive or an email attachment. Auto-fill can read PDF receipts too.
+Not currently — a photo or screenshot of the PDF works as a substitute.
 
 **I have a company-issued fuel card — should I log that fuel as an expense?**
 No. If a fuel purchase was paid for on a card the company owns, you didn't personally pay for it, so it isn't a deductible cost to you — logging it would overstate your expenses. Auto-fill will show a warning when a receipt shows clear signs of a fuel-card payment (a named scheme like Allstar or BP Plus, or "FUEL CARD"/"FLEET CARD" printed on it), but it's a best-effort signal, not exhaustive — a personal fuel card can look similar, so it's always your own call whether to include a flagged receipt.
