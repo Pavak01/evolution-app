@@ -19,7 +19,7 @@ Reference material for filling out Play Console's forms — drafted from what th
 - Photos — collected (receipt and invoice photos you attach). Purpose: App functionality. Required only for non-`travel` expense categories; optional for `travel` and for income invoices.
 
 **Files and docs**
-- Files and docs — collected: PDF invoices attached to income records, and CSV earnings reports used for "Import income from CSV" (the original file is stored with each imported record). Receipts are photos only. Purpose: App functionality. Optional.
+- Files and docs — collected: PDF receipts and PDF invoices, and CSV earnings reports used for "Import income from CSV" (the original file is stored with each imported record). Purpose: App functionality. Optional.
 
 **Financial info → Purchase history** (only once Phase B ships)
 - Not collected yet. When Play billing via RevenueCat ships, subscription status/purchase history becomes collected (Purpose: App functionality / account management). Promo codes give free access and aren't purchases.
@@ -81,4 +81,4 @@ This is a finance/productivity utility with no user-generated public content, no
 - iOS: blocked on Apple Developer Program enrollment (not yet done) — Android-only for now.
 - Plans (2026-10-04): 1-month free trial, then Basic or Pro (Pro = anything that reads a photo/PDF). Phase A shipped: trial, enforcement, Plans screen, free promo codes. **Phase B (Play billing via RevenueCat) not built** — don't advertise subscriptions as purchasable in the listing yet. When it ships: Data Safety gains purchase history (collected via Google Play/RevenueCat), and the listing should state "Free trial, then subscription". Promo codes are given away only, never sold outside Play billing (Play payments policy).
 - Notifications (2026-10-03): the next build requests the Android 13+ notification permission (reimbursement reminders, on-device only, no data leaves the phone for this).
-- PDF attachment just wired up this session (`3a7d2d9`) — unverified on a real device as of this build. Confirm it actually works before claiming "PDF support" anywhere in the listing or updating the FAQ.
+- PDF receipts and invoices (2026-10-05, `5924192`): receipts now accept PDF and image files as well as photos; server side verified on production (save, auto-fill, download). Not in build 111 — confirm on device in build 112 before advertising PDF receipts in the listing.
