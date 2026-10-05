@@ -2,8 +2,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import React, { useCallback, useEffect } from "react";
-import { ActivityIndicator, View } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Linking, View } from "react-native";
 import { useAuth } from "../auth/AuthContext";
 import { LoginScreen } from "../screens/auth/LoginScreen";
 import { RegisterScreen } from "../screens/auth/RegisterScreen";
@@ -23,6 +23,22 @@ import { PromoAdminScreen } from "../screens/settings/PromoAdminScreen";
 import { TwoFactorScreen } from "../screens/settings/TwoFactorScreen";
 import { navigationRef } from "./navigationRef";
 import { consumeLaunchReminderTap, onReminderTapped } from "../reimbursementReminders";
+import { flushPendingDeepLink, handleDeepLink } from "../deepLinks";
+import { isAndroidExpoGo } from "../nativeSupport";
+
+// Native-only pieces, loaded only where they exist (see nativeSupport.ts).
+/* eslint-disable @typescript-eslint/no-require-imports */
+const ShareIntentRouter: React.ComponentType<{ ready: boolean }> | null = isAndroidExpoGo
+  ? null
+  : require("../share/ShareIntentRouter").ShareIntentRouter;
+const QuickActions: typeof import("expo-quick-actions") | null = isAndroidExpoGo ? null : require("expo-quick-actions");
+/* eslint-enable @typescript-eslint/no-require-imports */
+
+// Long-press on the app icon: the same two shortcuts as the widget.
+const QUICK_ACTIONS = [
+  { id: "receipt", title: "Snap a receipt", params: { href: "evolution://capture?camera=1" } },
+  { id: "income", title: "Record income", params: { href: "evolution://income" } }
+];
 import { VerifyTwoFactorScreen } from "../screens/auth/VerifyTwoFactorScreen";
 import { VerifyEmailScreen } from "../screens/auth/VerifyEmailScreen";
 import { ForgotPasswordScreen } from "../screens/auth/ForgotPasswordScreen";
@@ -135,6 +151,32 @@ function openAwaitingFromReminder(): void {
 
 export function RootNavigator(): React.JSX.Element {
   const { user, isLoading } = useAuth();
+  const [navReady, setNavReady] = useState(false);
+  // Signed in and past the terms screen: the main app is on screen.
+  const appReady = Boolean(user) && !(user?.terms && !user.terms.accepted) && navReady;
+
+  // Widget / shortcut links: the one that launched the app, then any later.
+  useEffect(() => {
+    void Linking.getInitialURL().then(handleDeepLink);
+    const subscription = Linking.addEventListener("url", ({ url }) => handleDeepLink(url));
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    if (appReady) flushPendingDeepLink();
+  }, [appReady]);
+
+  useEffect(() => {
+    if (!QuickActions) return;
+    void QuickActions.setItems(QUICK_ACTIONS).catch(() => undefined);
+    const href = QuickActions.initial?.params?.href;
+    if (typeof href === "string") handleDeepLink(href);
+    const subscription = QuickActions.addListener((action) => {
+      const link = action.params?.href;
+      if (typeof link === "string") handleDeepLink(link);
+    });
+    return () => subscription.remove();
+  }, []);
 
   // Tapping a reimbursement reminder opens History filtered to what's
   // still awaiting — both while running and from a cold start (onReady).
@@ -144,6 +186,7 @@ export function RootNavigator(): React.JSX.Element {
   }, [user]);
 
   const handleReady = useCallback(() => {
+    setNavReady(true);
     if (!user) return;
     void consumeLaunchReminderTap().then((tapped) => {
       if (tapped) openAwaitingFromReminder();
@@ -160,6 +203,7 @@ export function RootNavigator(): React.JSX.Element {
 
   return (
     <NavigationContainer ref={navigationRef} onReady={handleReady}>
+      {ShareIntentRouter && <ShareIntentRouter ready={appReady} />}
       {user && user.terms && !user.terms.accepted ? (
         <AcceptTermsScreen />
       ) : user ? (

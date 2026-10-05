@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Modal, Pressable, StyleSheet, Text, View, type ScrollView } from "react-native";
 import { useAccess, useAuth } from "../../auth/AuthContext";
 import { PlanRequiredCard, ProUpsell, TrialBanner } from "../../components/PlanBits";
@@ -18,7 +18,7 @@ import type { IncomeStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<IncomeStackParamList, "RecordIncome">;
 
-export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
+export function RecordIncomeScreen({ navigation, route }: Props): React.JSX.Element {
   const { refreshUser } = useAuth();
   const { pickFromFiles, pickDocument } = useReceiptCapture();
   // Trial or Pro — anything that reads a photo/PDF for you.
@@ -51,6 +51,17 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
     if (periodEnd < periodStart) return "Period end must be on or after period start.";
     return null;
   }
+
+  // A PDF or image shared to Evolution from another app (e.g. an invoice
+  // from Gmail) arrives already attached.
+  useEffect(() => {
+    const shared = route.params?.sharedFile;
+    if (!shared) return;
+    navigation.setParams({ sharedFile: undefined });
+    setFile(shared);
+    showStatus({ kind: "info", text: "Invoice added from another app — fill in the details and save." });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.params?.sharedFile]);
 
   async function handleAttachPhoto(): Promise<void> {
     setShowAttachMenu(false);

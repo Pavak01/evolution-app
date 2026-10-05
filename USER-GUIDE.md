@@ -15,6 +15,8 @@ This guide walks through every screen. For quick answers, see the [FAQ](FAQ.md).
 - [Export](#export)
 - [Settings](#settings)
 - [Plans and free trial](#plans-and-free-trial)
+- [Quick logging and sharing](#quick-logging-and-sharing)
+- [Two-factor authentication](#two-factor-authentication)
 
 ## Signing in
 
@@ -24,7 +26,7 @@ Sign in with your email and password, or tap **Create an account** if you're new
 
 **Forgot your password?** Tap **Forgot password?** on the sign-in screen, enter your email and tap **Send code**. Then enter the code from the email and your new password (at least 8 characters) twice. You'll be signed straight in, and signed out on any other phone.
 
-If your account has two-factor authentication (2FA) turned on, after entering your password you'll be asked for the 6-digit code from your authenticator app. (2FA can be verified at sign-in, but there isn't yet an in-app screen for turning it on — that's coming in a future update.)
+If your account has two-factor authentication (2FA) turned on, after entering your password you'll be asked for the 6-digit code from your authenticator app, or one of your backup codes. See [Two-factor authentication](#two-factor-authentication).
 
 ## Log a receipt (Capture)
 
@@ -150,3 +152,27 @@ During the last week of your trial you'll see a reminder on Log a receipt and Su
 **Have a code?** If you've been given a code (for testing or a promotion), enter it under **Settings → Have a code?** or on the Plans screen. It unlocks the plan it's for, either for a set time or with no end date. A code never takes away a better plan you already have; if it wouldn't improve your plan, nothing changes and the code isn't used up.
 
 Subscriptions can't be bought in the app just yet. That's coming soon.
+
+## Quick logging and sharing
+
+**Home-screen widget (Android):** long-press an empty spot on your home screen, choose **Widgets**, find **Evolution — quick log**, and drag it onto your home screen. **📷 Receipt** opens the camera straight away; **£ Income** opens Record income.
+
+**App-icon shortcuts:** long-press the Evolution icon for **Snap a receipt** and **Record income**.
+
+**Share to Evolution:** in another app (Gmail, Files, Photos, Drive), tap **Share** and choose **Evolution**:
+- a **PDF** opens Record income with it attached;
+- a **CSV** earnings report opens Import income from CSV with it loaded;
+- a **photo** asks whether it's a **receipt** (expense) or an **invoice** (income).
+
+If you're signed out, Evolution asks you to sign in first and then carries on.
+
+## Two-factor authentication
+
+Two-factor authentication (2FA) adds a second step when signing in: a 6-digit code from an authenticator app such as Google Authenticator or Microsoft Authenticator.
+
+**To turn it on:** Settings → **Two-factor authentication → Set up**. Tap **Add to authenticator app on this phone**, or scan the QR code from another device, or type the key into your authenticator. Enter the 6-digit code it shows and tap **Turn on**.
+
+**Backup codes:** you'll then see 10 one-time backup codes. Save them somewhere safe; tap **Share / save codes** to keep a copy. If you lose your phone, each code lets you sign in once. You can make a new set any time from the same screen, which replaces the old ones.
+
+**To turn it off:** Settings → Two-factor authentication → enter your password and a code (or a backup code) → **Turn off**.
+

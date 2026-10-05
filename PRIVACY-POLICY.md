@@ -41,7 +41,7 @@ This policy applies to users of Evolution, including the mobile app and its back
 - Email address
 - Password (stored as a bcrypt hash, never in plain text)
 - Whether you've confirmed your email address, and short-lived one-time codes we email you to confirm it or reset your password (stored only as a one-way hash, valid for 15 minutes)
-- Optional two-factor authentication state (Evolution verifies, but does not itself generate, a two-factor code against an encrypted secret already stored on the account)
+- Optional two-factor authentication: an encrypted authenticator secret, and one-time backup codes stored only as a one-way hash
 
 ### B. Expense information you enter
 - Category, amount, payment method (cash or card), and reimbursement status (none, awaiting, partial, or full) for each expense, plus the amount reimbursed if you record one

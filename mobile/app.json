@@ -34,13 +34,46 @@
       ],
       "@react-native-community/datetimepicker",
       "expo-notifications",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "QuickLog",
+              "label": "Evolution — quick log",
+              "description": "Snap a receipt or record income in one tap",
+              "minWidth": "250dp",
+              "minHeight": "40dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 1,
+              "resizeMode": "horizontal",
+              "updatePeriodMillis": 0
+            }
+          ]
+        }
+      ],
+      [
+        "expo-share-intent",
+        {
+          "androidIntentFilters": [
+            "image/*",
+            "application/pdf",
+            "text/csv",
+            "text/comma-separated-values"
+          ],
+          "disableIOS": true
+        }
+      ],
+      "expo-quick-actions",
+      "expo-font"
     ],
     "extra": {
       "eas": {
         "projectId": "15509214-ea42-42f2-8b3e-4d8c40cb5ac0"
       }
     },
-    "owner": "pavak01"
+    "owner": "pavak01",
+    "scheme": "evolution"
   }
 }

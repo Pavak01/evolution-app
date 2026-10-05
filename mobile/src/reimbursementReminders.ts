@@ -1,7 +1,7 @@
-import Constants, { ExecutionEnvironment } from "expo-constants";
 import type * as NotificationsModule from "expo-notifications";
 import { Platform } from "react-native";
 import { listExpenses } from "./api/expenses";
+import { isAndroidExpoGo } from "./nativeSupport";
 import type { Expense } from "./api/types";
 
 // On-device reminders for expenses still "awaiting" reimbursement — no
@@ -28,9 +28,7 @@ const MAX_PAGES = 10;
 // required where it works (real builds, iOS Expo Go); in Android Expo Go
 // reminders quietly do nothing. Nothing else in the app may import
 // expo-notifications directly — go through this file.
-export const remindersSupported = !(
-  Platform.OS === "android" && Constants.executionEnvironment === ExecutionEnvironment.StoreClient
-);
+export const remindersSupported = !isAndroidExpoGo;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const Notifications: typeof NotificationsModule | null = remindersSupported ? require("expo-notifications") : null;
 

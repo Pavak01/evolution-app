@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import React, { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { ApiError } from "../../api/client";
 import { createIncomeInvoice } from "../../api/income";
@@ -12,6 +13,7 @@ import { enqueueIncome, generateLocalId, syncQueue } from "../../offlineQueue";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { formatUkDate, getTaxYearFromDate } from "../../utils/taxYear";
 import { parseIncomeCsv, type ParsedIncomeCsvRow } from "../../utils/parseIncomeCsv";
+import type { IncomeStackParamList } from "../../navigation/types";
 
 type ImportRow = ParsedIncomeCsvRow & {
   key: string;
@@ -19,7 +21,9 @@ type ImportRow = ParsedIncomeCsvRow & {
   outcome: "pending" | "submitting" | "done" | "failed" | "queued";
 };
 
-export function ImportIncomeCsvScreen(): React.JSX.Element {
+type Props = NativeStackScreenProps<IncomeStackParamList, "ImportIncomeCsv">;
+
+export function ImportIncomeCsvScreen({ navigation, route }: Props): React.JSX.Element {
   const { pickDocument, readLocalTextFile } = useReceiptCapture();
 
   const [file, setFile] = useState<PickedFile | null>(null);
@@ -37,14 +41,30 @@ export function ImportIncomeCsvScreen(): React.JSX.Element {
   }
 
   async function handlePick(): Promise<void> {
+    setIsPicking(true);
+    try {
+      const picked = await pickDocument("csv");
+      if (picked) await loadFile(picked);
+    } finally {
+      setIsPicking(false);
+    }
+  }
+
+  // A CSV shared to Evolution from another app goes through the same checks.
+  useEffect(() => {
+    const shared = route.params?.sharedFile;
+    if (!shared) return;
+    navigation.setParams({ sharedFile: undefined });
+    void loadFile({ ...shared, mimeType: "text/csv" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.params?.sharedFile]);
+
+  async function loadFile(picked: PickedFile): Promise<void> {
     setStatus(null);
     setFile(null);
     setRows([]);
     setSkippedCount(0);
-    setIsPicking(true);
     try {
-      const picked = await pickDocument("csv");
-      if (!picked) return;
 
       if (picked.mimeType !== "text/csv") {
         setStatus({ kind: "error", text: "Please pick a CSV file." });
@@ -73,8 +93,8 @@ export function ImportIncomeCsvScreen(): React.JSX.Element {
           outcome: "pending"
         }))
       );
-    } finally {
-      setIsPicking(false);
+    } catch {
+      setStatus({ kind: "error", text: "Couldn't read that file. Please try again." });
     }
   }
 

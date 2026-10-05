@@ -13,11 +13,11 @@ Check your spam or junk folder first; it comes from no-reply@mail.aplccommoditie
 **I've forgotten my password.**
 Tap **Forgot password?** on the sign-in screen and follow the steps: we email you a code, and you choose a new password. For your security, resetting signs you out on every other device.
 
-**I have 2FA enabled — how does that work in Evolution?**
-After your password, you'll be asked for the 6-digit code from your authenticator app. There's no in-app screen for turning 2FA on or off yet — that's planned for a future update, and can currently only be verified at sign-in, not configured.
+**How do I turn on two-factor authentication?**
+Settings → **Two-factor authentication → Set up**, then follow the steps. After your password, signing in will ask for the 6-digit code from your authenticator app. Save the backup codes it gives you.
 
 **I lost access to my authenticator app / my 2FA code won't work — what now?**
-Contact support (see [Privacy Policy](PRIVACY-POLICY.md) for the contact email) — account recovery for 2FA has to be handled manually, since it involves verifying your identity outside the app.
+Use one of your **backup codes** in place of the 6-digit code; each works once. Then, in Settings → Two-factor authentication, turn 2FA off and on again with your new phone. If your codes don't work, first check your phone's time is set automatically. If you've lost your backup codes too, contact support@aplccommodities.com: recovery then has to be done manually, after checking it's really you.
 
 **How do I delete my account?**
 In-app: Settings → Delete account (type `DELETE` to confirm). Without the app installed: use the [public account deletion page](ACCOUNT-DELETION.html), which asks for your email and password to confirm it's really you. Either way, processing completes within 30 days. Full details in the [Privacy Policy](PRIVACY-POLICY.md).

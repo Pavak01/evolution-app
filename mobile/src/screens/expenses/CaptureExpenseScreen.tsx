@@ -129,6 +129,24 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route.params?.resubmit]);
 
+  // Widget / app-icon shortcut "Receipt": open the camera straight away.
+  useEffect(() => {
+    if (!route.params?.launchCamera) return;
+    navigation.setParams({ launchCamera: undefined });
+    if (canWrite) void handleAttachReceipt(captureFromCamera);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.params?.launchCamera]);
+
+  // A photo shared to Evolution from another app, chosen as a receipt.
+  useEffect(() => {
+    const shared = route.params?.sharedFile;
+    if (!shared) return;
+    navigation.setParams({ sharedFile: undefined });
+    void handleAttachReceipt(async () => shared);
+    showStatus({ kind: "info", text: "Photo added from another app — fill in the details and save." });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.params?.sharedFile]);
+
   function validate(): string | null {
     if (!category.trim()) return "Enter a category.";
     if (!receipt && !isTravel) return "Add a receipt photo or file.";

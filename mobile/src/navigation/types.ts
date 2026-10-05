@@ -1,5 +1,9 @@
 import type { NavigatorScreenParams } from "@react-navigation/native";
 
+// A file shared to Evolution from another app, already copied into the
+// app's own storage (see share/ShareIntentRouter.tsx).
+export type SharedFile = { uri: string; name: string; mimeType: string };
+
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
@@ -35,14 +39,16 @@ export type ResubmitPrefill = {
 export type CaptureStackParamList = {
   // Named distinctly from the "Capture" tab that hosts this stack —
   // React Navigation warns about nested screens sharing a name.
-  CaptureForm: { resubmit?: ResubmitPrefill } | undefined;
+  // launchCamera: a timestamp (widget / app-icon shortcut) so each tap
+  // re-triggers; sharedFile: a photo shared to Evolution as a receipt.
+  CaptureForm: { resubmit?: ResubmitPrefill; launchCamera?: number; sharedFile?: SharedFile } | undefined;
   ImportReceipts: undefined;
 };
 
 export type IncomeStackParamList = {
-  RecordIncome: undefined;
+  RecordIncome: { sharedFile?: SharedFile } | undefined;
   IncomeHistory: undefined;
-  ImportIncomeCsv: undefined;
+  ImportIncomeCsv: { sharedFile?: SharedFile } | undefined;
 };
 
 // Plans sits above the tabs so it can be opened from any of them.
@@ -59,7 +65,7 @@ export type MainTabParamList = {
   // React Navigation's standard pattern for typed cross-tab navigation, used
   // by ExpenseDetailScreen's "Resubmit" action.
   Capture: NavigatorScreenParams<CaptureStackParamList> | undefined;
-  Income: undefined;
+  Income: NavigatorScreenParams<IncomeStackParamList> | undefined;
   Summary: undefined;
   History: NavigatorScreenParams<ExpensesStackParamList> | undefined;
   Export: undefined;
