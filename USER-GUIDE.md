@@ -51,7 +51,7 @@ After saving, you'll see your running total for the current tax year (net profit
 
 The first time you do this, the app asks whether it can send you notifications. If you allow it, you'll get a reminder at 9am, two weeks after the oldest expense still awaiting reimbursement, and then once a week until you've recorded them all. Tapping the reminder opens History showing just those expenses. Reminders stop on their own once nothing is awaiting, and you can turn them off any time in your phone's notification settings.
 
-**A note on other file types**: photo capture and photo-library selection both work reliably. Picking a PDF or a "Files" document doesn't currently work — a photo or screenshot of the PDF works as a substitute.
+**Receipts that arrive as a PDF or file**: for emailed or app receipts (Uber, trains, online orders), tap **Choose a file (PDF or image)** under the photo buttons. It opens your phone's file picker, so you can pick from Downloads, Google Drive or an email attachment. PDFs and JPEG, PNG or WebP images are accepted. Auto-fill works on PDFs too. In History, a PDF receipt shows **Open receipt (PDF)**, which opens it in your phone's PDF viewer. The same option appears when attaching proof to a travel expense later.
 
 **Auto-fill from receipt** (Pro, and included in the free trial): reads a picked receipt photo and fills in the category, amount, and date for you, still fully editable before you save. Once a photo is added you'll see an **Auto-fill from receipt** button, or on Basic a note that it's part of Pro.
 
