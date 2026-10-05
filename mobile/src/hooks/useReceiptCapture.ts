@@ -133,16 +133,24 @@ export function useReceiptCapture() {
   // real build, only these two file types break, not the already-reliable
   // photo picker too.
   const CSV_LOOKALIKE_MIME_TYPES = new Set(["text/csv", "text/comma-separated-values", "application/vnd.ms-excel", "text/plain"]);
+  const INVOICE_IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
   // kind restricts the OS picker itself to the relevant type (a "PDF"
   // choice shouldn't even offer a CSV to select) — a caller that already
   // knows which one it wants gets a tighter picker, not just a filtered
   // result checked after the fact.
-  async function pickDocument(kind: "pdf" | "csv"): Promise<PickedFile | null> {
+  // "invoice": a PDF or an image file from anywhere on the phone (Downloads,
+  // Drive, an email attachment) — the photo-gallery picker can't reach those.
+  async function pickDocument(kind: "pdf" | "csv" | "invoice"): Promise<PickedFile | null> {
     const selected = await DocumentPicker.getDocumentAsync({
       copyToCacheDirectory: true,
       multiple: false,
-      type: kind === "pdf" ? "application/pdf" : ["application/pdf", ...CSV_LOOKALIKE_MIME_TYPES]
+      type:
+        kind === "pdf"
+          ? "application/pdf"
+          : kind === "invoice"
+            ? ["application/pdf", ...INVOICE_IMAGE_MIME_TYPES]
+            : ["application/pdf", ...CSV_LOOKALIKE_MIME_TYPES]
     });
 
     if (selected.canceled || selected.assets.length === 0) {
@@ -168,6 +176,13 @@ export function useReceiptCapture() {
     const isCsvByMimeType = !!asset.mimeType && CSV_LOOKALIKE_MIME_TYPES.has(asset.mimeType);
     const mimeType =
       asset.mimeType === "application/pdf" ? "application/pdf" : isCsvByName || isCsvByMimeType ? "text/csv" : (asset.mimeType ?? "application/octet-stream");
+
+    // The server takes PDF, JPEG, PNG and WebP invoices — say so now rather
+    // than letting e.g. a HEIC or a Word file fail at save time.
+    if (kind === "invoice" && mimeType !== "application/pdf" && !INVOICE_IMAGE_MIME_TYPES.includes(mimeType)) {
+      Alert.alert("Can't use that file", "Invoices can be a PDF, or a JPEG, PNG or WebP image.");
+      return null;
+    }
 
     return { uri: asset.uri, name, mimeType };
   }

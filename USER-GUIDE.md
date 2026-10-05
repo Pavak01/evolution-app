@@ -67,7 +67,7 @@ Unlike expenses, income is entered periodically — whenever a payment or invoic
 2. Enter the **period** the payment covers (start and end date).
 3. Enter the **total amount**.
 4. Confirm the **received date** (defaults to today).
-5. Optionally attach the invoice: tap **Attach invoice**, then choose **Photo** or **PDF** from the dropdown — unlike an expense receipt, an invoice can be either, since real invoices routinely arrive as PDFs.
+5. Optionally attach the invoice: tap **Attach invoice — photo or file**, then choose **Photo from gallery**, or **File (PDF or image)** to pick from your phone's files (Downloads, Google Drive or an email attachment). Unlike an expense receipt, an invoice can be a PDF, since real invoices routinely arrive that way.
 6. Tap **Save income**.
 
 You'll see the updated running total for total income and net profit. Tap **View income history** to see everything you've recorded.

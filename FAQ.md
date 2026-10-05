@@ -90,7 +90,7 @@ No. Overlapping income periods are legitimate (two clients paying you for the sa
 No — attaching a file to an income record is optional.
 
 **Can I attach a PDF invoice, unlike an expense receipt?**
-Yes. Real invoices routinely arrive as PDFs, unlike point-of-sale receipts, so income invoices support both — tap the attach button on Record income and choose **Photo** or **PDF** from the dropdown.
+Yes. Real invoices routinely arrive as PDFs, unlike point-of-sale receipts, so income invoices support both — tap **Attach invoice — photo or file** on Record income and choose **Photo from gallery** or **File (PDF or image)**, which opens your phone's files (Downloads, Google Drive, email attachments).
 
 **What is "Auto-fill from invoice"?**
 Part of Pro (and included in the free trial). It reads an attached invoice (photo or PDF) and fills in who paid you, the total amount, and the received date automatically; you still review and can edit everything before saving. It never fills in the period dates, since most real invoices don't state an explicit period. Typing it in yourself always works on either plan.

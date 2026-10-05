@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React, { useRef, useState } from "react";
-import { Alert, Modal, Pressable, StyleSheet, Text, View, type ScrollView } from "react-native";
+import { Modal, Pressable, StyleSheet, Text, View, type ScrollView } from "react-native";
 import { useAccess, useAuth } from "../../auth/AuthContext";
 import { PlanRequiredCard, ProUpsell, TrialBanner } from "../../components/PlanBits";
 import { createIncomeInvoice } from "../../api/income";
@@ -57,15 +57,12 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
     setFile((await pickFromFiles()) ?? file);
   }
 
-  async function handleAttachPdf(): Promise<void> {
+  // The phone's file picker — PDFs and image files from Downloads, Drive or
+  // an email attachment, which the photo gallery can't reach.
+  async function handleAttachFile(): Promise<void> {
     setShowAttachMenu(false);
-    const picked = await pickDocument("pdf");
-    if (!picked) return;
-    if (picked.mimeType !== "application/pdf") {
-      Alert.alert("Not a PDF", "Please pick a PDF file, or use Photo instead.");
-      return;
-    }
-    setFile(picked);
+    const picked = await pickDocument("invoice");
+    if (picked) setFile(picked);
   }
 
   // Only ever fills source/total amount/received date — never touches
@@ -174,15 +171,15 @@ export function RecordIncomeScreen({ navigation }: Props): React.JSX.Element {
         <DateField label="Received date" value={receivedDate} onChange={setReceivedDate} maximumDate={new Date()} />
         <Field label="Notes (optional)" value={notes} onChange={setNotes} placeholder="" />
 
-        <PrimaryButton label={file ? "Change invoice ▾" : "Attach invoice (optional) ▾"} onPress={() => setShowAttachMenu(true)} />
+        <PrimaryButton label={file ? "Change invoice ▾" : "Attach invoice — photo or file (optional) ▾"} onPress={() => setShowAttachMenu(true)} />
         <Modal visible={showAttachMenu} transparent animationType="fade" onRequestClose={() => setShowAttachMenu(false)}>
           <Pressable style={styles.menuBackdrop} onPress={() => setShowAttachMenu(false)}>
             <View style={styles.menuSheet}>
               <Pressable style={styles.menuRow} onPress={handleAttachPhoto}>
-                <Text style={styles.menuRowText}>Photo</Text>
+                <Text style={styles.menuRowText}>Photo from gallery</Text>
               </Pressable>
-              <Pressable style={styles.menuRow} onPress={handleAttachPdf}>
-                <Text style={styles.menuRowText}>PDF</Text>
+              <Pressable style={styles.menuRow} onPress={handleAttachFile}>
+                <Text style={styles.menuRowText}>File (PDF or image)</Text>
               </Pressable>
               <Pressable style={[styles.menuRow, styles.menuCancelRow]} onPress={() => setShowAttachMenu(false)}>
                 <Text style={styles.menuCancelText}>Cancel</Text>
