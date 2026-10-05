@@ -25,7 +25,7 @@ type Props = NativeStackScreenProps<CaptureStackParamList, "CaptureForm">;
 
 export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.Element {
   const { refreshUser } = useAuth();
-  const { captureFromCamera, pickFromFiles } = useReceiptCapture();
+  const { captureFromCamera, pickFromFiles, pickDocument, shareLocalUri } = useReceiptCapture();
   // Trial or Pro — anything that reads a photo/PDF for you.
   const { ocr: hasOcrUpgrade, canWrite } = useAccess();
 
@@ -286,13 +286,20 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
             <PrimaryButton label="Choose photo" onPress={() => handleAttachReceipt(pickFromFiles)} />
           </View>
         </View>
+        {/* Emailed / app receipts (Uber, trains, online orders) usually arrive as a PDF. */}
+        <Text
+          style={{ color: colors.accent, textAlign: "center", fontWeight: "600", marginBottom: spacing.md }}
+          onPress={() => handleAttachReceipt(() => pickDocument("receipt"))}
+        >
+          Choose a file (PDF or image)
+        </Text>
         {receipt ? (
           <>
-            <Pressable onPress={() => setViewerUri(receipt.uri)}>
+            <Pressable onPress={() => (receipt.mimeType === "application/pdf" ? void shareLocalUri(receipt.uri) : setViewerUri(receipt.uri))}>
               <ReceiptThumbnail uri={receipt.uri} isPdf={receipt.mimeType === "application/pdf"} filename={receipt.name} />
             </Pressable>
             <Text style={{ color: colors.textMuted, fontSize: typography.micro, marginTop: spacing.xs }}>
-              Tap the photo to check it full-size before saving
+              {receipt.mimeType === "application/pdf" ? "Tap to open the PDF and check it before saving" : "Tap the photo to check it full-size before saving"}
             </Text>
             <View style={{ height: spacing.sm }} />
             {hasOcrUpgrade ? (
