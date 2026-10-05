@@ -9,6 +9,10 @@ export function openPlans(): void {
   if (navigationRef.isReady()) navigationRef.navigate("Plans");
 }
 
+export function openTwoFactor(): void {
+  if (navigationRef.isReady()) navigationRef.navigate("TwoFactor");
+}
+
 export function openPromoAdmin(): void {
   if (navigationRef.isReady()) navigationRef.navigate("PromoAdmin");
 }

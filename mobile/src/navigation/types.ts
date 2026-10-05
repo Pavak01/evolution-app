@@ -50,6 +50,7 @@ export type RootStackParamList = {
   Main: NavigatorScreenParams<MainTabParamList> | undefined;
   Plans: undefined;
   PromoAdmin: undefined;
+  TwoFactor: undefined;
 };
 
 export type MainTabParamList = {

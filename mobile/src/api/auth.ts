@@ -16,6 +16,7 @@ export type AuthUser = {
   email: string;
   // Shows Settings → Admin; the server checks independently on every admin call.
   is_admin?: boolean;
+  two_factor_enabled?: boolean;
   // Absent from older servers — treated as accepted, never as a block.
   terms?: { current_version: string; accepted: boolean };
   entitlements: { ocr_upgrade_active: boolean; access?: Access };

@@ -35,11 +35,12 @@ export function VerifyTwoFactorScreen({ route }: Props): React.JSX.Element {
       <Text style={{ fontSize: typography.h1, fontWeight: "700", color: colors.textMain }}>Two-factor code</Text>
       <Card>
         <Text style={{ color: colors.textSecondary, marginBottom: 12 }}>
-          Enter the 6-digit code from your authenticator app.
+          Enter the 6-digit code from your authenticator app. Lost your phone? Enter one of your backup codes instead (like
+          ABCD-EFGH).
         </Text>
-        <Field label="Code" value={code} onChange={setCode} keyboardType="number-pad" placeholder="123456" />
+        <Field label="Code" value={code} onChange={setCode} placeholder="123456 or ABCD-EFGH" />
         {error && <StatusBanner kind="error" text={error} />}
-        <PrimaryButton label="Verify" onPress={handleSubmit} isLoading={isSubmitting} disabled={code.trim().length !== 6} />
+        <PrimaryButton label="Verify" onPress={handleSubmit} isLoading={isSubmitting} disabled={code.trim().length < 6} />
       </Card>
     </Screen>
   );

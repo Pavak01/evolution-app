@@ -20,6 +20,7 @@ import { SettingsScreen } from "../screens/settings/SettingsScreen";
 import { PlansScreen } from "../screens/settings/PlansScreen";
 import { AcceptTermsScreen } from "../screens/auth/AcceptTermsScreen";
 import { PromoAdminScreen } from "../screens/settings/PromoAdminScreen";
+import { TwoFactorScreen } from "../screens/settings/TwoFactorScreen";
 import { navigationRef } from "./navigationRef";
 import { consumeLaunchReminderTap, onReminderTapped } from "../reimbursementReminders";
 import { VerifyTwoFactorScreen } from "../screens/auth/VerifyTwoFactorScreen";
@@ -166,6 +167,7 @@ export function RootNavigator(): React.JSX.Element {
           <RootStack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
           <RootStack.Screen name="Plans" component={PlansScreen} options={{ title: "Plans", presentation: "modal" }} />
           <RootStack.Screen name="PromoAdmin" component={PromoAdminScreen} options={{ title: "Promo codes" }} />
+          <RootStack.Screen name="TwoFactor" component={TwoFactorScreen} options={{ title: "Two-factor authentication" }} />
         </RootStack.Navigator>
       ) : (
         <AuthStack.Navigator screenOptions={{ headerShown: false }}>

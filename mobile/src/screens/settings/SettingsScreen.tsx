@@ -7,7 +7,7 @@ import { Card, DangerAction, Field, PrimaryButton, StatusBanner } from "../../co
 import { Screen } from "../../components/Screen";
 import { sendTestReimbursementReminder } from "../../reimbursementReminders";
 import { formatPlanDate, PromoCodeField } from "../../components/PlanBits";
-import { openPlans, openPromoAdmin } from "../../navigation/navigationRef";
+import { openPlans, openPromoAdmin, openTwoFactor } from "../../navigation/navigationRef";
 import { openDoc } from "../../utils/docs";
 import { useAccess, useAuth } from "../../auth/AuthContext";
 import { colors, spacing, typography } from "../../theme/tokens";
@@ -92,6 +92,14 @@ export function SettingsScreen(): React.JSX.Element {
         <PrimaryButton label="See plans" onPress={openPlans} />
         <View style={{ height: spacing.md }} />
         <PromoCodeField />
+      </Card>
+
+      <Card>
+        <Text style={{ fontSize: typography.body, fontWeight: "700", color: colors.textMain, marginBottom: spacing.xs }}>Two-factor authentication</Text>
+        <Text style={{ color: colors.textSecondary, marginBottom: spacing.md }}>
+          {user?.two_factor_enabled ? "On — signing in also needs a code from your authenticator app." : "Off. Add a second step to signing in for extra security."}
+        </Text>
+        <PrimaryButton label={user?.two_factor_enabled ? "Manage" : "Set up"} onPress={openTwoFactor} />
       </Card>
 
       {user?.is_admin && (
