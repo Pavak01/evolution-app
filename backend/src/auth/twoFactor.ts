@@ -1,11 +1,10 @@
 import crypto from "node:crypto";
 
-// Verifies against the same encrypted TOTP secret Qbit already manages in
-// the shared `users` table — not a parallel 2FA system. Ported verbatim
-// from Qbit's backend/src/index.ts (encryptTwoFactorSecret/base32Encode/
-// generateTwoFactorSecret omitted since Evolution never creates a 2FA
-// secret, only verifies one Qbit already set up) so the crypto is
-// byte-for-byte compatible with what Qbit already encrypted.
+// TOTP 2FA on the shared `users` table's two_factor_* columns. The crypto
+// was ported verbatim from Qbit (byte-for-byte compatible with secrets Qbit
+// encrypted); since 2026-10-05 Evolution also *creates* secrets (setup/
+// enable/disable in routes/twoFactor.routes.ts) using the exact inverse
+// below — format "iv.tag.ciphertext", base64url, AES-256-GCM.
 const twoFactorTimeStepSeconds = 30;
 
 function getTwoFactorEncryptionKey(): Buffer {
@@ -14,6 +13,42 @@ function getTwoFactorEncryptionKey(): Buffer {
     throw new Error("TWO_FACTOR_ENCRYPTION_KEY is required");
   }
   return crypto.createHash("sha256").update(seed).digest();
+}
+
+export function encryptTwoFactorSecret(secret: string): string {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", getTwoFactorEncryptionKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(secret, "utf8"), cipher.final()]);
+  return [iv, cipher.getAuthTag(), encrypted].map((part) => part.toString("base64url")).join(".");
+}
+
+const BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+
+function base32Encode(buffer: Buffer): string {
+  let bits = 0;
+  let current = 0;
+  let output = "";
+  for (const byte of buffer) {
+    current = (current << 8) | byte;
+    bits += 8;
+    while (bits >= 5) {
+      output += BASE32_ALPHABET[(current >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+  if (bits > 0) output += BASE32_ALPHABET[(current << (5 - bits)) & 31];
+  return output;
+}
+
+// 160-bit secret, the RFC 4226 recommended size; base32 is what
+// authenticator apps expect.
+export function generateTwoFactorSecret(): string {
+  return base32Encode(crypto.randomBytes(20));
+}
+
+export function otpauthUrl(email: string, secret: string): string {
+  const label = encodeURIComponent(`Evolution:${email}`);
+  return `otpauth://totp/${label}?secret=${secret}&issuer=Evolution&algorithm=SHA1&digits=6&period=30`;
 }
 
 export function decryptTwoFactorSecret(payload: string | null | undefined): string | null {
@@ -60,7 +95,7 @@ function base32Decode(value: string): Buffer {
   return Buffer.from(output);
 }
 
-function generateTotpCode(secret: string, timestampMs = Date.now()): string {
+export function generateTotpCode(secret: string, timestampMs = Date.now()): string {
   const counter = Math.floor(timestampMs / 1000 / twoFactorTimeStepSeconds);
   const buffer = Buffer.alloc(8);
   buffer.writeBigUInt64BE(BigInt(counter));

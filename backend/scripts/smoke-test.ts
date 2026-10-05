@@ -135,6 +135,7 @@ async function cleanup(): Promise<void> {
     await pool.query("DELETE FROM email_codes WHERE user_id = $1", [createdUserId]);
     await pool.query("DELETE FROM email_verifications WHERE user_id = $1", [createdUserId]);
     await pool.query("DELETE FROM terms_acceptances WHERE user_id = $1", [createdUserId]);
+    await pool.query("DELETE FROM two_factor_backup_codes WHERE user_id = $1", [createdUserId]);
     await pool.query("DELETE FROM public.users WHERE id = $1", [createdUserId]);
     console.log(`Cleaned up smoke-test account (${email}).`);
   } catch (error) {

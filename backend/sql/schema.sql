@@ -419,3 +419,15 @@ CREATE TABLE IF NOT EXISTS evolution.terms_acceptances (
   accepted_at TIMESTAMP NOT NULL DEFAULT NOW(),
   PRIMARY KEY (user_id, version)
 );
+
+-- One-time 2FA backup codes created by Evolution's 2FA setup (HMAC-hashed,
+-- like email codes). Qbit's public.two_factor_backup_codes is not used —
+-- it's hashed with Qbit's own secret.
+CREATE TABLE IF NOT EXISTS evolution.two_factor_backup_codes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id),
+  code_hash TEXT NOT NULL,
+  used_at TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_2fa_backup_codes_user ON evolution.two_factor_backup_codes(user_id);

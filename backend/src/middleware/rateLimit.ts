@@ -91,3 +91,13 @@ export const emailCodeRateLimit = createRateLimitMiddleware({
   max: 30,
   message: "Too many attempts. Please try again later."
 });
+
+// 2FA settings (setup / turn on / turn off / new backup codes) — their own
+// budget so managing 2FA never eats into sign-in attempts. Guessing is
+// still bounded: each request checks one code.
+export const twoFactorManageRateLimit = createRateLimitMiddleware({
+  key: "2fa-manage",
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: "Too many attempts. Please try again later."
+});

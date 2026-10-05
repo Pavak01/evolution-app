@@ -7,6 +7,7 @@ import { db } from "../db.js";
 import { checkCode, isDisposableEmail, isEmailVerified, markEmailVerified, sendCode } from "../emailCodes.js";
 import { getAccess, type Access } from "../entitlements.js";
 import { isAdmin } from "./admin.routes.js";
+import { consumeBackupCode, looksLikeBackupCode } from "./twoFactor.routes.js";
 import { CURRENT_TERMS_VERSION, hasAcceptedCurrentTerms, recordTermsAcceptance } from "../terms.js";
 import { sendError } from "../middleware/errorHandler.js";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
@@ -40,6 +41,7 @@ async function buildUserPayload(
   id: string;
   email: string;
   is_admin: boolean;
+  two_factor_enabled: boolean;
   terms: { current_version: string; accepted: boolean };
   entitlements: { ocr_upgrade_active: boolean; access: Access };
 }> {
@@ -48,6 +50,7 @@ async function buildUserPayload(
     id,
     email,
     is_admin: await isAdmin(id),
+    two_factor_enabled: (await db.query<{ on: boolean }>("SELECT two_factor_enabled AS on FROM users WHERE id = $1", [id])).rows[0]?.on ?? false,
     terms: { current_version: CURRENT_TERMS_VERSION, accepted: await hasAcceptedCurrentTerms(id) },
     entitlements: { ocr_upgrade_active: access.ocr, access }
   };
@@ -217,8 +220,11 @@ authRouter.post("/auth/verify-2fa", authRateLimit, async (req: Request, res: Res
 
     const user = result.rows[0];
     const secret = decryptTwoFactorSecret(user.two_factor_secret);
-    if (!secret || !verifyTotpCode(secret, parsed.data.code)) {
-      return res.status(401).json({ error: "Invalid verification code" });
+    const totpOk = Boolean(secret && verifyTotpCode(secret, parsed.data.code));
+    // A one-time backup code (lost phone) works in place of the 6-digit code.
+    const backupOk = !totpOk && looksLikeBackupCode(parsed.data.code) && (await consumeBackupCode(user.id, parsed.data.code));
+    if (!totpOk && !backupOk) {
+      return res.status(401).json({ error: "That code isn't right." });
     }
 
     const token = signToken(user.id, user.token_version);
