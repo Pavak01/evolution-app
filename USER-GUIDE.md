@@ -18,7 +18,7 @@ This guide walks through every screen. For quick answers, see the [FAQ](FAQ.md).
 
 ## Signing in
 
-Sign in with your email and password, or tap **Create an account** if you're new.
+Sign in with your email and password, or tap **Create an account** if you're new. To create an account you'll tick to agree to the [Terms of Use](TERMS-OF-USE.md) (and confirm you've read the [Privacy Policy](PRIVACY-POLICY.md)). If you signed up before the Terms existed, or they change in a way that matters, you'll be asked to accept them once after signing in. You can read them any time in **Settings**.
 
 **Confirming your email.** When you create an account, we email you a 6-digit code. Enter it on the **Check your email** screen to finish. Your free trial starts at that moment. The code lasts 15 minutes. Can't see it? Check your spam or junk folder, or tap **Resend code** (available after a minute). Only the newest code works. If you typed the wrong email, tap **Wrong email? Start again**.
 

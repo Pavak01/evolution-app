@@ -5,6 +5,15 @@ export const authSchema = z.object({
   password: z.string().min(8).max(200)
 });
 
+// Sign-up from builds that show the terms tick-box sends the version the
+// person agreed to. Optional so builds without the tick-box (111) can
+// still sign up; those accounts are asked to accept after signing in.
+export const registerSchema = authSchema.extend({
+  accepted_terms_version: z.string().max(40).optional()
+});
+
+export const acceptTermsSchema = z.object({ version: z.string().max(40) });
+
 export const twoFactorVerifySchema = z.object({
   challenge_token: z.string().min(1),
   code: z.string().trim().min(6).max(6)

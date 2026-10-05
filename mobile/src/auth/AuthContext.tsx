@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { AppState } from "react-native";
 import {
+  acceptTerms as apiAcceptTerms,
   fetchMe,
   login as apiLogin,
   register as apiRegister,
@@ -18,7 +19,8 @@ type AuthContextValue = {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<LoginResult>;
   verifyTwoFactor: (challengeToken: string, code: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<LoginResult>;
+  register: (email: string, password: string, acceptedTermsVersion: string) => Promise<LoginResult>;
+  acceptTerms: (version: string) => Promise<void>;
   verifyEmail: (verificationToken: string, code: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
   // Re-reads plan/trial state — after a redeem, a 402, or coming back to the app.
@@ -94,8 +96,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     setUser(await apiVerifyTwoFactor(challengeToken, code));
   }, []);
 
-  const register = useCallback(async (email: string, password: string): Promise<LoginResult> => {
-    const result = await apiRegister(email, password);
+  const register = useCallback(async (email: string, password: string, acceptedTermsVersion: string): Promise<LoginResult> => {
+    const result = await apiRegister(email, password, acceptedTermsVersion);
     if (result.status === "success") setUser(result.user);
     return result;
   }, []);
@@ -104,6 +106,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     const result = await apiVerifyEmail(verificationToken, code);
     if (result.status === "success") setUser(result.user);
     return result;
+  }, []);
+
+  const acceptTerms = useCallback(async (version: string) => {
+    setUser(await apiAcceptTerms(version));
   }, []);
 
   const refreshUser = useCallback(async () => {
@@ -120,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, verifyTwoFactor, register, verifyEmail, logout, refreshUser }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, isLoading, login, verifyTwoFactor, register, verifyEmail, acceptTerms, logout, refreshUser }}>{children}</AuthContext.Provider>
   );
 }
 

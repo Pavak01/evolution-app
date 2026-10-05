@@ -1,11 +1,13 @@
 # Privacy Policy
 
-Last updated: 14 September 2026
+Last updated: 5 October 2026
 
 This Privacy Policy explains how Evolution collects, uses, stores, and protects your information when you use the mobile app and backend API.
 
 App name on Google Play: Evolution
 Developer name on Google Play: Pavak01
+
+**Who is responsible for your data (the data controller):** APLC Commodities Ltd, a company registered in England and Wales (company number 15868594), registered office Baslow House, Whitle Road, New Mills, High Peak, SK22 4EH. Contact: support@aplccommodities.com. Using Evolution is also governed by our [Terms of Use](TERMS-OF-USE.md).
 
 ## Data deletion request (Google Play)
 

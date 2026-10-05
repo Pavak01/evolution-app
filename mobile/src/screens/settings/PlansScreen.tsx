@@ -5,6 +5,7 @@ import { Card, PrimaryButton, StatusBanner } from "../../components/Controls";
 import { formatPlanDate, PromoCodeField } from "../../components/PlanBits";
 import { Screen } from "../../components/Screen";
 import { colors, spacing, typography } from "../../theme/tokens";
+import { openDoc } from "../../utils/docs";
 
 // Agreed 2026-10-04: everything is in Basic except features that read a
 // photo or PDF for you, which are Pro. Prices are set in Play Console
@@ -107,7 +108,10 @@ export function PlansScreen(): React.JSX.Element {
         onChoose={() => setChosen("Pro")}
       />
       <Text style={{ color: colors.textMuted, fontSize: typography.small, textAlign: "center" }}>
-        A subscription is an allowable business expense.
+        A subscription is an allowable business expense.{" "}
+        <Text style={{ color: colors.accent }} onPress={() => openDoc("TERMS-OF-USE.html")}>
+          Terms of Use
+        </Text>
       </Text>
 
       <Card>

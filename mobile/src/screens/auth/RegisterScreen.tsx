@@ -8,6 +8,8 @@ import { ApiError } from "../../api/client";
 import { colors, spacing, typography } from "../../theme/tokens";
 import type { AuthStackParamList } from "../../navigation/types";
 import { routeAuthResult } from "./routeAuthResult";
+import { TermsAgreement } from "../../components/TermsAgreement";
+import { TERMS_VERSION } from "../../utils/docs";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Register">;
 
@@ -17,6 +19,7 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [agreed, setAgreed] = useState(false);
 
   async function handleSubmit(): Promise<void> {
     if (password.length < 8) {
@@ -27,7 +30,7 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
     setError(null);
     setIsSubmitting(true);
     try {
-      routeAuthResult(navigation, await register(email.trim().toLowerCase(), password));
+      routeAuthResult(navigation, await register(email.trim().toLowerCase(), password, TERMS_VERSION));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not create your account. Check your connection.");
     } finally {
@@ -41,9 +44,10 @@ export function RegisterScreen({ navigation }: Props): React.JSX.Element {
       <Card>
         <Field label="Email" value={email} onChange={setEmail} keyboardType="email-address" placeholder="you@example.com" />
         <Field label="Password" value={password} onChange={setPassword} placeholder="At least 8 characters" />
+        <TermsAgreement checked={agreed} onToggle={() => setAgreed((a) => !a)} />
         {error && <StatusBanner kind="error" text={error} />}
         <View style={{ height: spacing.sm }} />
-        <PrimaryButton label="Create account" onPress={handleSubmit} isLoading={isSubmitting} disabled={!email || !password} />
+        <PrimaryButton label="Create account" onPress={handleSubmit} isLoading={isSubmitting} disabled={!email || !password || !agreed} />
       </Card>
       <Text style={{ color: colors.textMuted, textAlign: "center" }} onPress={() => navigation.navigate("Login")}>
         Already have an account? Sign in

@@ -7,15 +7,18 @@ import { db } from "../db.js";
 import { checkCode, isDisposableEmail, isEmailVerified, markEmailVerified, sendCode } from "../emailCodes.js";
 import { getAccess, type Access } from "../entitlements.js";
 import { isAdmin } from "./admin.routes.js";
+import { CURRENT_TERMS_VERSION, hasAcceptedCurrentTerms, recordTermsAcceptance } from "../terms.js";
 import { sendError } from "../middleware/errorHandler.js";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { authRateLimit, emailCodeRateLimit, registerRateLimit } from "../middleware/rateLimit.js";
 import {
+  acceptTermsSchema,
   accountDeletionRequestSchema,
   authSchema,
   passwordResetConfirmSchema,
   passwordResetRequestSchema,
   publicAccountDeletionRequestSchema,
+  registerSchema,
   resendVerificationSchema,
   twoFactorVerifySchema,
   verifyEmailSchema
@@ -33,9 +36,21 @@ export const authRouter = Router();
 async function buildUserPayload(
   id: string,
   email: string
-): Promise<{ id: string; email: string; is_admin: boolean; entitlements: { ocr_upgrade_active: boolean; access: Access } }> {
+): Promise<{
+  id: string;
+  email: string;
+  is_admin: boolean;
+  terms: { current_version: string; accepted: boolean };
+  entitlements: { ocr_upgrade_active: boolean; access: Access };
+}> {
   const access = await getAccess(id);
-  return { id, email, is_admin: await isAdmin(id), entitlements: { ocr_upgrade_active: access.ocr, access } };
+  return {
+    id,
+    email,
+    is_admin: await isAdmin(id),
+    terms: { current_version: CURRENT_TERMS_VERSION, accepted: await hasAcceptedCurrentTerms(id) },
+    entitlements: { ocr_upgrade_active: access.ocr, access }
+  };
 }
 
 // The "now check your email" response. No session token — an unconfirmed
@@ -73,7 +88,7 @@ async function completeSignIn(userId: string) {
 }
 
 authRouter.post("/auth/register", registerRateLimit, async (req: Request, res: Response) => {
-  const parsed = authSchema.safeParse(req.body);
+  const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid payload", details: parsed.error.flatten() });
   }
@@ -98,6 +113,9 @@ authRouter.post("/auth/register", registerRateLimit, async (req: Request, res: R
     );
 
     const user = inserted.rows[0];
+    if (parsed.data.accepted_terms_version) {
+      await recordTermsAcceptance(user.id, parsed.data.accepted_terms_version);
+    }
     return res.status(201).json(await emailVerificationResponse(user.id, user.email));
   } catch (error) {
     return sendError(res, 500, "Failed to register", error);
@@ -300,6 +318,25 @@ authRouter.post("/auth/password-reset/confirm", emailCodeRateLimit, async (req: 
     return res.json({ reset: true, message: "Password changed. You're being signed in." });
   } catch (error) {
     return sendError(res, 500, "Failed to reset password", error);
+  }
+});
+
+// One-time "We've updated our terms" (or first acceptance for accounts made
+// before acceptance was asked for). Only the current version can be accepted.
+authRouter.post("/auth/accept-terms", requireAuth, async (req: Request, res: Response) => {
+  const authReq = req as AuthenticatedRequest;
+  const parsed = acceptTermsSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid payload" });
+  }
+  try {
+    if (!(await recordTermsAcceptance(authReq.userId, parsed.data.version))) {
+      return res.status(409).json({ error: "The terms have been updated since you opened them. Please review the latest version.", current_version: CURRENT_TERMS_VERSION });
+    }
+    const row = await db.query<{ email: string }>("SELECT email FROM users WHERE id = $1", [authReq.userId]);
+    return res.json({ user: await buildUserPayload(authReq.userId, row.rows[0].email) });
+  } catch (error) {
+    return sendError(res, 500, "Failed to record acceptance", error);
   }
 });
 

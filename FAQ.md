@@ -126,6 +126,9 @@ Nothing is deleted or hidden. You can still view everything, export it, lock a f
 **I've been given a code. How do I use it?**
 Go to **Settings → Have a code?** (or the Plans screen), enter it and tap **Redeem code**. Capitals and spaces don't matter. A code never takes away a better plan you already have; if it wouldn't improve yours, nothing changes and the code isn't used up. Each code can only be used once per account.
 
+**Where are the Terms of Use?**
+In **Settings → Terms of use**, and on our website. They cover the free trial and plans, that Evolution gives estimates rather than tax advice, and how your data is handled. Evolution is provided by APLC Commodities Ltd.
+
 **How much do the plans cost?**
 Prices haven't been set yet, and subscriptions can't be bought in the app just yet. The aim is to keep both plans affordable.
 

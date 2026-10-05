@@ -409,3 +409,13 @@ CREATE TABLE IF NOT EXISTS evolution.admin_users (
 INSERT INTO evolution.admin_users (user_id)
 SELECT id FROM public.users WHERE email IN ('roger.nichols@gmail.com', 'rogeristhekey@yandex.com')
 ON CONFLICT (user_id) DO NOTHING;
+
+-- Evidence of which Terms of Use version each account accepted, and when
+-- (see src/terms.ts). Kept after account deletion as the legal record of
+-- the agreement; it holds no app data.
+CREATE TABLE IF NOT EXISTS evolution.terms_acceptances (
+  user_id UUID NOT NULL REFERENCES public.users(id),
+  version TEXT NOT NULL,
+  accepted_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, version)
+);

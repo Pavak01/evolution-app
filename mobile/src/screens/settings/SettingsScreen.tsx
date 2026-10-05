@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Linking, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { requestAccountDeletion } from "../../api/account";
 import { ApiError } from "../../api/client";
 import { resetAllData } from "../../api/dataReset";
@@ -8,17 +8,10 @@ import { Screen } from "../../components/Screen";
 import { sendTestReimbursementReminder } from "../../reimbursementReminders";
 import { formatPlanDate, PromoCodeField } from "../../components/PlanBits";
 import { openPlans, openPromoAdmin } from "../../navigation/navigationRef";
+import { openDoc } from "../../utils/docs";
 import { useAccess, useAuth } from "../../auth/AuthContext";
 import { colors, spacing, typography } from "../../theme/tokens";
 
-const DOCS_BASE_URL = "https://pavak01.github.io/evolution-app";
-
-// GitHub Pages serves these with a 10-minute cache-control, and phone
-// browsers cache on top of that — a query param that changes on every tap
-// forces a fresh fetch instead of showing a stale page from an earlier visit.
-function openDoc(path: string): void {
-  Linking.openURL(`${DOCS_BASE_URL}/${path}?v=${Date.now()}`);
-}
 
 export function SettingsScreen(): React.JSX.Element {
   const { user, logout } = useAuth();
@@ -141,6 +134,7 @@ export function SettingsScreen(): React.JSX.Element {
           <PrimaryButton label="User guide" onPress={() => openDoc("USER-GUIDE.html")} />
           <PrimaryButton label="FAQ" onPress={() => openDoc("FAQ.html")} />
           <PrimaryButton label="Privacy policy" onPress={() => openDoc("PRIVACY-POLICY.html")} />
+          <PrimaryButton label="Terms of use" onPress={() => openDoc("TERMS-OF-USE.html")} />
         </View>
       </Card>
 

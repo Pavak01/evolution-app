@@ -16,6 +16,8 @@ export type AuthUser = {
   email: string;
   // Shows Settings → Admin; the server checks independently on every admin call.
   is_admin?: boolean;
+  // Absent from older servers — treated as accepted, never as a block.
+  terms?: { current_version: string; accepted: boolean };
   entitlements: { ocr_upgrade_active: boolean; access?: Access };
 };
 
@@ -55,8 +57,17 @@ async function toLoginResult(result: AuthStepResponse): Promise<LoginResult> {
   return { status: "success", user: result.user as AuthUser };
 }
 
-export async function register(email: string, password: string): Promise<LoginResult> {
-  return toLoginResult(await apiJson<AuthStepResponse>("/auth/register", { method: "POST", body: JSON.stringify({ email, password }) }));
+export async function register(email: string, password: string, acceptedTermsVersion: string): Promise<LoginResult> {
+  return toLoginResult(
+    await apiJson<AuthStepResponse>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ email, password, accepted_terms_version: acceptedTermsVersion })
+    })
+  );
+}
+
+export async function acceptTerms(version: string): Promise<AuthUser> {
+  return (await apiJson<{ user: AuthUser }>("/auth/accept-terms", { method: "POST", body: JSON.stringify({ version }) })).user;
 }
 
 export async function login(email: string, password: string): Promise<LoginResult> {
