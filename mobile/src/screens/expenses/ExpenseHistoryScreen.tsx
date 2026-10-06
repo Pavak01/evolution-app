@@ -13,6 +13,7 @@ import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { humanizeCategory } from "../../utils/category";
 import { formatUkDate, getTaxYearFromDate } from "../../utils/taxYear";
 import type { ExpensesStackParamList } from "../../navigation/types";
+import { Ornaments } from "../../components/Ornaments";
 
 type Props = NativeStackScreenProps<ExpensesStackParamList, "ExpenseHistory">;
 
@@ -176,6 +177,7 @@ export function ExpenseHistoryScreen({ navigation, route }: Props): React.JSX.El
 
   return (
     <View style={styles.flex}>
+      <Ornaments />
       <FlatList
         data={expenses}
         keyExtractor={(item) => item.id}

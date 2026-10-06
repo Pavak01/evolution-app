@@ -12,6 +12,7 @@ import { useReceiptCapture } from "../../hooks/useReceiptCapture";
 import { listPending, removePending, syncQueue, type PendingItem } from "../../offlineQueue";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { formatUkDate, getTaxYearFromDate } from "../../utils/taxYear";
+import { Ornaments } from "../../components/Ornaments";
 
 function InvoiceRow({ invoice, onVoided }: { invoice: IncomeInvoice; onVoided: () => void }): React.JSX.Element {
   const { downloadToLocalUri, shareLocalUri } = useReceiptCapture();
@@ -166,6 +167,7 @@ export function IncomeHistoryScreen(): React.JSX.Element {
 
   return (
     <View style={styles.flex}>
+      <Ornaments />
       {error && (
         <View style={styles.errorWrap}>
           <StatusBanner kind="error" text={error} />

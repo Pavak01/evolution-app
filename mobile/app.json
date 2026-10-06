@@ -11,7 +11,8 @@
       "versionCode": 111,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#f5ede1"
+        "monochromeImage": "./assets/adaptive-icon-monochrome.png",
+        "backgroundColor": "#2f566f"
       },
       "softwareKeyboardLayoutMode": "resize"
     },
@@ -41,7 +42,7 @@
           "widgets": [
             {
               "name": "QuickLog",
-              "label": "Evolution — quick log",
+              "label": "Evolution \u2014 quick log",
               "description": "Snap a receipt or record income in one tap",
               "minWidth": "250dp",
               "minHeight": "40dp",
@@ -66,7 +67,16 @@
         }
       ],
       "expo-quick-actions",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 140,
+          "resizeMode": "contain",
+          "backgroundColor": "#f5ede1"
+        }
+      ]
     ],
     "extra": {
       "eas": {

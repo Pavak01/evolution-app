@@ -1,6 +1,7 @@
 import React, { forwardRef, useEffect, useRef } from "react";
 import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { colors, spacing } from "../theme/tokens";
+import { Ornaments } from "./Ornaments";
 
 // Forwards a ref to the underlying ScrollView so screens can scroll back to
 // top on demand — e.g. to bring an important status message (like an
@@ -55,6 +56,7 @@ export const Screen = forwardRef<
       // and becomes scrollable regardless of what the OS-level resize does.
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
+      <Ornaments />
       <ScrollView
         ref={(node) => {
           internalRef.current = node;

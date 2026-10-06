@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { Text, View } from "react-native";
 import { Card, Field, PrimaryButton, StatusBanner } from "../../components/Controls";
 import { Screen } from "../../components/Screen";
+import { Brand } from "../../components/Brand";
 import { useAuth } from "../../auth/AuthContext";
 import { ApiError } from "../../api/client";
 import { colors, spacing, typography } from "../../theme/tokens";
@@ -32,7 +33,7 @@ export function LoginScreen({ navigation }: Props): React.JSX.Element {
 
   return (
     <Screen>
-      <Text style={{ fontSize: typography.h1, fontWeight: "700", color: colors.textMain }}>Evolution</Text>
+      <Brand />
       <Card>
         <Field label="Email" value={email} onChange={setEmail} keyboardType="email-address" placeholder="you@example.com" />
         <Field label="Password" value={password} onChange={setPassword} placeholder="••••••••" />

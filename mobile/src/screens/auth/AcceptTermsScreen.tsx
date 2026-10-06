@@ -4,6 +4,7 @@ import { ApiError } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { Card, PrimaryButton, StatusBanner } from "../../components/Controls";
 import { Screen } from "../../components/Screen";
+import { Brand } from "../../components/Brand";
 import { TermsAgreement } from "../../components/TermsAgreement";
 import { colors, spacing, typography } from "../../theme/tokens";
 
@@ -30,7 +31,8 @@ export function AcceptTermsScreen(): React.JSX.Element {
 
   return (
     <Screen>
-      <Text style={{ fontSize: typography.h1, fontWeight: "700", color: colors.textMain }}>Terms of Use</Text>
+      <Brand />
+      <Text style={{ fontSize: typography.h2, fontWeight: "700", color: colors.textMain, textAlign: "center" }}>Terms of Use</Text>
       <Card>
         <Text style={{ color: colors.textSecondary, marginBottom: spacing.md }}>
           Before you carry on, please read and accept our Terms of Use. They explain your free trial and plans, that Evolution

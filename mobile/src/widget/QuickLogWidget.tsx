@@ -1,7 +1,8 @@
 import React from "react";
 import { FlexWidget, TextWidget } from "react-native-android-widget";
 
-// "Evolution — quick log" home-screen widget: two big buttons, nothing
+// "Evolution — quick log" home-screen widget, in the logo's colours (deep
+// blue tile, orange and cream): two big buttons, nothing
 // private shown, nothing to refresh. Colours mirror theme/tokens.ts
 // (widgets can't import app styles). Only ever loaded in real Android
 // builds — see index.ts.
@@ -38,13 +39,13 @@ export function QuickLogWidget() {
         height: "match_parent",
         width: "match_parent",
         flexDirection: "row",
-        backgroundColor: CARD,
+        backgroundColor: NAV,
         borderRadius: 20,
         padding: 6
       }}
     >
       <WidgetButton label="📷  Receipt" uri="evolution://capture?camera=1" background={ACCENT} color={ACCENT_TEXT} />
-      <WidgetButton label="£  Income" uri="evolution://income" background={NAV} color={ACCENT_TEXT} />
+      <WidgetButton label="£  Income" uri="evolution://income" background={CARD} color={NAV} />
     </FlexWidget>
   );
 }

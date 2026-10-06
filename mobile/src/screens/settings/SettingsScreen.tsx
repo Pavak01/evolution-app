@@ -5,6 +5,7 @@ import { ApiError } from "../../api/client";
 import { resetAllData } from "../../api/dataReset";
 import { Card, DangerAction, Field, PrimaryButton, StatusBanner } from "../../components/Controls";
 import { Screen } from "../../components/Screen";
+import { Brand } from "../../components/Brand";
 import { sendTestReimbursementReminder } from "../../reimbursementReminders";
 import { formatPlanDate, PromoCodeField } from "../../components/PlanBits";
 import { openPlans, openPromoAdmin, openTwoFactor } from "../../navigation/navigationRef";
@@ -196,6 +197,7 @@ export function SettingsScreen(): React.JSX.Element {
           disabled={confirmText.trim().toUpperCase() !== "DELETE"}
         />
       </Card>
+      <Brand size="small" />
     </Screen>
   );
 }
