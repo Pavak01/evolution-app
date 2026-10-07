@@ -42,7 +42,7 @@
           "widgets": [
             {
               "name": "QuickLog",
-              "label": "Evolution \u2014 quick log",
+              "label": "Evolution — quick log",
               "description": "Snap a receipt or record income in one tap",
               "minWidth": "250dp",
               "minHeight": "40dp",
@@ -90,7 +90,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#f5ede1"
         }
-      ]
+      ],
+      "@sentry/react-native"
     ],
     "extra": {
       "eas": {
