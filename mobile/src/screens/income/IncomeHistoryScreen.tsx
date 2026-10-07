@@ -13,6 +13,7 @@ import { listPending, removePending, syncQueue, type PendingItem } from "../../o
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { formatUkDate, getTaxYearFromDate } from "../../utils/taxYear";
 import { Ornaments } from "../../components/Ornaments";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
 function InvoiceRow({ invoice, onVoided }: { invoice: IncomeInvoice; onVoided: () => void }): React.JSX.Element {
   const { downloadToLocalUri, shareLocalUri } = useReceiptCapture();
@@ -74,7 +75,7 @@ function InvoiceRow({ invoice, onVoided }: { invoice: IncomeInvoice; onVoided: (
   }
 
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, invoice.voided_at ? styles.rowVoided : null]}>
       <View style={styles.rowMain}>
         <Text style={styles.source}>{invoice.source}</Text>
         <Text style={styles.period}>
@@ -84,7 +85,9 @@ function InvoiceRow({ invoice, onVoided }: { invoice: IncomeInvoice; onVoided: (
       <View style={styles.rowEnd}>
         <Text style={styles.amount}>£{invoice.total_amount.toFixed(2)}</Text>
         {invoice.voided_at ? (
-          <Text style={styles.voided}>voided</Text>
+          <Text style={styles.voided} numberOfLines={1}>
+            voided{invoice.void_reason ? `: ${invoice.void_reason}` : ""}
+          </Text>
         ) : (
           canWrite && <SmallAction label="Void" onPress={() => setIsExpanded((v) => !v)} />
         )}
@@ -186,6 +189,10 @@ export function IncomeHistoryScreen(): React.JSX.Element {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         keyboardShouldPersistTaps="handled"
+        // Keyboard-aware like every other screen (components/Screen.tsx): a
+        // field inside a row (e.g. the void reason) scrolls above the
+        // keyboard, so its Confirm button stays reachable in real builds.
+        renderScrollComponent={(props) => <KeyboardAwareScrollView {...props} bottomOffset={120} />}
         refreshControl={<RefreshControl refreshing={false} onRefresh={load} />}
         ListEmptyComponent={<Text style={styles.empty}>No income recorded yet this tax year.</Text>}
         renderItem={({ item }) => <InvoiceRow invoice={item} onVoided={load} />}
@@ -208,6 +215,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.sm
   },
+  // Dimmed like voided expenses, so it reads as struck through at a glance.
+  rowVoided: { opacity: 0.5 },
   rowMain: { flexDirection: "row", justifyContent: "space-between" },
   source: { fontSize: typography.body, fontWeight: "700", color: colors.textMain },
   period: { fontSize: typography.small, color: colors.textMuted },

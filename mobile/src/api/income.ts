@@ -46,8 +46,10 @@ export async function createIncomeInvoice(
   return postMultipart("/income-invoices", fields, file);
 }
 
+// Voided entries stay visible (audit trail — void never hides or deletes),
+// exactly as expense History does; the row marks them as voided.
 export async function listIncomeInvoices(params?: { tax_year?: string }): Promise<IncomeInvoice[]> {
-  const query = params?.tax_year ? `?tax_year=${encodeURIComponent(params.tax_year)}` : "";
+  const query = `?include_voided=true${params?.tax_year ? `&tax_year=${encodeURIComponent(params.tax_year)}` : ""}`;
   const result = await apiJson<{ invoices: IncomeInvoice[] }>(`/income-invoices${query}`);
   return result.invoices;
 }

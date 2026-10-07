@@ -14,6 +14,7 @@ import { humanizeCategory } from "../../utils/category";
 import { formatUkDate, getTaxYearFromDate } from "../../utils/taxYear";
 import type { ExpensesStackParamList } from "../../navigation/types";
 import { Ornaments } from "../../components/Ornaments";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
 type Props = NativeStackScreenProps<ExpensesStackParamList, "ExpenseHistory">;
 
@@ -183,6 +184,10 @@ export function ExpenseHistoryScreen({ navigation, route }: Props): React.JSX.El
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         keyboardShouldPersistTaps="handled"
+        // Keyboard-aware like every other screen (components/Screen.tsx): a
+        // field inside a row (e.g. the void reason) scrolls above the
+        // keyboard, so its Confirm button stays reachable in real builds.
+        renderScrollComponent={(props) => <KeyboardAwareScrollView {...props} bottomOffset={120} />}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => load(true)} />}
         onEndReachedThreshold={0.4}
         onEndReached={() => {
