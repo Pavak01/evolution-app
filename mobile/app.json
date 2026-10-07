@@ -42,7 +42,7 @@
           "widgets": [
             {
               "name": "QuickLog",
-              "label": "Evolution — quick log",
+              "label": "Evolution \u2014 quick log",
               "description": "Snap a receipt or record income in one tap",
               "minWidth": "250dp",
               "minHeight": "40dp",
@@ -66,7 +66,21 @@
           "disableIOS": true
         }
       ],
-      "expo-quick-actions",
+      [
+        "expo-quick-actions",
+        {
+          "androidIcons": {
+            "shortcut_receipt": {
+              "foregroundImage": "./assets/shortcut-receipt.png",
+              "backgroundColor": "#2f566f"
+            },
+            "shortcut_income": {
+              "foregroundImage": "./assets/shortcut-income.png",
+              "backgroundColor": "#2f566f"
+            }
+          }
+        }
+      ],
       "expo-font",
       [
         "expo-splash-screen",

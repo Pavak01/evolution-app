@@ -54,6 +54,22 @@ fs.mkdirSync(out("store"), { recursive: true });
 await sharp(Buffer.from(files["icon.png"])).resize(512, 512).flatten({ background: BLUE }).png().toFile(out("store/play-store-icon-512.png"));
 await sharp(Buffer.from(files["logo.png"])).resize(48, 48).png().toFile(out("favicon.png"));
 
+// Long-press app-icon shortcuts (Android adaptive foregrounds; the blue
+// background is set in app.json). Glyphs kept well inside the safe zone.
+const shortcutIcons = {
+  "shortcut-receipt.png": svg(scaled(`
+    <rect x="272" y="372" width="480" height="340" rx="56" fill="${CARD}"/>
+    <path d="M412 372 L452 312 H572 L612 372 Z" fill="${CARD}"/>
+    <circle cx="512" cy="542" r="104" fill="${BLUE}"/>
+    <circle cx="512" cy="542" r="62" fill="${ORANGE}"/>
+    <circle cx="684" cy="430" r="20" fill="${ORANGE}"/>`, 0.62)),
+  "shortcut-income.png": svg(scaled(`
+    <text x="512" y="700" font-family="Helvetica, Arial" font-size="560" font-weight="700" fill="${CARD}" text-anchor="middle">£</text>
+    <rect x="300" y="760" width="424" height="40" rx="20" fill="${ORANGE}"/>`, 0.62))
+};
+for (const [name, content] of Object.entries(shortcutIcons)) await sharp(Buffer.from(content)).png().toFile(out(name));
+console.log("Generated:", Object.keys(shortcutIcons).join(", "));
+
 // Play Store feature graphic: 1024x500, no transparency. Logo tile, name and
 // strapline on the blue, with two soft background circles (a faint cream one —
 // the app's orange circle turns muddy grey over blue).
