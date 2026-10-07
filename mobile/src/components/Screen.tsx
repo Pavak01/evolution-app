@@ -1,5 +1,6 @@
-import React, { forwardRef, useEffect, useRef } from "react";
-import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
+import React, { forwardRef } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardAwareScrollView, type KeyboardAwareScrollViewRef } from "react-native-keyboard-controller";
 import { colors, spacing } from "../theme/tokens";
 import { Ornaments } from "./Ornaments";
 
@@ -10,69 +11,30 @@ import { Ornaments } from "./Ornaments";
 export const Screen = forwardRef<
   ScrollView,
   { children: React.ReactNode; refreshControl?: React.ComponentProps<typeof ScrollView>["refreshControl"] }
->(function Screen({ children, refreshControl }, forwardedRef) {
-  // A screen's own field-level onFocus->scrollToEnd (the previous approach)
-  // fires before the keyboard has actually finished appearing, scrolling
-  // based on the still-full-height screen — so a field near the bottom can
-  // still end up covered with no correction afterward. Listening for the
-  // keyboard's own show event instead (its size/timing is only known once
-  // it's genuinely showing) fixes this for every screen at once, not just
-  // the one that happened to wire an onFocus handler.
-  const internalRef = useRef<ScrollView>(null);
-
-  useEffect(() => {
-    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    // Android in particular can re-fire "show" while the keyboard is
-    // already up (e.g. its suggestion bar changing height as you type) —
-    // without this guard, every re-fire forced the scroll back to the end
-    // again, so it felt like the page was stuck and wouldn't scroll up.
-    // Only the genuine hidden -> shown transition should auto-scroll.
-    let isKeyboardVisible = false;
-    const showSubscription = Keyboard.addListener(showEvent, () => {
-      if (isKeyboardVisible) return;
-      isKeyboardVisible = true;
-      internalRef.current?.scrollToEnd({ animated: true });
-    });
-    const hideSubscription = Keyboard.addListener("keyboardDidHide", () => {
-      isKeyboardVisible = false;
-    });
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
-
+>(function Screen({ children, refreshControl }, ref) {
+  // Keyboard handling, take three. KeyboardAvoidingView + "scroll to the end
+  // when the keyboard shows" looked fixed in Expo Go but not in real builds:
+  // those run edge-to-edge (the app draws under Android's navigation bar and
+  // the window no longer shrinks for the keyboard), so its maths came up
+  // short by about the nav-bar height and the void-reason box stayed partly
+  // hidden (Roger, build 112). react-native-keyboard-controller is built for
+  // edge-to-edge: it scrolls whichever field is focused to sit bottomOffset
+  // above the keyboard — on every screen, wherever the field is.
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      // Android previously relied solely on the OS's own window resize
-      // (app.json's softwareKeyboardLayoutMode: "resize") with no help from
-      // this component, leaving `behavior` a no-op here. That's what let a
-      // field near the bottom of a screen end up genuinely unreachable —
-      // not just un-auto-scrolled, but not manually scrollable either,
-      // because the ScrollView's own measured content wasn't reliably
-      // shrinking to make room. Setting "height" here makes this container
-      // itself shrink on keyboard-show, guaranteeing the content overflows
-      // and becomes scrollable regardless of what the OS-level resize does.
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
+    <View style={styles.flex}>
       <Ornaments />
-      <ScrollView
-        ref={(node) => {
-          internalRef.current = node;
-          if (typeof forwardedRef === "function") {
-            forwardedRef(node);
-          } else if (forwardedRef) {
-            forwardedRef.current = node;
-          }
-        }}
+      <KeyboardAwareScrollView
+        // Its handle is a ScrollView plus assureFocusedInputVisible(), so screens
+        // that hold a plain ScrollView ref (to scroll back to the top) still work.
+        ref={ref as React.Ref<KeyboardAwareScrollViewRef>}
+        bottomOffset={96}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         refreshControl={refreshControl}
       >
         <View style={styles.gap}>{children}</View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 });
 

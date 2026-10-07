@@ -1,6 +1,7 @@
 import "react-native-gesture-handler";
 import React from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import { AuthProvider } from "./src/auth/AuthContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import { isAndroidExpoGo } from "./src/nativeSupport";
@@ -17,9 +18,12 @@ export default function App(): React.JSX.Element {
   return (
     <ShareProvider>
       <SafeAreaProvider>
-        <AuthProvider>
-          <RootNavigator />
-        </AuthProvider>
+        {/* Keyboard tracking for edge-to-edge builds (see components/Screen.tsx). */}
+        <KeyboardProvider>
+          <AuthProvider>
+            <RootNavigator />
+          </AuthProvider>
+        </KeyboardProvider>
       </SafeAreaProvider>
     </ShareProvider>
   );
