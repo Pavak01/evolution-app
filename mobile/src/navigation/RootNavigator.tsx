@@ -10,6 +10,7 @@ import { RegisterScreen } from "../screens/auth/RegisterScreen";
 import { CaptureExpenseScreen } from "../screens/expenses/CaptureExpenseScreen";
 import { ExpenseDetailScreen } from "../screens/expenses/ExpenseDetailScreen";
 import { ExpenseHistoryScreen } from "../screens/expenses/ExpenseHistoryScreen";
+import { CompareExpensesScreen } from "../screens/expenses/CompareExpensesScreen";
 import { ImportReceiptsScreen } from "../screens/expenses/ImportReceiptsScreen";
 import { ExportScreen } from "../screens/export/ExportScreen";
 import { ImportIncomeCsvScreen } from "../screens/income/ImportIncomeCsvScreen";
@@ -82,6 +83,7 @@ function HistoryStackScreen(): React.JSX.Element {
     <ExpensesStack.Navigator screenOptions={headerOptions}>
       <ExpensesStack.Screen name="ExpenseHistory" component={ExpenseHistoryScreen} options={{ title: "History" }} />
       <ExpensesStack.Screen name="ExpenseDetail" component={ExpenseDetailScreen} options={{ title: "Expense" }} />
+      <ExpensesStack.Screen name="CompareExpenses" component={CompareExpensesScreen} options={{ title: "Compare" }} />
     </ExpensesStack.Navigator>
   );
 }

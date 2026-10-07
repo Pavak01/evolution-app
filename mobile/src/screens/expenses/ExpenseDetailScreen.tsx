@@ -234,6 +234,12 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
           <Text style={{ color: colors.textSecondary }}>{expense.possible_duplicate.message}</Text>
           <Text
             style={{ color: colors.accent, marginTop: spacing.sm, fontWeight: "600" }}
+            onPress={() => navigation.navigate("CompareExpenses", { leftId: expense.id, rightId: expense.possible_duplicate!.expense_id })}
+          >
+            Compare side by side
+          </Text>
+          <Text
+            style={{ color: colors.textMuted, marginTop: spacing.sm }}
             onPress={() => navigation.navigate("ExpenseDetail", { expenseId: expense.possible_duplicate!.expense_id })}
           >
             Open the other entry
@@ -252,6 +258,12 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
             onPress={() => navigation.navigate("ExpenseDetail", { expenseId: expense.resubmitted_from!.expense_id })}
           >
             Open the original entry
+          </Text>
+          <Text
+            style={{ color: colors.accent, marginTop: spacing.sm, fontWeight: "600" }}
+            onPress={() => navigation.navigate("CompareExpenses", { leftId: expense.id, rightId: expense.resubmitted_from!.expense_id })}
+          >
+            Compare with the original
           </Text>
         </Card>
       )}

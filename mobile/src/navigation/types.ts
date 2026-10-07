@@ -16,6 +16,8 @@ export type ExpensesStackParamList = {
   // awaitingOnly: opened from a reimbursement reminder — starts filtered.
   ExpenseHistory: { awaitingOnly?: boolean } | undefined;
   ExpenseDetail: { expenseId: string };
+  // Side by side: a suspected duplicate, or a resubmitted entry and its original.
+  CompareExpenses: { leftId: string; rightId: string };
 };
 
 // Carried from ExpenseDetailScreen's "Resubmit" action on a voided expense
