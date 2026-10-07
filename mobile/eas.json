@@ -13,7 +13,7 @@
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://evolution-backend-production.up.railway.app",
         "EXPO_PUBLIC_SENTRY_DSN": "https://022e6f909819ef4350387662667f8830@o4512215650861056.ingest.de.sentry.io/4512215802839120",
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+        "SENTRY_ALLOW_FAILURE": "true"
       }
     },
     "production": {
@@ -24,7 +24,7 @@
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://evolution-backend-production.up.railway.app",
         "EXPO_PUBLIC_SENTRY_DSN": "https://022e6f909819ef4350387662667f8830@o4512215650861056.ingest.de.sentry.io/4512215802839120",
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+        "SENTRY_ALLOW_FAILURE": "true"
       }
     }
   },
