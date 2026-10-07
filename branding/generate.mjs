@@ -54,6 +54,12 @@ fs.mkdirSync(out("store"), { recursive: true });
 await sharp(Buffer.from(files["icon.png"])).resize(512, 512).flatten({ background: BLUE }).png().toFile(out("store/play-store-icon-512.png"));
 await sharp(Buffer.from(files["logo.png"])).resize(48, 48).png().toFile(out("favicon.png"));
 
+// Mark only, transparent and cropped tight — for the blue header bar, where
+// the logo tile's own blue would vanish.
+const markSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="220 220 584 584">${mark()}</svg>`;
+await sharp(Buffer.from(markSvg)).png().toFile(out("logo-mark.png"));
+console.log("Generated: logo-mark.png");
+
 // Long-press app-icon shortcuts (Android adaptive foregrounds; the blue
 // background is set in app.json). Glyphs kept well inside the safe zone.
 const shortcutIcons = {

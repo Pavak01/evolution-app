@@ -22,6 +22,7 @@ import { AcceptTermsScreen } from "../screens/auth/AcceptTermsScreen";
 import { PromoAdminScreen } from "../screens/settings/PromoAdminScreen";
 import { TwoFactorScreen } from "../screens/settings/TwoFactorScreen";
 import { navigationRef } from "./navigationRef";
+import { HeaderBrandTitle } from "../components/HeaderBrandTitle";
 import { consumeLaunchReminderTap, onReminderTapped } from "../reimbursementReminders";
 import { flushPendingDeepLink, handleDeepLink } from "../deepLinks";
 import { isAndroidExpoGo } from "../nativeSupport";
@@ -66,7 +67,11 @@ const headerOptions = { headerStyle: { backgroundColor: colors.navBg }, headerTi
 function CaptureStackScreen(): React.JSX.Element {
   return (
     <CaptureStack.Navigator screenOptions={headerOptions}>
-      <CaptureStack.Screen name="CaptureForm" component={CaptureExpenseScreen} options={{ title: "Log a receipt" }} />
+      <CaptureStack.Screen
+        name="CaptureForm"
+        component={CaptureExpenseScreen}
+        options={{ title: "Log a receipt", headerTitle: () => <HeaderBrandTitle title="Log a receipt" /> }}
+      />
       <CaptureStack.Screen name="ImportReceipts" component={ImportReceiptsScreen} options={{ title: "Import past receipts" }} />
     </CaptureStack.Navigator>
   );
