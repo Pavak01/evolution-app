@@ -55,26 +55,59 @@ This is a finance/productivity utility with no user-generated public content, no
 - Not designed for or directed at children.
 - Primary audience: self-employed UK trade plate drivers tracking expenses/income for Self Assessment.
 
-## Store listing copy (draft)
+## Store listing (updated 2026-10-07)
 
-**Short description** (80 char max):
-> Receipt-first expense & tax tracking for self-employed UK drivers.
+**App name** (30 max): `Evolution: Receipts & Tax` (25)
 
-**Full description** (draft — trim/adjust freely):
-> Evolution is built around one idea: log a receipt the moment you pay, not at the end of the week trying to remember what it was for.
+**Short description** (80 max):
+> Snap receipts, log income and see your UK tax estimate. Built for drivers. (75)
+
+**Full description** (4000 max; about 2,200 here):
+
+> Evolution keeps your self-employed records straight, as you go. Snap a receipt the moment you pay, log income when it arrives, and always know roughly what to put aside for tax.
 >
-> • Snap a photo of a receipt the second you get it — takes seconds
-> • Record income separately, whenever an invoice or payment actually arrives
-> • Automatic UK tax year and National Insurance calculations as you go
-> • Business-use % apportionment for mixed-use expenses (phone, home office)
-> • Export shaped around HMRC's actual Self Assessment SA103S boxes — not just raw category totals
-> • Works offline — a receipt logged with no signal syncs automatically once you're back online
-> • Optional AI auto-fill from a receipt photo (paid upgrade)
-> • Full audit trail — corrections are voided with a reason, never silently overwritten, so your records hold up if HMRC ever asks
+> Built for trade plate drivers and other self-employed people in the UK: travel-heavy, paid per job, no fixed workplace.
 >
-> Built specifically with trade plate drivers in mind — no fixed workplace, travel-heavy, paid per job — but useful for any self-employed person who wants their books in order without the Sunday-night scramble.
+> **Log a receipt in seconds**
+> • Take a photo the moment you pay; the receipt is stored with the expense
+> • Travel with no receipt yet? Save it now and attach proof later
+> • Auto-fill reads the amount, date and category from the photo for you (Pro)
+> • Import a pile of past receipts in one go (Pro)
+> • One tap from your home screen with the Evolution widget
+>
+> **Income, your way**
+> • Record each payment or invoice when it comes in
+> • Attach the invoice as a photo or PDF, or share it straight from Gmail
+> • Import a CSV earnings report in one go
+>
+> **Reimbursements that don't get forgotten**
+> • Mark travel you expect to be paid back for
+> • Record what was reimbursed later, and only what you actually paid counts
+> • Gentle reminders until it's sorted
+>
+> **Know where you stand**
+> • Running estimate of income tax and National Insurance for the UK tax year
+> • Business-use percentage for mixed-use costs
+> • Duplicate checks, and an audit trail: corrections are voided with a reason, never silently changed
+> • Export shaped around HMRC's Self Assessment (SA103S) boxes, ready for you or your accountant
+>
+> **Works when you do**
+> • No signal? Entries save on your phone and upload when you're back online
+> • Email-confirmed accounts and optional two-factor authentication
+>
+> **Plans**
+> Try everything free for one month. Then choose Basic (everything you enter yourself) or Pro (adds auto-fill and receipt import). Subscriptions are managed through Google Play and can be cancelled at any time.
+>
+> Evolution provides estimates to help you plan; it is not tax advice. You remain responsible for your tax return.
+>
+> Evolution is made by APLC Commodities Ltd.
 
-**Category**: Finance (or Business/Productivity — Play only allows one primary category, use your judgement on which fits your positioning better).
+**Notes before publishing:**
+- The **Plans** paragraph assumes Phase B (Play billing) is live. For closed testing, replace it with: "Free while in testing." Keep the trial wording accurate: Play rejects listings that call a paid app "free".
+- "Share it straight from Gmail", "widget" and "reminders" arrive in build 112. Don't use this text with build 111.
+- **Category:** Finance. **Tags:** expense tracker, tax, self-employed, receipts.
+- **Graphics:** icon `mobile/assets/store/play-store-icon-512.png`; feature graphic `mobile/assets/store/feature-graphic-1024x500.png`; phone screenshots (2 to 8, from build 112): suggested Log a receipt, History, Summary, Plans, the widget on a home screen.
+- **Contact details:** email support@aplccommodities.com; privacy policy https://pavak01.github.io/evolution-app/PRIVACY-POLICY.html
 
 ## Known pending items (not blockers, worth tracking)
 

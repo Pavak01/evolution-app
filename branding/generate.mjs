@@ -53,4 +53,20 @@ for (const [name, content] of Object.entries(files)) {
 fs.mkdirSync(out("store"), { recursive: true });
 await sharp(Buffer.from(files["icon.png"])).resize(512, 512).flatten({ background: BLUE }).png().toFile(out("store/play-store-icon-512.png"));
 await sharp(Buffer.from(files["logo.png"])).resize(48, 48).png().toFile(out("favicon.png"));
+
+// Play Store feature graphic: 1024x500, no transparency. Logo tile, name and
+// strapline on the blue, with two soft background circles (a faint cream one —
+// the app's orange circle turns muddy grey over blue).
+const feature = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500">
+  <rect width="1024" height="500" fill="${BLUE}"/>
+  <circle cx="1010" cy="-10" r="170" fill="${CREAM}" opacity="0.08"/>
+  <circle cx="90" cy="470" r="210" fill="#2b5f5a" opacity="0.5"/>
+  <g transform="translate(96,110) scale(0.2734)"><rect width="1024" height="1024" rx="230" fill="#24465b"/>${mark()}</g>
+  <text x="420" y="215" font-family="Helvetica, Arial" font-size="92" font-weight="700" fill="${CARD}">Evolution</text>
+  <text x="424" y="285" font-family="Helvetica, Arial" font-size="38" fill="${CREAM}">Snap receipts. Log income.</text>
+  <text x="424" y="335" font-family="Helvetica, Arial" font-size="38" fill="${CREAM}">Know what to put aside for tax.</text>
+  <rect x="424" y="372" width="96" height="8" rx="4" fill="${ORANGE}"/>
+</svg>`;
+await sharp(Buffer.from(feature)).flatten({ background: BLUE }).png().toFile(out("store/feature-graphic-1024x500.png"));
+console.log("Generated: store/feature-graphic-1024x500.png");
 console.log("Generated:", [...Object.keys(files), "store/play-store-icon-512.png", "favicon.png"].join(", "));
