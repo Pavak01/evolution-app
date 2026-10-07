@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import React, { useRef, useState, useEffect } from "react";
-import { Modal, Pressable, StyleSheet, Text, View, type ScrollView } from "react-native";
+import { Alert, Modal, Pressable, StyleSheet, Text, View, type ScrollView } from "react-native";
 import { useAccess, useAuth } from "../../auth/AuthContext";
 import { PlanRequiredCard, ProUpsell, TrialBanner } from "../../components/PlanBits";
 import { createIncomeInvoice } from "../../api/income";
@@ -62,6 +62,36 @@ export function RecordIncomeScreen({ navigation, route }: Props): React.JSX.Elem
     showStatus({ kind: "info", text: "Invoice added from another app — fill in the details and save." });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route.params?.sharedFile]);
+
+  // After a save the dates stay as they were (several invoices for the same
+  // period are common); Cancel resets everything.
+  function clearFields(): void {
+    setSource("");
+    setTotalAmount("");
+    setNotes("");
+    setFile(null);
+  }
+
+  const hasEntry = Boolean(source.trim() || totalAmount.trim() || notes.trim() || file);
+
+  // Record income is the Income tab's main screen — there's no back arrow —
+  // so a started (or shared-in) entry needs its own way out.
+  function handleCancel(): void {
+    Alert.alert("Discard this entry?", "What you've typed and any attached invoice will be cleared.", [
+      { text: "Keep editing", style: "cancel" },
+      {
+        text: "Discard",
+        style: "destructive",
+        onPress: () => {
+          clearFields();
+          setPeriodStart(getTodayIso());
+          setPeriodEnd(getTodayIso());
+          setReceivedDate(getTodayIso());
+          setStatus(null);
+        }
+      }
+    ]);
+  }
 
   async function handleAttachPhoto(): Promise<void> {
     setShowAttachMenu(false);
@@ -143,10 +173,7 @@ export function RecordIncomeScreen({ navigation, route }: Props): React.JSX.Elem
       });
       setLastSummary(summary);
       showStatus({ kind: "info", text: "Income recorded." });
-      setSource("");
-      setTotalAmount("");
-      setNotes("");
-      setFile(null);
+      clearFields();
     } catch (error) {
       if (error instanceof ApiError) {
         console.error("Income submit failed:", error);
@@ -155,10 +182,7 @@ export function RecordIncomeScreen({ navigation, route }: Props): React.JSX.Elem
       } else {
         await enqueueIncome(fields, file?.uri, file?.name, file?.mimeType, idempotencyKey);
         showStatus({ kind: "info", text: "No connection — saved on your device. It'll upload automatically once you're back online." });
-        setSource("");
-        setTotalAmount("");
-        setNotes("");
-        setFile(null);
+        clearFields();
         void syncQueue();
       }
     } finally {
@@ -201,6 +225,9 @@ export function RecordIncomeScreen({ navigation, route }: Props): React.JSX.Elem
         {file && (
           <>
             <ReceiptThumbnail uri={file.uri} isPdf={file.mimeType === "application/pdf"} filename={file.name} />
+            <Text style={{ color: colors.danger, marginTop: spacing.xs }} onPress={() => setFile(null)}>
+              Remove attachment
+            </Text>
             <View style={{ height: spacing.sm }} />
             {hasOcrUpgrade ? (
               <PrimaryButton label="Auto-fill from invoice ✨" onPress={handleAutoFillInvoice} isLoading={isExtracting} />
@@ -212,6 +239,11 @@ export function RecordIncomeScreen({ navigation, route }: Props): React.JSX.Elem
 
         <View style={{ height: spacing.sm }} />
         <PrimaryButton label="Save income" onPress={handleSubmit} isLoading={isSubmitting} />
+        {hasEntry && (
+          <Text style={{ color: colors.textMuted, textAlign: "center", marginTop: spacing.md, fontWeight: "600" }} onPress={handleCancel}>
+            Cancel
+          </Text>
+        )}
       </Card>
       )}
 

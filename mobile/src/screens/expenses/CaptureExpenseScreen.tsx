@@ -1,7 +1,7 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, Text, View, type ScrollView } from "react-native";
+import { Alert, Pressable, Text, View, type ScrollView } from "react-native";
 import { useAccess, useAuth } from "../../auth/AuthContext";
 import { createExpense } from "../../api/expenses";
 import { getTaxSummary } from "../../api/tax";
@@ -385,6 +385,26 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
 
         <View style={{ height: spacing.sm }} />
         <PrimaryButton label="Save expense" onPress={handleSubmit} isLoading={isSubmitting} />
+        {(receipt || category.trim() || totalAmount.trim() || notes.trim()) && (
+          <Text
+            style={{ color: colors.textMuted, textAlign: "center", marginTop: spacing.md, fontWeight: "600" }}
+            onPress={() =>
+              Alert.alert("Discard this receipt?", "What you've entered and the attached photo will be cleared.", [
+                { text: "Keep editing", style: "cancel" },
+                {
+                  text: "Discard",
+                  style: "destructive",
+                  onPress: () => {
+                    resetForm();
+                    setStatus(null);
+                  }
+                }
+              ])
+            }
+          >
+            Cancel
+          </Text>
+        )}
       </Card>
       </>
       )}
