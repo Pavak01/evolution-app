@@ -86,9 +86,12 @@ function serializePossibleDuplicate(row: DuplicateJoinRow): DuplicateWarning {
   }
   return {
     expense_id: row.dup_id,
-    message: `This looks similar to one you logged on ${row.dup_occurred_at} for ${humanizeCategory(row.dup_category)} (£${Number(row.dup_total_amount).toFixed(2)}) — open it to void if this is a duplicate.`
+    message: `This looks similar to one you logged on ${ukDate(row.dup_occurred_at)} for ${humanizeCategory(row.dup_category)} (£${Number(row.dup_total_amount).toFixed(2)}) — open it in History to compare and void it if it's a duplicate.`
   };
 }
+
+// "2026-10-01" -> "01/10/2026" for user-facing messages.
+const ukDate = (iso: string) => (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : iso);
 
 const duplicateJoin = `LEFT JOIN expenses d ON d.id = e.duplicate_of_expense_id AND d.voided_at IS NULL`;
 const duplicateJoinColumns = `d.id AS dup_id, d.occurred_at::text AS dup_occurred_at, d.category AS dup_category, d.total_amount::text AS dup_total_amount`;
@@ -112,7 +115,7 @@ function serializeResubmittedFrom(row: ResubmitJoinRow): ResubmittedFromWarning 
   }
   return {
     expense_id: row.resub_id,
-    message: `Resubmitted from a voided entry on ${row.resub_occurred_at} for ${humanizeCategory(row.resub_category)} (£${Number(row.resub_total_amount).toFixed(2)}).`
+    message: `Resubmitted from a voided entry on ${ukDate(row.resub_occurred_at)} for ${humanizeCategory(row.resub_category)} (£${Number(row.resub_total_amount).toFixed(2)}).`
   };
 }
 
@@ -148,7 +151,7 @@ async function findDuplicateWarning(
       const match = hashMatch.rows[0];
       return {
         expense_id: match.expense_id,
-        message: `This looks like the same receipt as one you logged on ${match.occurred_at} for ${humanizeCategory(match.category)} (£${Number(match.total_amount).toFixed(2)}) — open it to void if this is a duplicate.`
+        message: `This looks like the same receipt as one you logged on ${ukDate(match.occurred_at)} for ${humanizeCategory(match.category)} (£${Number(match.total_amount).toFixed(2)}) — open it in History to compare and void it if it's a duplicate.`
       };
     }
   }
@@ -180,8 +183,8 @@ async function findDuplicateWarning(
   const timeMatched = eligible.find((row) => transactionTime && row.transaction_time === transactionTime);
   const candidate = timeMatched ?? eligible[0];
   const message = timeMatched
-    ? `This looks like the same transaction as one you logged on ${candidate.occurred_at} for ${humanizeCategory(candidate.category)} (£${Number(candidate.total_amount).toFixed(2)}) — open it to void if this is a duplicate.`
-    : `This looks similar to one you logged on ${candidate.occurred_at} for ${humanizeCategory(candidate.category)} (£${Number(candidate.total_amount).toFixed(2)}) — open it to void if this is a duplicate.`;
+    ? `This looks like the same transaction as one you logged on ${ukDate(candidate.occurred_at)} for ${humanizeCategory(candidate.category)} (£${Number(candidate.total_amount).toFixed(2)}) — open it in History to compare and void it if it's a duplicate.`
+    : `This looks similar to one you logged on ${ukDate(candidate.occurred_at)} for ${humanizeCategory(candidate.category)} (£${Number(candidate.total_amount).toFixed(2)}) — open it in History to compare and void it if it's a duplicate.`;
 
   return { expense_id: candidate.id, message };
 }

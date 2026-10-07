@@ -17,6 +17,7 @@ import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCaptur
 import { enqueueExpense, generateLocalId, syncQueue, subscribePendingCount } from "../../offlineQueue";
 import { syncReimbursementReminders } from "../../reimbursementReminders";
 import { PlanRequiredCard, ProUpsell, TrialBanner } from "../../components/PlanBits";
+import { openCompareInHistory } from "../../navigation/navigationRef";
 import type { CaptureStackParamList } from "../../navigation/types";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTaxYearFromDate, getTodayIso } from "../../utils/taxYear";
@@ -62,6 +63,9 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [status, setStatus] = useState<{ kind: "info" | "error"; text: string } | null>(null);
+  // Set when the receipt just saved looks like one already logged — offers a
+  // straight route to Compare (in History) instead of making the user find it.
+  const [duplicatePair, setDuplicatePair] = useState<{ savedId: string; otherId: string } | null>(null);
   // Swaps the "No connection — saved on your device" notice once the queued
   // entry has actually uploaded, rather than leaving a stale warning up.
   const awaitingUpload = useRef(false);
@@ -106,6 +110,7 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
   }
 
   function resetForm(): void {
+    // (duplicatePair deliberately survives the post-save reset — that's when it's shown)
     setCategory("");
     setTotalAmount("");
     setBusinessUsePercent("100");
@@ -190,6 +195,7 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
     setFuelCardHint(null);
     setViewerUri(null);
     setReceipt(picked);
+    setDuplicatePair(null);
   }
 
   async function handleAutoFill(): Promise<void> {
@@ -258,7 +264,7 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
       resubmittedFromExpenseId: resubmittedFromExpenseId ?? undefined
     };
     try {
-      const { summary, duplicate_warning } = await createExpense({
+      const { expense: saved, summary, duplicate_warning } = await createExpense({
         ...fields,
         receiptUri: receipt?.uri,
         receiptName: receipt?.name,
@@ -273,6 +279,7 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
         kind: "info",
         text: duplicate_warning ? `Expense logged. ${duplicate_warning.message}` : "Expense logged."
       });
+      setDuplicatePair(duplicate_warning ? { savedId: saved.id, otherId: duplicate_warning.expense_id } : null);
       resetForm();
     } catch (error) {
       if (error instanceof ApiError) {
@@ -299,6 +306,15 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
     <Screen ref={scrollRef}>
       <Text style={{ fontSize: typography.h1, fontWeight: "700", color: colors.textMain }}>Log a receipt</Text>
       {status && <StatusBanner kind={status.kind} text={status.text} />}
+      {duplicatePair && status && (
+        <PrimaryButton
+          label="Compare and void"
+          onPress={() => {
+            openCompareInHistory(duplicatePair.savedId, duplicatePair.otherId);
+            setDuplicatePair(null);
+          }}
+        />
+      )}
       <TrialBanner />
       {!canWrite && <PlanRequiredCard />}
       {canWrite && (

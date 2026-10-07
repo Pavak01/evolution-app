@@ -9,6 +9,16 @@ export function openPlans(): void {
   if (navigationRef.isReady()) navigationRef.navigate("Plans");
 }
 
+// Compare a just-saved expense with its suspected duplicate, inside History
+// (initial: false keeps the History list underneath, so Back lands there).
+export function openCompareInHistory(leftId: string, rightId: string): void {
+  if (!navigationRef.isReady()) return;
+  navigationRef.navigate("Main", {
+    screen: "History",
+    params: { screen: "CompareExpenses", initial: false, params: { leftId, rightId } }
+  });
+}
+
 export function openTwoFactor(): void {
   if (navigationRef.isReady()) navigationRef.navigate("TwoFactor");
 }
