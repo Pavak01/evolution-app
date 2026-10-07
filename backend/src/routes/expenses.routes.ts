@@ -136,7 +136,10 @@ async function findDuplicateWarning(
       `SELECT r.expense_id, e.occurred_at::text, e.category, e.total_amount::text
        FROM receipts r
        JOIN expenses e ON e.id = r.expense_id
-       WHERE r.user_id = $1 AND r.content_hash = $2 AND r.expense_id != $3
+       -- Only active expenses: matching a voided copy (the oldest, if the
+       -- original was voided) hid the flag, since a flag pointing at a voided
+       -- expense is deliberately not shown (found by Roger, 2026-10-07).
+       WHERE r.user_id = $1 AND r.content_hash = $2 AND r.expense_id != $3 AND e.voided_at IS NULL
        ORDER BY r.created_at ASC
        LIMIT 1`,
       [userId, contentHash, expenseId]
