@@ -35,6 +35,47 @@ export function generateLocalId(): string {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
 }
 
+// Screens showing "No connection — saved on your device" listen for the
+// queue emptying, so the notice can change to "uploaded" instead of sitting
+// there after the upload has happened.
+type PendingListener = (count: number) => void;
+const pendingListeners = new Set<PendingListener>();
+
+function notifyPendingCount(count: number): void {
+  for (const listener of pendingListeners) listener(count);
+}
+
+export function subscribePendingCount(listener: PendingListener): () => void {
+  pendingListeners.add(listener);
+  return () => pendingListeners.delete(listener);
+}
+
+// While anything is waiting, retry every RETRY_MS — otherwise uploads only
+// happened on app foreground or the next save, so a signal coming back
+// while the user stayed on a screen changed nothing. Started on sign-in
+// (AuthContext), stopped on sign-out; cheap: one local file read when idle.
+const RETRY_MS = 15_000;
+let retryTimer: ReturnType<typeof setInterval> | null = null;
+// Only keep retrying while the last problem was no connection. An item the
+// server itself refuses (e.g. trial ended) waits for the next foreground or
+// save instead of being re-sent every 15 seconds forever.
+let lastAttemptOffline = false;
+
+export function startPendingRetry(): void {
+  if (retryTimer) return;
+  retryTimer = setInterval(() => {
+    if (!lastAttemptOffline) return;
+    void readQueue().then((items) => {
+      if (items.length > 0) void syncQueue();
+    });
+  }, RETRY_MS);
+}
+
+export function stopPendingRetry(): void {
+  if (retryTimer) clearInterval(retryTimer);
+  retryTimer = null;
+}
+
 async function readQueue(): Promise<PendingItem[]> {
   const info = await FileSystem.getInfoAsync(QUEUE_PATH);
   if (!info.exists) {
@@ -50,6 +91,7 @@ async function readQueue(): Promise<PendingItem[]> {
 
 async function writeQueue(items: PendingItem[]): Promise<void> {
   await FileSystem.writeAsStringAsync(QUEUE_PATH, JSON.stringify(items));
+  notifyPendingCount(items.length);
 }
 
 export async function listPending(): Promise<PendingItem[]> {
@@ -97,6 +139,7 @@ export async function enqueueExpense(
     fileName: receiptUri ? receiptName ?? "receipt" : null,
     fileType: receiptUri ? receiptType ?? "application/octet-stream" : null
   });
+  lastAttemptOffline = true; // queued because there was no connection
   await writeQueue(items);
 }
 
@@ -121,6 +164,7 @@ export async function enqueueIncome(
     fileName: fileUri ? fileName ?? "invoice" : null,
     fileType: fileUri ? fileType ?? "application/octet-stream" : null
   });
+  lastAttemptOffline = true; // queued because there was no connection
   await writeQueue(items);
 }
 
@@ -145,6 +189,7 @@ export async function syncQueue(onItemSynced?: () => void): Promise<void> {
   isSyncing = true;
   try {
     const items = await readQueue();
+    let offline = false;
     for (const item of items) {
       try {
         if (item.kind === "expense") {
@@ -166,11 +211,13 @@ export async function syncQueue(onItemSynced?: () => void): Promise<void> {
         onItemSynced?.();
       } catch (error) {
         if (!(error instanceof ApiError)) {
+          offline = true;
           break; // still offline — stop, don't hammer the remaining items
         }
         // real server error (e.g. expired-token 401) — leave queued, keep trying the rest
       }
     }
+    lastAttemptOffline = offline;
   } finally {
     isSyncing = false;
   }

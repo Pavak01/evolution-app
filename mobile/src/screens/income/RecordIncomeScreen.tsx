@@ -11,7 +11,7 @@ import { Card, DateField, Field, PrimaryButton, SmallAction, SnapshotTile, Statu
 import { ReceiptThumbnail } from "../../components/ReceiptThumbnail";
 import { Screen } from "../../components/Screen";
 import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCapture";
-import { enqueueIncome, generateLocalId, syncQueue } from "../../offlineQueue";
+import { enqueueIncome, generateLocalId, syncQueue, subscribePendingCount } from "../../offlineQueue";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { getTodayIso } from "../../utils/taxYear";
 import type { IncomeStackParamList } from "../../navigation/types";
@@ -36,6 +36,19 @@ export function RecordIncomeScreen({ navigation, route }: Props): React.JSX.Elem
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<{ kind: "info" | "error"; text: string } | null>(null);
+  // Swaps the "No connection — saved on your device" notice once the queued
+  // entry has actually uploaded, rather than leaving a stale warning up.
+  const awaitingUpload = useRef(false);
+  useEffect(
+    () =>
+      subscribePendingCount((count) => {
+        if (count === 0 && awaitingUpload.current) {
+          awaitingUpload.current = false;
+          setStatus({ kind: "info", text: "Back online — your saved income has uploaded." });
+        }
+      }),
+    []
+  );
   const [lastSummary, setLastSummary] = useState<TaxSummary | null>(null);
 
   const scrollRef = useRef<ScrollView>(null);
@@ -182,6 +195,7 @@ export function RecordIncomeScreen({ navigation, route }: Props): React.JSX.Elem
       } else {
         await enqueueIncome(fields, file?.uri, file?.name, file?.mimeType, idempotencyKey);
         showStatus({ kind: "info", text: "No connection — saved on your device. It'll upload automatically once you're back online." });
+        awaitingUpload.current = true;
         clearFields();
         void syncQueue();
       }

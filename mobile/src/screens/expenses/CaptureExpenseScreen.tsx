@@ -14,7 +14,7 @@ import { ImageViewerModal } from "../../components/ImageViewerModal";
 import { ReceiptThumbnail } from "../../components/ReceiptThumbnail";
 import { Screen } from "../../components/Screen";
 import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCapture";
-import { enqueueExpense, generateLocalId, syncQueue } from "../../offlineQueue";
+import { enqueueExpense, generateLocalId, syncQueue, subscribePendingCount } from "../../offlineQueue";
 import { syncReimbursementReminders } from "../../reimbursementReminders";
 import { PlanRequiredCard, ProUpsell, TrialBanner } from "../../components/PlanBits";
 import type { CaptureStackParamList } from "../../navigation/types";
@@ -62,6 +62,19 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [status, setStatus] = useState<{ kind: "info" | "error"; text: string } | null>(null);
+  // Swaps the "No connection — saved on your device" notice once the queued
+  // entry has actually uploaded, rather than leaving a stale warning up.
+  const awaitingUpload = useRef(false);
+  useEffect(
+    () =>
+      subscribePendingCount((count) => {
+        if (count === 0 && awaitingUpload.current) {
+          awaitingUpload.current = false;
+          setStatus({ kind: "info", text: "Back online — your saved expense has uploaded." });
+        }
+      }),
+    []
+  );
   const [lastSummary, setLastSummary] = useState<TaxSummary | null>(null);
 
   // Without this, the running-total card only ever reflected whatever was
@@ -273,6 +286,7 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
         // moment shouldn't require the user to think about their signal.
         await enqueueExpense(fields, receipt?.uri, receipt?.name, receipt?.mimeType, idempotencyKey);
         showStatus({ kind: "info", text: "No connection — saved on your device. It'll upload automatically once you're back online." });
+        awaitingUpload.current = true;
         resetForm();
         void syncQueue();
       }

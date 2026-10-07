@@ -11,7 +11,7 @@ import {
   type LoginResult
 } from "../api/auth";
 import { clearToken, getToken, setUnauthorizedListener } from "../api/client";
-import { syncQueue } from "../offlineQueue";
+import { startPendingRetry, stopPendingRetry, syncQueue } from "../offlineQueue";
 import { cancelReimbursementReminders, syncReimbursementReminders } from "../reimbursementReminders";
 
 type AuthContextValue = {
@@ -55,8 +55,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   useEffect(() => {
     if (!signedInId) {
       void cancelReimbursementReminders().catch(() => undefined);
+      stopPendingRetry();
       return;
     }
+    startPendingRetry();
     const syncWork = () => void syncQueue().finally(() => syncReimbursementReminders());
     syncWork();
     const subscription = AppState.addEventListener("change", (state) => {
