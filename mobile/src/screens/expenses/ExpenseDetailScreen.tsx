@@ -18,6 +18,7 @@ import { formatUkDate, getTodayIso } from "../../utils/taxYear";
 import type { ExpensesStackParamList, MainTabParamList } from "../../navigation/types";
 
 function extensionForMimeType(mimeType: string): string {
+  if (mimeType === "application/pdf") return "pdf";
   if (mimeType === "image/png") return "png";
   if (mimeType === "image/webp") return "webp";
   return "jpg";
@@ -77,6 +78,13 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
 
   async function handleViewReceipt(): Promise<void> {
     if (!expense?.receipt_download_url) return;
+    // A PDF receipt (shared in from email/Drive) can't show in the in-app
+    // photo viewer — hand it to the phone's PDF viewer, as invoices do.
+    if (expense.receipt_mime_type === "application/pdf") {
+      const localUri = await downloadToLocalUri(expense.receipt_download_url, `${expense.category}-receipt.pdf`);
+      if (localUri) await shareLocalUri(localUri);
+      return;
+    }
     setViewerVisible(true);
     setViewerLoading(true);
     setViewerUri(null);
@@ -249,7 +257,7 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
       )}
 
       {expense.receipt_download_url ? (
-        <PrimaryButton label="View receipt" onPress={handleViewReceipt} />
+        <PrimaryButton label={expense.receipt_mime_type === "application/pdf" ? "Open receipt (PDF)" : "View receipt"} onPress={handleViewReceipt} />
       ) : (
         canWrite && (
         <Card>

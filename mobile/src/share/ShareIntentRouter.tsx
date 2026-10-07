@@ -7,9 +7,10 @@ import type { SharedFile } from "../navigation/types";
 
 // "Share to Evolution" from another app (Gmail, Files, Photos…). Only
 // mounted in real Android builds (see App.tsx / RootNavigator.tsx).
-//   PDF   -> Record income, attached        (receipts stay photo-only)
-//   CSV   -> Import income from CSV, loaded
-//   image -> ask: receipt (expense) or invoice (income)
+//   PDF or image -> ask: receipt (expense) or invoice (income)
+//   CSV          -> Import income from CSV, loaded
+// (PDF receipts arrive only this way — the in-app receipt screen stays
+// photo-first, Roger's call 2026-10-07.)
 // Waits until the app is ready (signed in, terms accepted, navigator up),
 // so a file shared while signed out is handled right after signing in.
 const SHARED_DIR = `${FileSystem.documentDirectory}shared/`;
@@ -45,12 +46,10 @@ export function ShareIntentRouter({ ready }: { ready: boolean }): null {
         const file: SharedFile = { uri, name, mimeType };
         const toIncome = () =>
           navigationRef.navigate("Main", { screen: "Income", params: { screen: "RecordIncome", params: { sharedFile: file } } });
-        if (mimeType === "application/pdf") {
-          toIncome();
-        } else if (isCsv(mimeType, name)) {
+        if (isCsv(mimeType, name)) {
           navigationRef.navigate("Main", { screen: "Income", params: { screen: "ImportIncomeCsv", params: { sharedFile: { ...file, mimeType: "text/csv" } } } });
-        } else if (["image/jpeg", "image/png", "image/webp"].includes(mimeType)) {
-          Alert.alert("Add this photo as…", undefined, [
+        } else if (["application/pdf", "image/jpeg", "image/png", "image/webp"].includes(mimeType)) {
+          Alert.alert(mimeType === "application/pdf" ? "Add this PDF as…" : "Add this photo as…", undefined, [
             {
               text: "Receipt (expense)",
               onPress: () =>

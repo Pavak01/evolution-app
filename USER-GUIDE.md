@@ -160,9 +160,10 @@ Subscriptions can't be bought in the app just yet. That's coming soon.
 **App-icon shortcuts:** long-press the Evolution icon for **Snap a receipt** and **Record income**.
 
 **Share to Evolution:** in another app (Gmail, Files, Photos, Drive), tap **Share** and choose **Evolution**:
-- a **PDF** opens Record income with it attached;
-- a **CSV** earnings report opens Import income from CSV with it loaded;
-- a **photo** asks whether it's a **receipt** (expense) or an **invoice** (income).
+- a **PDF** or a **photo** asks whether it's a **receipt** (expense) or an **invoice** (income), then opens the right screen with it attached;
+- a **CSV** earnings report opens Import income from CSV with it loaded.
+
+This is how to add an emailed or app receipt that arrives as a PDF (Uber, trains, online orders). In Google Drive, use **⋮ → Send a copy** (Drive's own Share button only shares access). A PDF receipt opens in your phone's PDF viewer from History, and auto-fill can read it.
 
 If you're signed out, Evolution asks you to sign in first and then carries on.
 

@@ -25,7 +25,7 @@ type Props = NativeStackScreenProps<CaptureStackParamList, "CaptureForm">;
 
 export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.Element {
   const { refreshUser } = useAuth();
-  const { captureFromCamera, pickFromFiles } = useReceiptCapture();
+  const { captureFromCamera, pickFromFiles, shareLocalUri } = useReceiptCapture();
   // Trial or Pro — anything that reads a photo/PDF for you.
   const { ocr: hasOcrUpgrade, canWrite } = useAccess();
 
@@ -143,7 +143,7 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
     if (!shared) return;
     navigation.setParams({ sharedFile: undefined });
     void handleAttachReceipt(async () => shared);
-    showStatus({ kind: "info", text: "Photo added from another app — fill in the details and save." });
+    showStatus({ kind: "info", text: `${shared.mimeType === "application/pdf" ? "PDF" : "Photo"} added from another app — fill in the details and save.` });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route.params?.sharedFile]);
 
@@ -306,11 +306,12 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
         </View>
         {receipt ? (
           <>
-            <Pressable onPress={() => setViewerUri(receipt.uri)}>
+            {/* A shared PDF receipt can't show in the photo viewer — open it in the phone's PDF viewer. */}
+            <Pressable onPress={() => (receipt.mimeType === "application/pdf" ? void shareLocalUri(receipt.uri) : setViewerUri(receipt.uri))}>
               <ReceiptThumbnail uri={receipt.uri} isPdf={receipt.mimeType === "application/pdf"} filename={receipt.name} />
             </Pressable>
             <Text style={{ color: colors.textMuted, fontSize: typography.micro, marginTop: spacing.xs }}>
-              Tap the photo to check it full-size before saving
+              {receipt.mimeType === "application/pdf" ? "Tap to open the PDF and check it before saving" : "Tap the photo to check it full-size before saving"}
             </Text>
             <View style={{ height: spacing.sm }} />
             {hasOcrUpgrade ? (

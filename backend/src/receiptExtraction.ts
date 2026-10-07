@@ -38,6 +38,16 @@ const CATEGORY_SUGGESTIONS = [
 // entirely (see extractReceiptFields) rather than attempting a vision call
 // on non-image content.
 const SUPPORTED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+// PDF receipts (emailed / app receipts) go in as Anthropic's native
+// `document` block — same approach as invoiceExtraction.ts.
+const SUPPORTED_MIME_TYPES = new Set<string>([...SUPPORTED_IMAGE_MIME_TYPES, "application/pdf"]);
+type SupportedMimeType = "image/jpeg" | "image/png" | "image/webp" | "application/pdf";
+
+function fileBlock(buffer: Buffer, mimeType: SupportedMimeType): Anthropic.ImageBlockParam | Anthropic.DocumentBlockParam {
+  return mimeType === "application/pdf"
+    ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: buffer.toString("base64") } }
+    : { type: "image", source: { type: "base64", media_type: mimeType, data: buffer.toString("base64") } };
+}
 
 const extractionResultSchema = z.object({
   total_amount: z.number().positive().nullable(),
@@ -86,7 +96,7 @@ const EMPTY_RESULT: ReceiptExtractionResult = {
 
 type RawExtraction = z.infer<typeof extractionResultSchema>;
 
-async function runExtraction(buffer: Buffer, mimeType: "image/jpeg" | "image/png" | "image/webp"): Promise<RawExtraction | null> {
+async function runExtraction(buffer: Buffer, mimeType: SupportedMimeType): Promise<RawExtraction | null> {
   const response = await getClient().messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 300,
@@ -94,14 +104,11 @@ async function runExtraction(buffer: Buffer, mimeType: "image/jpeg" | "image/png
       {
         role: "user",
         content: [
-          {
-            type: "image",
-            source: { type: "base64", media_type: mimeType, data: buffer.toString("base64") }
-          },
+          fileBlock(buffer, mimeType),
           {
             type: "text",
             text:
-              "This is a photo of a UK receipt. UK date rule: any numeric-only date on this receipt is DD/MM/YYYY " +
+              "This is a UK receipt (a photo, or a PDF such as an emailed or app receipt). UK date rule: any numeric-only date on this receipt is DD/MM/YYYY " +
               "or DD/MM/YY — the day comes first, then the month. For example, 03/04/2026 on this receipt means " +
               "3 April 2026, never March 4. This is the opposite of the US MM/DD convention — do not use MM/DD. " +
               "Extract the total amount paid, the date of the transaction (converting it using the UK rule above), " +
@@ -148,17 +155,19 @@ function toPublicResult(data: RawExtraction): ReceiptExtractionResult {
 // throwing, so a bad extraction never blocks the manual-entry fallback the
 // rest of the app already relies on.
 export async function extractReceiptFields(buffer: Buffer, mimeType: string): Promise<ReceiptExtractionResult> {
-  if (!SUPPORTED_IMAGE_MIME_TYPES.has(mimeType)) {
+  if (!SUPPORTED_MIME_TYPES.has(mimeType)) {
     return EMPTY_RESULT;
   }
-  const typedMimeType = mimeType as "image/jpeg" | "image/png" | "image/webp";
+  const typedMimeType = mimeType as SupportedMimeType;
 
   try {
     const first = await runExtraction(buffer, typedMimeType);
     if (!first) {
       return EMPTY_RESULT;
     }
-    if (first.rotation_needed === 0) {
+    // A PDF page's rotation is a different concept — only photos get the
+    // rotate-and-retry pass.
+    if (first.rotation_needed === 0 || !SUPPORTED_IMAGE_MIME_TYPES.has(typedMimeType)) {
       return toPublicResult(first);
     }
 
