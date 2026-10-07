@@ -8,7 +8,7 @@
     "icon": "./assets/icon.png",
     "android": {
       "package": "com.aplc.weeklytaxapp",
-      "versionCode": 112,
+      "versionCode": 113,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "monochromeImage": "./assets/adaptive-icon-monochrome.png",
@@ -42,7 +42,7 @@
           "widgets": [
             {
               "name": "QuickLog",
-              "label": "Evolution \u2014 quick log",
+              "label": "Evolution — quick log",
               "description": "Snap a receipt or record income in one tap",
               "minWidth": "250dp",
               "minHeight": "40dp",
