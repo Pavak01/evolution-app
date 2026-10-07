@@ -58,7 +58,10 @@ This policy applies to users of Evolution, including the mobile app and its back
 - Estimated income tax and National Insurance figures
 - Year summaries and exports generated from your entries
 
-### E. Device-local app state
+### E. Crash and error reports
+If the app crashes or hits an error, it sends a report so we can fix it: what went wrong and where in the app's code, the screen you were on, your phone model, Android version and app version. Reports don't include your name, email address, IP address, receipts, amounts or anything you've typed.
+
+### F. Device-local app state
 On your device, the app stores your session token in secure device storage (`expo-secure-store`), used to keep you signed in between app launches.
 
 ## 3. How we use your information
@@ -93,6 +96,8 @@ We do not sell personal information.
 We may share data with infrastructure providers that run core app infrastructure (hosting, database, and object storage) only as needed to provide the service.
 
 To send sign-up and password-reset codes, your email address and the code are passed to Resend, our email delivery provider, solely to deliver that email.
+
+Crash and error reports (see section 2E) are processed by Sentry, our error-monitoring provider, and stored in the EU. They are used only to find and fix problems in the app.
 
 If you use the optional "Auto-fill from receipt", "Import past receipts" or "Auto-fill from invoice" features (part of Pro, and included in the free trial), the receipt photo, or the invoice photo or PDF, that you pick is sent to Anthropic (the provider of the underlying AI model) to read the details from it: for a receipt, the category, amount, date and merchant; for an invoice, who paid you, the total and the date. This only happens when you actively use these features on a file you choose — it is not automatic for every receipt or invoice you save. This use is governed by Anthropic's own commercial API terms, under which API data is not used to train their models (see Anthropic's published privacy and terms documentation for their current policy).
 

@@ -27,6 +27,10 @@ Reference material for filling out Play Console's forms — drafted from what th
 **App activity**
 - App interactions — arguably collected in the loose sense of "you use the app's features," but there's no analytics/telemetry SDK, no event tracking, no crash reporting service integrated. **I'd answer "not collected" here** unless something changes — there's genuinely nothing in the codebase collecting usage analytics.
 
+**App info and performance** (since build 113)
+- Crash logs and Diagnostics: collected, via Sentry (service provider, EU region). Purpose: App functionality (finding and fixing crashes). Not linked to the user (no user ID, email or IP sent). Automatic, not optional.
+- Answer "App interactions: not collected" still holds: Sentry is configured for errors only, with no performance tracing or usage analytics.
+
 **Device or other identifiers**
 - None collected. No advertising ID, no device ID tracking.
 
@@ -43,6 +47,7 @@ Reference material for filling out Play Console's forms — drafted from what th
 ### Data sharing with third parties
 This is the one place to be deliberate, not just tick "no":
 - **Anthropic** — receipt photos, and invoice photos/PDFs, are sent to Anthropic's API when the user actively uses "Auto-fill from receipt", "Import past receipts" or "Auto-fill from invoice" (Pro, and the free trial). Disclose it. Purpose: App functionality. Not for advertising or marketing.
+- **Sentry** — crash and error reports (no personal data) are processed by Sentry, our error-monitoring provider, in the EU. A service provider, normally not "sharing" in Play's sense.
 - **Resend** — the email address and a one-time code are passed to Resend solely to deliver sign-up confirmation and password-reset emails. A service provider acting on Evolution's behalf (like hosting), so normally not "sharing" in Play's sense — check Play's current help text.
 - **AWS (S3-compatible storage) / Railway (hosting, Postgres)** — these run the app's own infrastructure under contract, processing data on Evolution's behalf rather than for their own independent purposes. Most privacy frameworks (and Play's own guidance) treat a processor operating under a data processing agreement differently from "sharing" with a third party — I'd list these under "how data is stored/processed" rather than the "shared with third parties" section, but this is worth double-checking against Play's current help text yourself, since the exact line can shift.
 

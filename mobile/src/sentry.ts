@@ -41,3 +41,11 @@ export function initSentry(): void {
 }
 
 export { Sentry };
+
+// Admin-only check (Settings → Admin) that reports really arrive from a
+// real build. Returns false where reporting is off (development / no DSN).
+export async function sendTestErrorReport(): Promise<boolean> {
+  if (!sentryEnabled) return false;
+  Sentry.captureException(new Error("Evolution test error report (Settings → Admin)"));
+  return Sentry.flush();
+}

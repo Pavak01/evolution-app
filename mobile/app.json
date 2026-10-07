@@ -42,7 +42,7 @@
           "widgets": [
             {
               "name": "QuickLog",
-              "label": "Evolution — quick log",
+              "label": "Evolution \u2014 quick log",
               "description": "Snap a receipt or record income in one tap",
               "minWidth": "250dp",
               "minHeight": "40dp",
@@ -91,7 +91,14 @@
           "backgroundColor": "#f5ede1"
         }
       ],
-      "@sentry/react-native"
+      [
+        "@sentry/react-native",
+        {
+          "url": "https://de.sentry.io/",
+          "organization": "aplc-commodities-limited-ja",
+          "project": "evolution"
+        }
+      ]
     ],
     "extra": {
       "eas": {

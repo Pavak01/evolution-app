@@ -10,6 +10,7 @@ import { sendTestReimbursementReminder } from "../../reimbursementReminders";
 import { formatPlanDate, PromoCodeField } from "../../components/PlanBits";
 import { openPlans, openPromoAdmin, openTwoFactor } from "../../navigation/navigationRef";
 import { openDoc } from "../../utils/docs";
+import { sendTestErrorReport } from "../../sentry";
 import { useAccess, useAuth } from "../../auth/AuthContext";
 import { colors, spacing, typography } from "../../theme/tokens";
 
@@ -25,6 +26,7 @@ export function SettingsScreen(): React.JSX.Element {
         : `${access.tier === "pro" ? "Pro" : "Basic"}${access.planEndsAt ? `, until ${formatPlanDate(access.planEndsAt)}` : ""}.`;
 
   const [testReminderNote, setTestReminderNote] = useState<string | null>(null);
+  const [adminNote, setAdminNote] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [confirmText, setConfirmText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -110,6 +112,16 @@ export function SettingsScreen(): React.JSX.Element {
             Create free-access codes for testers and promotions, and share them.
           </Text>
           <PrimaryButton label="Promo codes" onPress={openPromoAdmin} />
+          <View style={{ height: spacing.sm }} />
+          <PrimaryButton
+            label="Send a test error report"
+            onPress={() =>
+              void sendTestErrorReport().then((sent) =>
+                setAdminNote(sent ? "Test error sent — it should appear in Sentry within a minute." : "Error reporting is off in this version (development).")
+              )
+            }
+          />
+          {adminNote && <Text style={{ color: colors.textMuted, marginTop: spacing.sm }}>{adminNote}</Text>}
         </Card>
       )}
 
