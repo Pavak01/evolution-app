@@ -65,7 +65,17 @@ export function ExportScreen(): React.JSX.Element {
         setStatus({ kind: "info", text: `Saved to ${fileUri}` });
       }
     } catch (error) {
-      setStatus({ kind: "error", text: error instanceof ApiError ? error.message : "Export failed." });
+      // Android's share module allows one share at a time (Sentry EVOLUTION-2-3).
+      const busy = String(error).includes("Another share request");
+      setStatus({
+        kind: "error",
+        text:
+          error instanceof ApiError
+            ? error.message
+            : busy
+              ? "Android still thinks an earlier share is open. Close any share screens, or restart Evolution, then try again."
+              : "Export failed."
+      });
     } finally {
       setIsExporting(false);
     }

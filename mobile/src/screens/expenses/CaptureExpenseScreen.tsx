@@ -27,7 +27,7 @@ type Props = NativeStackScreenProps<CaptureStackParamList, "CaptureForm">;
 
 export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.Element {
   const { refreshUser } = useAuth();
-  const { captureFromCamera, pickFromFiles, shareLocalUri } = useReceiptCapture();
+  const { captureFromCamera, pickFromFiles, openLocalFile } = useReceiptCapture();
   // Trial or Pro — anything that reads a photo/PDF for you.
   const { ocr: hasOcrUpgrade, canWrite } = useAccess();
 
@@ -338,7 +338,7 @@ export function CaptureExpenseScreen({ navigation, route }: Props): React.JSX.El
         {receipt ? (
           <>
             {/* A shared PDF receipt can't show in the photo viewer — open it in the phone's PDF viewer. */}
-            <Pressable onPress={() => (receipt.mimeType === "application/pdf" ? void shareLocalUri(receipt.uri) : setViewerUri(receipt.uri))}>
+            <Pressable onPress={() => (receipt.mimeType === "application/pdf" ? void openLocalFile(receipt.uri, "application/pdf") : setViewerUri(receipt.uri))}>
               <ReceiptThumbnail uri={receipt.uri} isPdf={receipt.mimeType === "application/pdf"} filename={receipt.name} />
             </Pressable>
             <Text style={{ color: colors.textMuted, fontSize: typography.micro, marginTop: spacing.xs }}>

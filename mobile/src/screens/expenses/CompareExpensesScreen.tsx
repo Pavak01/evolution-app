@@ -40,7 +40,7 @@ const ROWS: { label: string; value: (e: Expense) => string }[] = [
 export function CompareExpensesScreen({ route, navigation }: Props): React.JSX.Element {
   const { leftId, rightId } = route.params;
   const { canWrite } = useAccess();
-  const { downloadToLocalUri, shareLocalUri } = useReceiptCapture();
+  const { downloadToLocalUri, openLocalFile } = useReceiptCapture();
   const [pair, setPair] = useState<[Expense, Expense] | null>(null);
   const [images, setImages] = useState<Record<string, string | null>>({});
   const [viewerUri, setViewerUri] = useState<string | null>(null);
@@ -105,7 +105,7 @@ export function CompareExpensesScreen({ route, navigation }: Props): React.JSX.E
           <Pressable
             onPress={() =>
               void downloadToLocalUri(e.receipt_download_url!, `receipt-${e.id}.pdf`).then((uri) => {
-                if (uri) void shareLocalUri(uri);
+                if (uri) void openLocalFile(uri, "application/pdf");
               })
             }
             style={{ height: 150, borderRadius: 10, backgroundColor: colors.accentSoft, alignItems: "center", justifyContent: "center" }}

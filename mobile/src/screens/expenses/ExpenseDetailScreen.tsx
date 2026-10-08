@@ -29,7 +29,7 @@ type Props = NativeStackScreenProps<ExpensesStackParamList, "ExpenseDetail">;
 
 export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Element {
   const { expenseId } = route.params;
-  const { captureFromCamera, downloadToLocalUri, pickFromFiles, shareLocalUri } = useReceiptCapture();
+  const { captureFromCamera, downloadToLocalUri, pickFromFiles, shareLocalUri, openLocalFile } = useReceiptCapture();
 
   const [expense, setExpense] = useState<Expense | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -83,7 +83,7 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
     // photo viewer — hand it to the phone's PDF viewer, as invoices do.
     if (expense.receipt_mime_type === "application/pdf") {
       const localUri = await downloadToLocalUri(expense.receipt_download_url, `${expense.category}-receipt.pdf`);
-      if (localUri) await shareLocalUri(localUri);
+      if (localUri) await openLocalFile(localUri, "application/pdf");
       return;
     }
     setViewerVisible(true);

@@ -4,8 +4,9 @@ import * as DocumentPicker from "expo-document-picker";
 // preserving the exact function-based API this file already uses.
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
+import * as IntentLauncher from "expo-intent-launcher";
 import * as Sharing from "expo-sharing";
-import { Alert } from "react-native";
+import { Alert, Platform } from "react-native";
 import { getToken } from "../api/client";
 
 export type PickedFile = { uri: string; name: string; mimeType: string };
@@ -224,13 +225,45 @@ export function useReceiptCapture() {
     }
   }
 
+  // Never throws: Android's share module allows one share at a time and can
+  // stay "busy" if the target app never reports back (Sentry EVOLUTION-2-3,
+  // build 113), so a failure becomes a message instead of an unhandled error.
   async function shareLocalUri(uri: string): Promise<void> {
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(uri, { dialogTitle: "Share file" });
-    } else {
-      Alert.alert("Sharing unavailable", `File saved at ${uri}`);
+    try {
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { dialogTitle: "Share file" });
+      } else {
+        Alert.alert("Sharing unavailable", `File saved at ${uri}`);
+      }
+    } catch (error) {
+      const busy = String(error).includes("Another share request");
+      Alert.alert(
+        "Couldn't open the share screen",
+        busy
+          ? "Android still thinks an earlier share is open. Close any share screens, or restart Evolution, then try again."
+          : "Please try again."
+      );
     }
   }
 
-  return { captureFromCamera, pickFromFiles, pickMultipleFromFiles, pickDocument, readLocalTextFile, downloadToLocalUri, shareLocalUri };
+  // "View" for a PDF or CSV: opens it straight in the phone's own viewer
+  // (Android), falling back to the share sheet when nothing can open it.
+  async function openLocalFile(uri: string, mimeType: string): Promise<void> {
+    if (Platform.OS === "android") {
+      try {
+        const contentUri = await FileSystem.getContentUriAsync(uri);
+        await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
+          data: contentUri,
+          type: mimeType,
+          flags: 1 // FLAG_GRANT_READ_URI_PERMISSION
+        });
+        return;
+      } catch {
+        // No app for this type (or the intent failed) — share instead.
+      }
+    }
+    await shareLocalUri(uri);
+  }
+
+  return { captureFromCamera, pickFromFiles, pickMultipleFromFiles, pickDocument, readLocalTextFile, downloadToLocalUri, shareLocalUri, openLocalFile };
 }

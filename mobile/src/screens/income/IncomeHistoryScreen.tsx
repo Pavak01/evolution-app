@@ -17,7 +17,7 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { formatGbp } from "../../utils/money";
 
 function InvoiceRow({ invoice, onVoided }: { invoice: IncomeInvoice; onVoided: () => void }): React.JSX.Element {
-  const { downloadToLocalUri, shareLocalUri } = useReceiptCapture();
+  const { downloadToLocalUri, shareLocalUri, openLocalFile } = useReceiptCapture();
   const [isExpanded, setIsExpanded] = useState(false);
   const [reason, setReason] = useState("");
   const [isVoiding, setIsVoiding] = useState(false);
@@ -51,8 +51,7 @@ function InvoiceRow({ invoice, onVoided }: { invoice: IncomeInvoice; onVoided: (
   // <Image>), and the download URL itself can't be opened externally either
   // — it's a requireAuth-protected backend route, not a public link. So
   // either goes through the same authenticated download as an image, then
-  // hands off to the OS share sheet (the same content-URI-safe path already
-  // proven for CSV export) instead of the in-app viewer.
+  // opens in the phone's own viewer (share sheet if nothing can open it).
   async function handleViewInvoice(): Promise<void> {
     if (!invoice.file_download_url) return;
 
@@ -62,7 +61,7 @@ function InvoiceRow({ invoice, onVoided }: { invoice: IncomeInvoice; onVoided: (
       const localUri = await downloadToLocalUri(invoice.file_download_url, `${invoice.source}-invoice.${extension}`);
       setIsOpeningFile(false);
       if (localUri) {
-        await shareLocalUri(localUri);
+        await openLocalFile(localUri, invoice.invoice_mime_type ?? "application/pdf");
       }
       return;
     }
