@@ -2,6 +2,7 @@ import React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import type { PendingItem } from "../offlineQueue";
 import { colors, radius, spacing, typography } from "../theme/tokens";
+import { formatGbp } from "../utils/money";
 
 export function PendingUploads({
   items,
@@ -35,7 +36,7 @@ export function PendingUploads({
             <Text style={styles.sub}>Saved on device — no connection yet</Text>
           </View>
           <View style={styles.rowEnd}>
-            <Text style={styles.amount}>£{item.input.total_amount.toFixed(2)}</Text>
+            <Text style={styles.amount}>{formatGbp(item.input.total_amount)}</Text>
             <Pressable onPress={() => onDelete(item.localId)}>
               <Text style={styles.delete}>✕</Text>
             </Pressable>

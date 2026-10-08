@@ -14,6 +14,7 @@ import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { formatUkDate, getTaxYearFromDate } from "../../utils/taxYear";
 import { Ornaments } from "../../components/Ornaments";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import { formatGbp } from "../../utils/money";
 
 function InvoiceRow({ invoice, onVoided }: { invoice: IncomeInvoice; onVoided: () => void }): React.JSX.Element {
   const { downloadToLocalUri, shareLocalUri } = useReceiptCapture();
@@ -83,9 +84,9 @@ function InvoiceRow({ invoice, onVoided }: { invoice: IncomeInvoice; onVoided: (
         </Text>
       </View>
       <View style={styles.rowEnd}>
-        <Text style={styles.amount}>£{invoice.total_amount.toFixed(2)}</Text>
+        <Text style={styles.amount}>{formatGbp(invoice.total_amount)}</Text>
         {invoice.voided_at ? (
-          <Text style={styles.voided} numberOfLines={1}>
+          <Text style={[styles.voided, styles.voidReason]} numberOfLines={2}>
             voided{invoice.void_reason ? `: ${invoice.void_reason}` : ""}
           </Text>
         ) : (
@@ -223,6 +224,8 @@ const styles = StyleSheet.create({
   rowEnd: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   amount: { fontSize: typography.body, fontWeight: "700", color: colors.snapshotValue },
   voided: { fontSize: typography.micro, color: colors.danger, textTransform: "uppercase" },
+  // Wraps a long reason beside the amount instead of running off the card.
+  voidReason: { flexShrink: 1, marginLeft: spacing.md, textAlign: "right" },
   expandWrap: { marginTop: spacing.sm, gap: spacing.sm },
   viewLink: { color: colors.accent, fontWeight: "600", fontSize: typography.small }
 });

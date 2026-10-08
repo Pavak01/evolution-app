@@ -12,6 +12,7 @@ import type { KeyboardTypeOptions } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { colors, radius, spacing, typography } from "../theme/tokens";
 import { formatUkDate } from "../utils/taxYear";
+import { formatGbp } from "../utils/money";
 
 // Adapted from Qbit's Controls.tsx. DateField's value/onChange contract
 // stays ISO (YYYY-MM-DD) throughout the app — the format the backend
@@ -84,6 +85,7 @@ export function Field({
         style={styles.input}
         keyboardType={keyboardType}
         placeholder={placeholder}
+        placeholderTextColor={colors.textMuted}
         onFocus={onFocus}
       />
     </View>
@@ -132,6 +134,7 @@ export function DateField({
           onChangeText={handleTextChange}
           style={[styles.input, styles.dateInput]}
           placeholder={placeholder ?? "DD/MM/YYYY"}
+          placeholderTextColor={colors.textMuted}
         />
         <Pressable
           onPress={() => setShowPicker(true)}
@@ -201,7 +204,7 @@ export function PreviewPill({ label, value }: { label: string; value: number }):
   return (
     <View style={styles.previewPill}>
       <Text style={styles.previewLabel}>{label}</Text>
-      <Text style={styles.previewValue}>£{value.toFixed(2)}</Text>
+      <Text style={styles.previewValue}>{formatGbp(value)}</Text>
     </View>
   );
 }
@@ -210,7 +213,7 @@ export function SummaryRow({ label, value }: { label: string; value: number }): 
   return (
     <View style={styles.summaryRow}>
       <Text style={styles.summaryLabel}>{label}</Text>
-      <Text style={styles.summaryValue}>£{value.toFixed(2)}</Text>
+      <Text style={styles.summaryValue}>{formatGbp(value)}</Text>
     </View>
   );
 }

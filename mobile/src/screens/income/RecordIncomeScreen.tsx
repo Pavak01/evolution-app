@@ -15,6 +15,7 @@ import { enqueueIncome, generateLocalId, syncQueue, subscribePendingCount } from
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { getTodayIso } from "../../utils/taxYear";
 import type { IncomeStackParamList } from "../../navigation/types";
+import { formatGbp } from "../../utils/money";
 
 type Props = NativeStackScreenProps<IncomeStackParamList, "RecordIncome">;
 
@@ -267,8 +268,8 @@ export function RecordIncomeScreen({ navigation, route }: Props): React.JSX.Elem
             {lastSummary.tax_year} running total
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
-            <SnapshotTile label="Total income" value={`£${lastSummary.total_income.toFixed(2)}`} />
-            <SnapshotTile label="Net profit" value={`£${lastSummary.net_profit.toFixed(2)}`} />
+            <SnapshotTile label="Total income" value={`${formatGbp(lastSummary.total_income)}`} />
+            <SnapshotTile label="Net profit" value={`${formatGbp(lastSummary.net_profit)}`} />
           </View>
         </Card>
       )}

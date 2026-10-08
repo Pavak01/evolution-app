@@ -14,6 +14,7 @@ import { colors, spacing, typography } from "../../theme/tokens";
 import { formatUkDate, getTaxYearFromDate } from "../../utils/taxYear";
 import { parseIncomeCsv, type ParsedIncomeCsvRow } from "../../utils/parseIncomeCsv";
 import type { IncomeStackParamList } from "../../navigation/types";
+import { formatGbp } from "../../utils/money";
 
 type ImportRow = ParsedIncomeCsvRow & {
   key: string;
@@ -215,7 +216,7 @@ export function ImportIncomeCsvScreen({ navigation, route }: Props): React.JSX.E
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <View>
               <Text style={{ color: colors.textMain, fontWeight: "700" }}>
-                {formatUkDate(row.date)} · £{row.totalAmount.toFixed(2)}
+                {formatUkDate(row.date)} · {formatGbp(row.totalAmount)}
               </Text>
               <Text style={{ color: colors.textMuted, fontSize: typography.small }}>Invoice {row.invoiceNumber}</Text>
             </View>
@@ -248,8 +249,8 @@ export function ImportIncomeCsvScreen({ navigation, route }: Props): React.JSX.E
             {lastSummary.tax_year} running total
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
-            <SnapshotTile label="Total income" value={`£${lastSummary.total_income.toFixed(2)}`} />
-            <SnapshotTile label="Net profit" value={`£${lastSummary.net_profit.toFixed(2)}`} />
+            <SnapshotTile label="Total income" value={`${formatGbp(lastSummary.total_income)}`} />
+            <SnapshotTile label="Net profit" value={`${formatGbp(lastSummary.net_profit)}`} />
           </View>
           {otherTaxYears.length > 0 && (
             <Text style={{ color: colors.textMuted, fontSize: typography.small, marginTop: spacing.sm }}>

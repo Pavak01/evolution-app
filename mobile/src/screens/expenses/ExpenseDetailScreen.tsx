@@ -16,6 +16,7 @@ import { colors, spacing, typography } from "../../theme/tokens";
 import { humanizeCategory } from "../../utils/category";
 import { formatUkDate, getTodayIso } from "../../utils/taxYear";
 import type { ExpensesStackParamList, MainTabParamList } from "../../navigation/types";
+import { formatGbp } from "../../utils/money";
 
 function extensionForMimeType(mimeType: string): string {
   if (mimeType === "application/pdf") return "pdf";
@@ -318,7 +319,7 @@ export function ExpenseDetailScreen({ route, navigation }: Props): React.JSX.Ele
                 ? "awaiting reimbursement (counted in full until recorded)"
                 : expense.reimbursement_status === "full"
                   ? "fully reimbursed"
-                  : `£${expense.reimbursed_amount.toFixed(2)} reimbursed`}
+                  : `${formatGbp(expense.reimbursed_amount)} reimbursed`}
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginBottom: spacing.md }}>
             <SmallAction label="Not reimbursed" active={reimbStatus === "none"} onPress={() => setReimbStatus("none")} />

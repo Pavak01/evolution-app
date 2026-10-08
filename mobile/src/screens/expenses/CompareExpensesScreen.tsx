@@ -13,6 +13,7 @@ import { colors, spacing, typography } from "../../theme/tokens";
 import { humanizeCategory } from "../../utils/category";
 import { formatUkDate } from "../../utils/taxYear";
 import type { ExpensesStackParamList } from "../../navigation/types";
+import { formatGbp } from "../../utils/money";
 
 type Props = NativeStackScreenProps<ExpensesStackParamList, "CompareExpenses">;
 
@@ -20,7 +21,7 @@ type Props = NativeStackScreenProps<ExpensesStackParamList, "CompareExpenses">;
 // and its original — so the user can see what differs and void the right
 // one without hopping between screens.
 
-const money = (n: number) => `£${n.toFixed(2)}`;
+const money = formatGbp;
 const loggedAt = (iso: string) => {
   const d = new Date(iso.replace(" ", "T"));
   return Number.isNaN(d.getTime()) ? iso : `${formatUkDate(iso.slice(0, 10))} ${d.toTimeString().slice(0, 5)}`;

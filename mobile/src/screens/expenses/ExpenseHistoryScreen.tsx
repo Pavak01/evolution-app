@@ -15,6 +15,7 @@ import { formatUkDate, getTaxYearFromDate } from "../../utils/taxYear";
 import type { ExpensesStackParamList } from "../../navigation/types";
 import { Ornaments } from "../../components/Ornaments";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import { formatGbp } from "../../utils/money";
 
 type Props = NativeStackScreenProps<ExpensesStackParamList, "ExpenseHistory">;
 
@@ -261,9 +262,9 @@ export function ExpenseHistoryScreen({ navigation, route }: Props): React.JSX.El
               <Text style={styles.date}>{formatUkDate(item.occurred_at)}</Text>
             </View>
             <View style={styles.rowEnd}>
-              <Text style={styles.amount}>£{item.total_amount.toFixed(2)}</Text>
+              <Text style={styles.amount}>{formatGbp(item.total_amount)}</Text>
               {item.voided_at && (
-                <Text style={styles.voided} numberOfLines={1}>
+                <Text style={[styles.voided, styles.voidReason]} numberOfLines={2}>
                   voided{item.void_reason ? `: ${item.void_reason}` : ""}
                 </Text>
               )}
@@ -276,7 +277,7 @@ export function ExpenseHistoryScreen({ navigation, route }: Props): React.JSX.El
                     ? "awaiting reimbursement"
                     : item.reimbursement_status === "full"
                       ? "fully reimbursed"
-                      : `partially reimbursed: £${item.reimbursed_amount.toFixed(2)}`}
+                      : `partially reimbursed: ${formatGbp(item.reimbursed_amount)}`}
                 </Text>
               )}
             </View>
@@ -312,11 +313,14 @@ const styles = StyleSheet.create({
   // A small "voided" badge alone was easy to miss — dim the whole row too,
   // so a voided entry reads as struck-through at a glance, not just on close inspection.
   rowVoided: { opacity: 0.5 },
-  rowMain: { gap: spacing.xs },
+  rowMain: { gap: spacing.xs, flexShrink: 0 },
   category: { fontSize: typography.body, fontWeight: "700", color: colors.textMain, textTransform: "capitalize" },
   date: { fontSize: typography.small, color: colors.textMuted },
-  rowEnd: { alignItems: "flex-end", gap: spacing.xs },
+  // Shrinks so a long void reason wraps inside the card instead of pushing
+  // the amount off the edge.
+  rowEnd: { alignItems: "flex-end", gap: spacing.xs, flexShrink: 1, marginLeft: spacing.md },
   amount: { fontSize: typography.body, fontWeight: "700", color: colors.snapshotValue },
   voided: { fontSize: typography.micro, color: colors.danger, textTransform: "uppercase" },
+  voidReason: { textAlign: "right" },
   awaiting: { ...awaitingPill, fontSize: typography.micro, textTransform: "uppercase", paddingHorizontal: spacing.xs, paddingVertical: 1 }
 });

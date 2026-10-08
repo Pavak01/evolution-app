@@ -14,6 +14,7 @@ import { useReceiptCapture, type PickedFile } from "../../hooks/useReceiptCaptur
 import { enqueueExpense, generateLocalId, syncQueue } from "../../offlineQueue";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTaxYearFromDate, isTaxYearStillClaimable } from "../../utils/taxYear";
+import { formatGbp } from "../../utils/money";
 
 type ImportRow = {
   key: string;
@@ -299,8 +300,8 @@ export function ImportReceiptsScreen(): React.JSX.Element {
             {lastSummary.tax_year} running total
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
-            <SnapshotTile label="Net profit" value={`£${lastSummary.net_profit.toFixed(2)}`} />
-            <SnapshotTile label="Set aside for tax" value={`£${lastSummary.estimate.total_to_set_aside.toFixed(2)}`} />
+            <SnapshotTile label="Net profit" value={`${formatGbp(lastSummary.net_profit)}`} />
+            <SnapshotTile label="Set aside for tax" value={`${formatGbp(lastSummary.estimate.total_to_set_aside)}`} />
           </View>
           {otherTaxYears.length > 0 && (
             <Text style={{ color: colors.textMuted, fontSize: typography.small, marginTop: spacing.sm }}>

@@ -9,6 +9,7 @@ import { Screen } from "../../components/Screen";
 import { TrialBanner } from "../../components/PlanBits";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTaxYearFromDate } from "../../utils/taxYear";
+import { formatGbp } from "../../utils/money";
 
 export function SummaryScreen(): React.JSX.Element {
   const [taxYear, setTaxYear] = useState(getTaxYearFromDate(new Date()));
@@ -57,9 +58,9 @@ export function SummaryScreen(): React.JSX.Element {
         <>
           <Card>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.md }}>
-              <SnapshotTile label="Total income" value={`£${summary.total_income.toFixed(2)}`} />
-              <SnapshotTile label="Total expenses" value={`£${summary.total_expenses.toFixed(2)}`} />
-              <SnapshotTile label="Net profit" value={`£${summary.net_profit.toFixed(2)}`} />
+              <SnapshotTile label="Total income" value={`${formatGbp(summary.total_income)}`} />
+              <SnapshotTile label="Total expenses" value={`${formatGbp(summary.total_expenses)}`} />
+              <SnapshotTile label="Net profit" value={`${formatGbp(summary.net_profit)}`} />
               <SnapshotTile label="Weeks logged" value={String(summary.weeks_logged)} />
             </View>
             <SummaryRow label="Estimated income tax" value={summary.estimate.estimated_income_tax} />

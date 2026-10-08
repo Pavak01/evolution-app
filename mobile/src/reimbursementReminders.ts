@@ -3,6 +3,7 @@ import { Platform } from "react-native";
 import { listExpenses } from "./api/expenses";
 import { isAndroidExpoGo } from "./nativeSupport";
 import type { Expense } from "./api/types";
+import { formatGbp } from "./utils/money";
 
 // On-device reminders for expenses still "awaiting" reimbursement — no
 // server push needed. The schedule is rebuilt from the server's current
@@ -149,7 +150,7 @@ export async function syncReimbursementReminders({ askPermission = false } = {})
     const total = awaiting.reduce((sum, e) => sum + e.total_amount, 0);
     const count = awaiting.length;
     const body =
-      `${count} expense${count === 1 ? " is" : "s are"} still awaiting reimbursement (£${total.toFixed(2)}). ` +
+      `${count} expense${count === 1 ? " is" : "s are"} still awaiting reimbursement (${formatGbp(total)}). ` +
       `Record what's been paid back — or mark it not reimbursed — so your deductions stay right.`;
 
     const nudges = upcomingNudges(oldest.occurred_at, new Date());
