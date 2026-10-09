@@ -22,7 +22,8 @@ const SHOTS = [
   ["03-summary", ["Know what to", "put aside for tax"], "Live UK tax and NI estimate"],
   ["04-income", ["Log income", "your way"], "Photo, PDF or a CSV report"],
   ["05-compare", ["Spot a duplicate?", "Compare, then void"], "Side by side, one tap"],
-  ["06-widget", ["One tap from", "your home screen"], "Widget and app shortcuts"]
+  ["06-widget", ["One tap from", "your home screen"], "Widget and app shortcuts"],
+  ["07-export", ["Your year, ready", "for your accountant"], "PDF report or spreadsheet"]
 ];
 
 const args = process.argv.slice(2);
