@@ -433,3 +433,25 @@ CREATE TABLE IF NOT EXISTS evolution.two_factor_backup_codes (
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_2fa_backup_codes_user ON evolution.two_factor_backup_codes(user_id);
+
+-- Making Tax Digital: a user's link to their HMRC account (OAuth tokens and
+-- National Insurance number, all encrypted with HMRC_TOKEN_ENCRYPTION_KEY),
+-- and the short-lived state values that tie HMRC's sign-in redirect back to
+-- the user who started it. See backend/src/hmrc/.
+CREATE TABLE IF NOT EXISTS evolution.hmrc_connections (
+  user_id UUID PRIMARY KEY REFERENCES public.users(id),
+  environment TEXT NOT NULL,
+  access_token_enc TEXT NOT NULL,
+  refresh_token_enc TEXT NOT NULL,
+  access_expires_at TIMESTAMP NOT NULL,
+  scope TEXT,
+  nino_enc TEXT,
+  connected_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS evolution.hmrc_oauth_states (
+  state TEXT PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES public.users(id),
+  return_url TEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);

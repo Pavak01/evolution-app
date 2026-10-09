@@ -14,6 +14,7 @@ import { adminRouter } from "./routes/admin.routes.js";
 import { twoFactorRouter } from "./routes/twoFactor.routes.js";
 import { receiptsRouter } from "./routes/receipts.routes.js";
 import { taxRouter } from "./routes/tax.routes.js";
+import { hmrcRouter } from "./routes/hmrc.routes.js";
 
 const app = express();
 
@@ -54,6 +55,7 @@ app.use(plansRouter);
 app.use(adminRouter);
 app.use(twoFactorRouter);
 app.use(taxRouter);
+app.use(hmrcRouter);
 
 app.use(finalErrorHandler);
 

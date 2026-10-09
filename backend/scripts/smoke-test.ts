@@ -101,6 +101,32 @@ async function main(): Promise<void> {
     pdfRes.status === 200 && pdfRes.headers.get("content-type") === "application/pdf" && pdfBytes.subarray(0, 5).toString() === "%PDF-"
   );
 
+  // MTD: HMRC's checker on our fraud-prevention headers as sent from this
+  // machine through the real server (sandbox only). Reported, not failed:
+  // a few headers can only come from the phone.
+  const fraudRes = await fetch(`${baseUrl}/hmrc/fraud-headers/check`, {
+    method: "POST",
+    headers: {
+      ...authHeaders,
+      "Gov-Client-Device-ID": "beec798b-b366-47fa-b1f8-92cede14a1ce",
+      "Gov-Client-Local-IPs": "192.168.1.20",
+      "Gov-Client-Local-IPs-Timestamp": new Date().toISOString(),
+      "Gov-Client-Screens": "width=1080&height=2400&scaling-factor=2.625&colour-depth=24",
+      "Gov-Client-Window-Size": "width=411&height=914",
+      "Gov-Client-Timezone": "UTC+01:00",
+      "Gov-Client-User-Agent": "os-family=Android&os-version=14&device-manufacturer=samsung&device-model=SM-A528B",
+      "X-Evolution-App-Version": "smoke-test"
+    }
+  });
+  if (fraudRes.status === 200) {
+    const report = (await fraudRes.json()) as { code?: string; errors?: { code: string; headers: string[] }[]; warnings?: { headers: string[] }[] };
+    console.log(`INFO HMRC fraud headers: ${report.code}`);
+    for (const e of report.errors ?? []) console.log(`       error   ${e.headers.join(", ")}: ${e.code}`);
+    for (const w of report.warnings ?? []) console.log(`       warning ${w.headers.join(", ")}`);
+  } else {
+    console.log(`INFO HMRC fraud header check unavailable (${fraudRes.status})`);
+  }
+
   const downloadRes = await fetch(`${baseUrl}/expenses/${expenseId}`, { headers: authHeaders });
   const downloadBody = (await downloadRes.json()) as { expense: { receipt_download_url: string } };
   const downloadUrl = downloadBody.expense?.receipt_download_url;
@@ -145,6 +171,8 @@ async function cleanup(): Promise<void> {
     await pool.query("DELETE FROM email_verifications WHERE user_id = $1", [createdUserId]);
     await pool.query("DELETE FROM terms_acceptances WHERE user_id = $1", [createdUserId]);
     await pool.query("DELETE FROM two_factor_backup_codes WHERE user_id = $1", [createdUserId]);
+    await pool.query("DELETE FROM hmrc_connections WHERE user_id = $1", [createdUserId]);
+    await pool.query("DELETE FROM hmrc_oauth_states WHERE user_id = $1", [createdUserId]);
     await pool.query("DELETE FROM public.users WHERE id = $1", [createdUserId]);
     console.log(`Cleaned up smoke-test account (${email}).`);
   } catch (error) {
