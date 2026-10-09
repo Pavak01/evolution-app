@@ -4,6 +4,7 @@ export type TaxYearLockStatus = {
   locked: boolean;
   locked_at: string | null;
   archive_download_url: string | null;
+  archive_pdf_download_url?: string | null; // absent on older servers / years locked before the PDF report
 };
 
 export async function getTaxYearLockStatus(taxYear: string): Promise<TaxYearLockStatus> {

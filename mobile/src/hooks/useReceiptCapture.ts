@@ -217,6 +217,11 @@ export function useReceiptCapture() {
         Alert.alert("Download failed", "Could not save the file.");
         return null;
       }
+      // Otherwise a server error page would be saved and "opened" as the file.
+      if (result.status >= 400) {
+        Alert.alert("Download failed", "The server couldn't provide this file. Please try again.");
+        return null;
+      }
 
       return result.uri;
     } catch (error) {

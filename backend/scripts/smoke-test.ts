@@ -94,6 +94,13 @@ async function main(): Promise<void> {
   const summaryRes = await fetch(`${baseUrl}/tax-years/${taxYear}/summary`, { headers: authHeaders });
   check("GET /tax-years/:taxYear/summary", summaryRes.status === 200);
 
+  const pdfRes = await fetch(`${baseUrl}/tax-years/${taxYear}/export?format=pdf`, { headers: authHeaders });
+  const pdfBytes = Buffer.from(await pdfRes.arrayBuffer());
+  check(
+    "GET /tax-years/:taxYear/export?format=pdf",
+    pdfRes.status === 200 && pdfRes.headers.get("content-type") === "application/pdf" && pdfBytes.subarray(0, 5).toString() === "%PDF-"
+  );
+
   const downloadRes = await fetch(`${baseUrl}/expenses/${expenseId}`, { headers: authHeaders });
   const downloadBody = (await downloadRes.json()) as { expense: { receipt_download_url: string } };
   const downloadUrl = downloadBody.expense?.receipt_download_url;
@@ -129,6 +136,8 @@ async function cleanup(): Promise<void> {
     await pool.query("DELETE FROM receipts WHERE user_id = $1", [createdUserId]);
     await pool.query("DELETE FROM expenses WHERE user_id = $1", [createdUserId]);
     await pool.query("DELETE FROM tax_summaries WHERE user_id = $1", [createdUserId]);
+    // The PDF export check records an export event.
+    await pool.query("DELETE FROM export_events WHERE user_id = $1", [createdUserId]);
     // Every Evolution sign-in now creates an entitlements row (trial start).
     await pool.query("DELETE FROM promo_redemptions WHERE user_id = $1", [createdUserId]);
     await pool.query("DELETE FROM entitlements WHERE user_id = $1", [createdUserId]);

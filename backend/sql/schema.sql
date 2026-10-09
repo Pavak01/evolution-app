@@ -206,6 +206,8 @@ CREATE TABLE IF NOT EXISTS evolution.filed_tax_years (
   locked_at TIMESTAMP NOT NULL DEFAULT NOW(),
   unlocked_at TIMESTAMP
 );
+-- The readable PDF report archived alongside the CSV (null for years locked before it existed).
+ALTER TABLE evolution.filed_tax_years ADD COLUMN IF NOT EXISTS archive_pdf_storage_path TEXT;
 CREATE INDEX IF NOT EXISTS idx_filed_tax_years_user_tax_year ON evolution.filed_tax_years(user_id, tax_year) WHERE unlocked_at IS NULL;
 
 -- Supports History's keyset pagination (GET /expenses cursor) — the

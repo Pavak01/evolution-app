@@ -5,18 +5,21 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import React, { useEffect, useState } from "react";
 import { Linking, Text, View } from "react-native";
 import { fetchExportText } from "../../api/tax";
-import { ApiError } from "../../api/client";
+import { API_BASE_URL, ApiError } from "../../api/client";
+import { useReceiptCapture } from "../../hooks/useReceiptCapture";
 import { getTaxYearLockStatus, lockTaxYear, unlockTaxYear, type TaxYearLockStatus } from "../../api/taxYearLock";
 import { Card, DangerAction, Field, PrimaryButton, StatusBanner } from "../../components/Controls";
 import { Screen } from "../../components/Screen";
 import { colors, spacing, typography } from "../../theme/tokens";
-import { getTaxYearFromDate } from "../../utils/taxYear";
+import { formatUkDate, getTaxYearFromDate } from "../../utils/taxYear";
 
 const TAX_YEAR_FORMAT = /^\d{4}-\d{2}$/;
 
 export function ExportScreen(): React.JSX.Element {
   const [taxYear, setTaxYear] = useState(getTaxYearFromDate(new Date()));
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const { downloadToLocalUri, openLocalFile } = useReceiptCapture();
   const [status, setStatus] = useState<{ kind: "info" | "error"; text: string } | null>(null);
 
   const [lockStatus, setLockStatus] = useState<TaxYearLockStatus | null>(null);
@@ -82,6 +85,23 @@ export function ExportScreen(): React.JSX.Element {
     }
   }
 
+  // The readable report: downloaded, then opened in the phone's PDF viewer,
+  // which can also share or save it.
+  async function handleExportPdf(): Promise<void> {
+    if (!TAX_YEAR_FORMAT.test(taxYear)) {
+      setStatus({ kind: "error", text: "Enter a tax year like 2026-27." });
+      return;
+    }
+    setStatus(null);
+    setIsExportingPdf(true);
+    try {
+      const uri = await downloadToLocalUri(`${API_BASE_URL}/tax-years/${taxYear}/export?format=pdf`, `evolution-tax-year-${taxYear}.pdf`);
+      if (uri) await openLocalFile(uri, "application/pdf");
+    } finally {
+      setIsExportingPdf(false);
+    }
+  }
+
   async function handleLock(): Promise<void> {
     setLockError(null);
     setIsLockBusy(true);
@@ -114,7 +134,15 @@ export function ExportScreen(): React.JSX.Element {
       <Card>
         <Field label="Tax year" value={taxYear} onChange={setTaxYear} placeholder="2026-27" />
         {status && <StatusBanner kind={status.kind} text={status.text} />}
-        <PrimaryButton label="Export as CSV" onPress={handleExport} isLoading={isExporting} />
+        <PrimaryButton label="Tax year report (PDF)" onPress={handleExportPdf} isLoading={isExportingPdf} />
+        <Text style={{ color: colors.textMuted, fontSize: typography.small, marginTop: spacing.xs }}>
+          Summary, tax to set aside, SA103S boxes, and every income and expense. Easy to read, keep or send.
+        </Text>
+        <View style={{ height: spacing.md }} />
+        <PrimaryButton label="Spreadsheet (CSV)" onPress={handleExport} isLoading={isExporting} />
+        <Text style={{ color: colors.textMuted, fontSize: typography.small, marginTop: spacing.xs }}>
+          The same figures as a spreadsheet, for an accountant or bookkeeping software.
+        </Text>
       </Card>
 
       {lockStatus && (
@@ -133,13 +161,19 @@ export function ExportScreen(): React.JSX.Element {
           {lockStatus.locked ? (
             <>
               <Text style={{ color: colors.textSecondary, marginBottom: spacing.md }}>
-                Locked on {lockStatus.locked_at?.slice(0, 10)} — this tax year's data is protected from Reset all
+                Locked on {lockStatus.locked_at ? formatUkDate(lockStatus.locked_at.slice(0, 10)) : ""} — this tax year's data is protected from Reset all
                 data. A copy of the export from that moment is archived below.
               </Text>
               <View style={{ gap: spacing.sm }}>
+                {lockStatus.archive_pdf_download_url && (
+                  <PrimaryButton
+                    label="View archived report (PDF)"
+                    onPress={() => Linking.openURL(lockStatus.archive_pdf_download_url as string)}
+                  />
+                )}
                 {lockStatus.archive_download_url && (
                   <PrimaryButton
-                    label="View archived copy"
+                    label="View archived spreadsheet (CSV)"
                     onPress={() => Linking.openURL(lockStatus.archive_download_url as string)}
                   />
                 )}

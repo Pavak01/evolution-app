@@ -112,12 +112,13 @@ Tap **Update**. You'll see **Updated ✓** and go back to History. Your deductib
 Generate a file of everything logged for a given tax year, shaped around your actual Self Assessment return.
 
 1. Enter the tax year (for example, `2026-27`).
-2. Tap **Export as CSV**.
-3. The file is generated and offered through your device's share sheet — save it, email it to your accountant, or open it in another app.
+2. Choose a format:
+   - **Tax year report (PDF)**: a readable report that opens in your phone's PDF viewer, ready to keep, print or send (use the viewer's share button). It has a summary, the tax to set aside, your SA103S box totals, and every income and expense record, with expenses grouped by box and subtotalled.
+   - **Spreadsheet (CSV)**: the same figures as a spreadsheet, offered through your device's share sheet. Best for an accountant or bookkeeping software.
 
-The file has three parts: your totals, category totals grouped into HMRC's SA103S boxes (fuel/travel/parking combine into "car, van and travel expenses," phone/home office into "office costs," and so on), and a full itemized list of every expense and income record for the year. A travel expense still waiting on a receipt appears in the itemized list but is excluded from the box totals and marked as not yet counted, until you attach proof. The estimated income tax/NI figures are labelled as planning estimates — useful for setting money aside, but not part of what the return itself asks for.
+Both contain the same figures: your totals, category totals grouped into HMRC's SA103S boxes (fuel/travel/parking combine into "car, van and travel expenses," phone/home office into "office costs," and so on), and a full itemized list of every expense and income record for the year. A travel expense still waiting on a receipt appears in the itemized list but is excluded from the box totals and marked as not yet counted, until you attach proof. The estimated income tax/NI figures are labelled as planning estimates — useful for setting money aside, but not part of what the return itself asks for.
 
-**Once you've actually filed a Self Assessment return using a tax year's figures**, a "Filed status" card appears below Export for that year — tap **Lock this tax year**. This archives the export exactly as it looks right now (viewable any time after via **View archived copy**) and fully protects that year: Reset all data in Settings can never clear it, no matter what. **Unlock this tax year** reverses the protection if you need to — the archived copy stays regardless.
+**Once you've actually filed a Self Assessment return using a tax year's figures**, a "Filed status" card appears below Export for that year — tap **Lock this tax year**. This archives the report and spreadsheet exactly as they look right now (viewable any time after via **View archived report (PDF)** and **View archived spreadsheet (CSV)**) and fully protects that year: Reset all data in Settings can never clear it, no matter what. **Unlock this tax year** reverses the protection if you need to — the archived copy stays regardless.
 
 ## Settings
 

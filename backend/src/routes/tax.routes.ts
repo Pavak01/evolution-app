@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { humanizeCategory } from "../categoryDisplay.js";
+import { buildTaxYearReportPdf } from "../exportPdf.js";
 import { db } from "../db.js";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { sendError } from "../middleware/errorHandler.js";
@@ -69,7 +70,7 @@ const csvField = (value: string): string => (/[",\n]/.test(value) ? `"${value.re
 // shared by GET /tax-years/:taxYear/export and POST .../lock, so the
 // archived snapshot a lock creates is byte-identical to a manual export
 // taken at that same moment.
-async function buildTaxYearExport(userId: string, taxYear: string): Promise<{ payload: Record<string, unknown>; csv: string }> {
+async function buildTaxYearExport(userId: string, taxYear: string) {
   const summary = await recomputeTaxSummary(userId, taxYear);
 
   // counted_in_return mirrors recomputeTaxSummary's own "no proof, no
@@ -232,7 +233,25 @@ async function buildTaxYearExport(userId: string, taxYear: string): Promise<{ pa
     );
   }
 
-  return { payload, csv: lines.join("\n") };
+  return { payload, csv: lines.join("\n"), summary };
+}
+
+// The readable PDF version of the same export (see exportPdf.ts).
+async function buildTaxYearPdf(
+  userId: string,
+  taxYear: string,
+  built: Awaited<ReturnType<typeof buildTaxYearExport>>,
+  lockedAt: string | null
+): Promise<Buffer> {
+  const user = await db.query<{ email: string }>("SELECT email FROM public.users WHERE id = $1", [userId]);
+  return buildTaxYearReportPdf(built.payload, {
+    email: user.rows[0]?.email ?? "",
+    generatedAt: new Date(),
+    lockedAt,
+    niClass2: built.summary.estimate.ni_class2,
+    niClass4: built.summary.estimate.ni_class4,
+    totalToSetAside: built.summary.estimate.total_to_set_aside
+  });
 }
 
 taxRouter.get("/tax-years/:taxYear/export", requireAuth, async (req: Request, res: Response) => {
@@ -244,13 +263,25 @@ taxRouter.get("/tax-years/:taxYear/export", requireAuth, async (req: Request, re
   const format = (req.query.format || "json").toString().toLowerCase();
 
   try {
-    const { payload, csv } = await buildTaxYearExport(authReq.userId, taxYear);
+    const built = await buildTaxYearExport(authReq.userId, taxYear);
+    const { payload, csv } = built;
 
     // Records that this tax year was actually exported — the closest real
     // signal available for POST /data-reset's safety check, given there's
     // no HMRC/MTD integration to know whether a return was actually filed.
     // Best-effort: never let a logging failure break the export itself.
     db.query("INSERT INTO export_events (user_id, tax_year) VALUES ($1, $2)", [authReq.userId, taxYear]).catch(() => {});
+
+    if (format === "pdf") {
+      const locked = await db.query<{ locked_at: string }>(
+        "SELECT locked_at::text FROM filed_tax_years WHERE user_id = $1 AND tax_year = $2 AND unlocked_at IS NULL LIMIT 1",
+        [authReq.userId, taxYear]
+      );
+      const pdf = await buildTaxYearPdf(authReq.userId, taxYear, built, locked.rows[0]?.locked_at ?? null);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename=evolution-tax-year-${taxYear}.pdf`);
+      return res.send(pdf);
+    }
 
     if (format === "csv") {
       res.setHeader("Content-Type", "text/csv");
@@ -280,15 +311,20 @@ taxRouter.post("/tax-years/:taxYear/lock", requireAuth, async (req: Request, res
       return res.json({ locked: true, locked_at: existing.rows[0].locked_at });
     }
 
-    const { csv } = await buildTaxYearExport(authReq.userId, taxYear);
-    const storageKey = `filed-snapshots/${authReq.userId}/${taxYear}-${Date.now()}.csv`;
-    await uploadReceiptObject(storageKey, Buffer.from(csv, "utf-8"), "text/csv");
+    const built = await buildTaxYearExport(authReq.userId, taxYear);
+    const stamp = Date.now();
+    const storageKey = `filed-snapshots/${authReq.userId}/${taxYear}-${stamp}.csv`;
+    await uploadReceiptObject(storageKey, Buffer.from(built.csv, "utf-8"), "text/csv");
+    // The readable report is archived alongside, stamped with today as the lock date.
+    const pdfKey = `filed-snapshots/${authReq.userId}/${taxYear}-${stamp}.pdf`;
+    const pdf = await buildTaxYearPdf(authReq.userId, taxYear, built, new Date().toISOString());
+    await uploadReceiptObject(pdfKey, pdf, "application/pdf");
 
     const inserted = await db.query<{ locked_at: string }>(
-      `INSERT INTO filed_tax_years (user_id, tax_year, archive_storage_path)
-       VALUES ($1, $2, $3)
+      `INSERT INTO filed_tax_years (user_id, tax_year, archive_storage_path, archive_pdf_storage_path)
+       VALUES ($1, $2, $3, $4)
        RETURNING locked_at::text`,
-      [authReq.userId, taxYear, storageKey]
+      [authReq.userId, taxYear, storageKey, pdfKey]
     );
 
     return res.json({ locked: true, locked_at: inserted.rows[0].locked_at });
@@ -326,18 +362,22 @@ taxRouter.get("/tax-years/:taxYear/lock-status", requireAuth, async (req: Reques
   }
 
   try {
-    const result = await db.query<{ locked_at: string; archive_storage_path: string }>(
-      "SELECT locked_at::text, archive_storage_path FROM filed_tax_years WHERE user_id = $1 AND tax_year = $2 AND unlocked_at IS NULL LIMIT 1",
+    const result = await db.query<{ locked_at: string; archive_storage_path: string; archive_pdf_storage_path: string | null }>(
+      "SELECT locked_at::text, archive_storage_path, archive_pdf_storage_path FROM filed_tax_years WHERE user_id = $1 AND tax_year = $2 AND unlocked_at IS NULL LIMIT 1",
       [authReq.userId, taxYear]
     );
 
     if (result.rows.length === 0) {
-      return res.json({ locked: false, locked_at: null, archive_download_url: null });
+      return res.json({ locked: false, locked_at: null, archive_download_url: null, archive_pdf_download_url: null });
     }
 
     const row = result.rows[0];
     const archiveUrl = await getReceiptPresignedUrl(row.archive_storage_path, `self-assessment-${taxYear}-filed.csv`);
-    return res.json({ locked: true, locked_at: row.locked_at, archive_download_url: archiveUrl });
+    // Years locked before the PDF report existed only have the CSV.
+    const archivePdfUrl = row.archive_pdf_storage_path
+      ? await getReceiptPresignedUrl(row.archive_pdf_storage_path, `evolution-tax-year-${taxYear}-filed.pdf`)
+      : null;
+    return res.json({ locked: true, locked_at: row.locked_at, archive_download_url: archiveUrl, archive_pdf_download_url: archivePdfUrl });
   } catch (error) {
     return sendError(res, 500, "Failed to load lock status", error);
   }
