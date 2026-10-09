@@ -8,7 +8,7 @@
     "icon": "./assets/icon.png",
     "android": {
       "package": "com.aplc.weeklytaxapp",
-      "versionCode": 113,
+      "versionCode": 114,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "monochromeImage": "./assets/adaptive-icon-monochrome.png",
