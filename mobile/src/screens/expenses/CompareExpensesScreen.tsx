@@ -74,13 +74,14 @@ export function CompareExpensesScreen({ route, navigation }: Props): React.JSX.E
     setReason(`Duplicate of the ${money(other.total_amount)} ${humanizeCategory(other.category).toLowerCase()} entry on ${formatUkDate(other.occurred_at)}`);
   }
 
-  async function confirmVoid(target: Expense, kept: Expense): Promise<void> {
+  async function confirmVoid(target: Expense): Promise<void> {
     setIsVoiding(true);
     setStatus(null);
     try {
       await voidExpense(target.id, reason.trim());
-      // Land on the one that was kept.
-      navigation.replace("ExpenseDetail", { expenseId: kept.id });
+      // Back to History (it reloads on focus), whichever way Compare was
+      // opened — from an expense, or from Capture's "Compare and void".
+      navigation.reset({ index: 0, routes: [{ name: "ExpenseHistory" }] });
     } catch (err) {
       setStatus({ kind: "error", text: err instanceof ApiError ? err.message : "Could not void it." });
     } finally {
@@ -187,7 +188,7 @@ export function CompareExpensesScreen({ route, navigation }: Props): React.JSX.E
           {status && <StatusBanner kind={status.kind} text={status.text} />}
           <View style={{ flexDirection: "row", gap: spacing.sm }}>
             <View style={{ flex: 1 }}>
-              <DangerAction label="Confirm void" onPress={() => void confirmVoid(voidingTarget, kept)} isLoading={isVoiding} disabled={!reason.trim()} />
+              <DangerAction label="Confirm void" onPress={() => void confirmVoid(voidingTarget)} isLoading={isVoiding} disabled={!reason.trim()} />
             </View>
           </View>
           <Text style={{ color: colors.textMuted, textAlign: "center", marginTop: spacing.sm }} onPress={() => setVoidingId(null)}>

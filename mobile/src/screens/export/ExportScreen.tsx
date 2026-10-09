@@ -1,6 +1,7 @@
 // See useReceiptCapture.ts for why this imports the /legacy subpath.
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import React, { useEffect, useState } from "react";
 import { Linking, Text, View } from "react-native";
 import { fetchExportText } from "../../api/tax";
@@ -118,9 +119,16 @@ export function ExportScreen(): React.JSX.Element {
 
       {lockStatus && (
         <Card>
-          <Text style={{ fontSize: typography.body, fontWeight: "700", color: colors.textMain, marginBottom: spacing.sm }}>
-            Filed status
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm }}>
+            <Ionicons
+              name={lockStatus.locked ? "lock-closed" : "lock-open-outline"}
+              size={22}
+              color={lockStatus.locked ? colors.accent : colors.textMuted}
+            />
+            <Text style={{ fontSize: typography.body, fontWeight: "700", color: colors.textMain }}>
+              {lockStatus.locked ? `${taxYear} locked` : "Filed status"}
+            </Text>
+          </View>
           {lockError && <StatusBanner kind="error" text={lockError} />}
           {lockStatus.locked ? (
             <>
