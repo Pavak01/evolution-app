@@ -2,10 +2,12 @@ import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { ApiError } from "../../api/client";
 import {
+  getHmrcCalculation,
   getObligations,
   getQuarterlyPreview,
   listSubmissions,
   sendQuarterlyUpdate,
+  type HmrcCalculation,
   type HmrcObligation,
   type HmrcSubmission,
   type QuarterlyTotals
@@ -31,6 +33,7 @@ export function QuarterlyUpdates(): React.JSX.Element {
   const [obligations, setObligations] = useState<HmrcObligation[] | null>(null);
   const [submissions, setSubmissions] = useState<HmrcSubmission[]>([]);
   const [preview, setPreview] = useState<QuarterlyTotals | null>(null);
+  const [calculation, setCalculation] = useState<HmrcCalculation | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ kind: "info" | "error"; text: string } | null>(null);
 
@@ -39,6 +42,11 @@ export function QuarterlyUpdates(): React.JSX.Element {
       const [obl, subs] = await Promise.all([getObligations(), listSubmissions()]);
       setObligations([...obl].sort((a, b) => a.periodEndDate.localeCompare(b.periodEndDate)));
       setSubmissions(subs);
+      // HMRC's own figures; separate so a slow or failed calculation never
+      // hides the quarters.
+      getHmrcCalculation()
+        .then(setCalculation)
+        .catch(() => setCalculation(null));
     } catch (error) {
       setMessage({ kind: "error", text: error instanceof ApiError ? error.message : "Couldn't load your quarters from HMRC." });
     }
@@ -83,6 +91,11 @@ export function QuarterlyUpdates(): React.JSX.Element {
   }
 
   const today = getTodayIso();
+  // The most recent quarter already sent can be sent again with corrected
+  // figures (HMRC's endpoint is "create or amend"; updates are cumulative,
+  // so this replaces the year-to-date totals). Earlier quarters can't:
+  // HMRC won't let an update's end date move backwards.
+  const lastSent = [...obligations].reverse().find((o) => o.status === "fulfilled");
 
   return (
     <>
@@ -112,9 +125,8 @@ export function QuarterlyUpdates(): React.JSX.Element {
                       : `${overdue ? "Overdue: was due" : "Due"} ${formatUkDate(o.dueDate)}`}
                   </Text>
                 </View>
-                {ready && (
-                  <SmallAction label="Review" active onPress={() => void openPreview(o)} />
-                )}
+                {ready && <SmallAction label="Review" active onPress={() => void openPreview(o)} />}
+                {sent && o === lastSent && <SmallAction label="Correct" onPress={() => void openPreview(o)} />}
                 {busy === `preview-${o.periodEndDate}` && <ActivityIndicator color={colors.accent} />}
               </View>
             );
@@ -151,6 +163,43 @@ export function QuarterlyUpdates(): React.JSX.Element {
           <Text style={{ color: colors.textMuted, textAlign: "center", marginTop: spacing.md, fontWeight: "600" }} onPress={() => setPreview(null)}>
             Cancel
           </Text>
+        </Card>
+      )}
+
+      {calculation?.status === "ready" && (
+        <Card>
+          <Text style={{ fontSize: typography.body, fontWeight: "700", color: colors.textMain, marginBottom: spacing.xs }}>
+            HMRC's calculation
+          </Text>
+          <Text style={{ color: colors.textSecondary, marginBottom: spacing.sm }}>
+            Worked out by HMRC from your updates{calculation.period_to ? ` to ${formatUkDate(calculation.period_to)}` : ""}. Compare it with your
+            Summary; if they differ a lot, check your records.
+          </Text>
+          {calculation.profit !== null && <SummaryRow label="Profit so far" value={calculation.profit} />}
+          {calculation.income_tax !== null && <SummaryRow label="Income tax" value={calculation.income_tax} />}
+          {calculation.class2_nic !== null && <SummaryRow label="NI class 2" value={calculation.class2_nic} />}
+          {calculation.class4_nic !== null && <SummaryRow label="NI class 4" value={calculation.class4_nic} />}
+          {calculation.end_of_year && (
+            <>
+              <Text style={{ fontWeight: "700", color: colors.textMain, marginTop: spacing.sm }}>HMRC's estimate for the full year</Text>
+              {calculation.end_of_year.estimated_income !== null && <SummaryRow label="Estimated income" value={calculation.end_of_year.estimated_income} />}
+              <SummaryRow label="Income tax and NI" value={calculation.end_of_year.total} />
+            </>
+          )}
+          {calculation.messages.length > 0 && (
+            <View style={{ marginTop: spacing.sm }}>
+              {calculation.messages.map((m) => (
+                <Text key={m} style={{ color: colors.textMuted, fontSize: typography.small }}>
+                  • {m}
+                </Text>
+              ))}
+            </View>
+          )}
+        </Card>
+      )}
+      {calculation?.status === "pending" && (
+        <Card>
+          <Text style={{ color: colors.textMuted }}>HMRC is still working out its calculation from your latest update. Check back in a minute.</Text>
         </Card>
       )}
 

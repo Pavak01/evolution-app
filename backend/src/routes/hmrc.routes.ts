@@ -25,7 +25,21 @@ const ninoPattern = /^[A-CEGHJ-PR-TW-Z]{2}\d{6}[A-D]$/;
 async function fraudContext(req: Request): Promise<FraudContext> {
   const userId = (req as AuthenticatedRequest).userId;
   const user = await db.query<{ email: string }>("SELECT email FROM public.users WHERE id = $1", [userId]);
-  return { userId, email: user.rows[0]?.email ?? "" };
+  // The second factor used at the latest sign-in, if within a session's
+  // lifetime (7 days) — reported to HMRC as Gov-Client-Multi-Factor.
+  const mfa = await db.query<{ id: string; method: "TOTP" | "OTHER"; used_at: string }>(
+    `SELECT id, method, to_char(used_at AT TIME ZONE current_setting('TimeZone') AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI"Z"') AS used_at
+     FROM mfa_events WHERE user_id = $1 AND used_at > NOW() - INTERVAL '7 days' ORDER BY used_at DESC LIMIT 1`,
+    [userId]
+  );
+  const event = mfa.rows[0];
+  return {
+    userId,
+    email: user.rows[0]?.email ?? "",
+    multiFactor: event
+      ? [{ type: event.method, timestamp: event.used_at, reference: crypto.createHash("sha256").update(`${userId}:${event.id}`).digest("hex") }]
+      : undefined
+  };
 }
 
 async function ninoFor(userId: string): Promise<string | null> {
@@ -234,14 +248,96 @@ hmrcRouter.post("/hmrc/quarterly-update", requireAuth, async (req: Request, res:
       `/individuals/business/self-employment/${target.nino}/${target.businessId}/cumulative/${totals.tax_year}`,
       { method: "PUT", version: "5.0", body: payload }
     );
+    // HMRC recalculates the year's tax from what it now holds; asked for
+    // straight away so its estimate is ready when the user looks. Best
+    // effort: the update itself has already been accepted.
+    let calculationId: string | null = null;
+    try {
+      const calc = await hmrcRequest<{ calculationId: string }>(
+        req,
+        ctx,
+        `/individuals/calculations/${target.nino}/self-assessment/${totals.tax_year}/trigger/in-year`,
+        { method: "POST", version: "9.0" }
+      );
+      calculationId = calc.calculationId;
+    } catch (error) {
+      console.error("HMRC calculation trigger failed", error);
+    }
     const saved = await db.query<{ id: string; submitted_at: string }>(
-      `INSERT INTO hmrc_submissions (user_id, environment, business_id, tax_year, period_start, period_end, payload, correlation_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, submitted_at::text`,
-      [ctx.userId, hmrcEnvironment, target.businessId, totals.tax_year, period.start, period.end, JSON.stringify(payload), correlationId]
+      `INSERT INTO hmrc_submissions (user_id, environment, business_id, tax_year, period_start, period_end, payload, correlation_id, calculation_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, submitted_at::text`,
+      [ctx.userId, hmrcEnvironment, target.businessId, totals.tax_year, period.start, period.end, JSON.stringify(payload), correlationId, calculationId]
     );
     return res.json({ submitted: true, submission_id: saved.rows[0].id, submitted_at: saved.rows[0].submitted_at, correlation_id: correlationId, totals });
   } catch (error) {
     return sendHmrcError(res, error, "accept this quarterly update");
+  }
+});
+
+type HmrcCalculation = {
+  metadata?: { calculationId?: string; calculationTimestamp?: string; periodTo?: string };
+  calculation?: {
+    incomeSummaryTotals?: { totalSelfEmploymentProfit?: number };
+    taxCalculation?: {
+      incomeTax?: { totalTaxableIncome?: number; incomeTaxCharged?: number };
+      nics?: { nic2Amount?: number; nic4Amount?: number; totalNic?: number };
+      totalIncomeTaxAndNicsDue?: number;
+    };
+    endOfYearEstimate?: { totalEstimatedIncome?: number; incomeTaxAmount?: number; nic2?: number; nic4?: number; totalNicAmount?: number };
+  };
+  messages?: { warnings?: { text: string }[]; errors?: { text: string }[] };
+};
+
+// HMRC's own tax calculation from the latest update this tax year: what it
+// works out from the figures it holds, to compare with Evolution's estimate.
+hmrcRouter.get("/hmrc/calculation", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const ctx = await fraudContext(req);
+    const target = await quarterlyTarget(ctx.userId);
+    if ("error" in target) return res.status(409).json(target);
+    const taxYear = typeof req.query.tax_year === "string" ? req.query.tax_year : getTaxYearFromDate(new Date().toISOString().slice(0, 10));
+    const latest = await db.query<{ calculation_id: string }>(
+      `SELECT calculation_id FROM hmrc_submissions
+       WHERE user_id = $1 AND tax_year = $2 AND environment = $3 AND calculation_id IS NOT NULL
+       ORDER BY submitted_at DESC LIMIT 1`,
+      [ctx.userId, taxYear, hmrcEnvironment]
+    );
+    const calculationId = latest.rows[0]?.calculation_id;
+    if (!calculationId) return res.json({ status: "none" });
+    let calc: HmrcCalculation;
+    try {
+      calc = await hmrcRequest<HmrcCalculation>(req, ctx, `/individuals/calculations/${target.nino}/self-assessment/${taxYear}/${calculationId}`, {
+        version: "9.0"
+      });
+    } catch (error) {
+      // HMRC answers 404 while it's still working the calculation out.
+      if (error instanceof HmrcApiError && error.status === 404) return res.json({ status: "pending" });
+      throw error;
+    }
+    const tax = calc.calculation?.taxCalculation;
+    const eoy = calc.calculation?.endOfYearEstimate;
+    return res.json({
+      status: "ready",
+      tax_year: taxYear,
+      calculated_at: calc.metadata?.calculationTimestamp ?? null,
+      period_to: calc.metadata?.periodTo ?? null,
+      profit: calc.calculation?.incomeSummaryTotals?.totalSelfEmploymentProfit ?? null,
+      income_tax: tax?.incomeTax?.incomeTaxCharged ?? null,
+      class2_nic: tax?.nics?.nic2Amount ?? null,
+      class4_nic: tax?.nics?.nic4Amount ?? null,
+      total_due: tax?.totalIncomeTaxAndNicsDue ?? null,
+      end_of_year: eoy
+        ? {
+            estimated_income: eoy.totalEstimatedIncome ?? null,
+            income_tax: eoy.incomeTaxAmount ?? null,
+            nics: eoy.totalNicAmount ?? null,
+            total: (eoy.incomeTaxAmount ?? 0) + (eoy.totalNicAmount ?? 0)
+          }
+        : null,
+      messages: [...(calc.messages?.errors ?? []), ...(calc.messages?.warnings ?? [])].map((m) => m.text)
+    });
+  } catch (error) {
+    return sendHmrcError(res, error, "provide its tax calculation");
   }
 });
 

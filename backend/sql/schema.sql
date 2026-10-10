@@ -473,3 +473,14 @@ CREATE TABLE IF NOT EXISTS evolution.hmrc_submissions (
   submitted_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_hmrc_submissions_user ON evolution.hmrc_submissions(user_id, tax_year);
+
+-- HMRC's tax calculation triggered after each quarterly update, and the
+-- 2FA sign-ins reported in HMRC's Gov-Client-Multi-Factor header.
+ALTER TABLE evolution.hmrc_submissions ADD COLUMN IF NOT EXISTS calculation_id TEXT;
+CREATE TABLE IF NOT EXISTS evolution.mfa_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id),
+  method TEXT NOT NULL,
+  used_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_mfa_events_user ON evolution.mfa_events(user_id, used_at DESC);

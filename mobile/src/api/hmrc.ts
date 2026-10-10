@@ -95,3 +95,23 @@ export function sendQuarterlyUpdate(
 export async function listSubmissions(): Promise<HmrcSubmission[]> {
   return (await hmrcJson<{ submissions: HmrcSubmission[] }>("/hmrc/submissions")).submissions;
 }
+
+export type HmrcCalculation =
+  | { status: "none" | "pending" }
+  | {
+      status: "ready";
+      tax_year: string;
+      calculated_at: string | null;
+      period_to: string | null;
+      profit: number | null;
+      income_tax: number | null;
+      class2_nic: number | null;
+      class4_nic: number | null;
+      total_due: number | null;
+      end_of_year: { estimated_income: number | null; income_tax: number | null; nics: number | null; total: number } | null;
+      messages: string[];
+    };
+
+export function getHmrcCalculation(): Promise<HmrcCalculation> {
+  return hmrcJson("/hmrc/calculation");
+}

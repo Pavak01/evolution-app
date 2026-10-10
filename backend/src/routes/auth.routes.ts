@@ -227,6 +227,12 @@ authRouter.post("/auth/verify-2fa", authRateLimit, async (req: Request, res: Res
       return res.status(401).json({ error: "That code isn't right." });
     }
 
+    // Kept for HMRC's Gov-Client-Multi-Factor fraud-prevention header
+    // (Making Tax Digital): which second factor opened this session, when.
+    await db
+      .query("INSERT INTO mfa_events (user_id, method) VALUES ($1, $2)", [user.id, totpOk ? "TOTP" : "OTHER"])
+      .catch((error) => console.error("Failed to record 2FA sign-in", error));
+
     const token = signToken(user.id, user.token_version);
     return res.json({ token, user: await buildUserPayload(user.id, user.email) });
   } catch (error) {
