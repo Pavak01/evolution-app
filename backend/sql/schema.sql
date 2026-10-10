@@ -455,3 +455,21 @@ CREATE TABLE IF NOT EXISTS evolution.hmrc_oauth_states (
   return_url TEXT NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+-- The self-employment the user's quarterly updates go to (from HMRC's
+-- Business Details), and a permanent record of every update sent: exactly
+-- what was submitted, when, and HMRC's correlation reference.
+ALTER TABLE evolution.hmrc_connections ADD COLUMN IF NOT EXISTS business_id TEXT;
+CREATE TABLE IF NOT EXISTS evolution.hmrc_submissions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id),
+  environment TEXT NOT NULL,
+  business_id TEXT NOT NULL,
+  tax_year TEXT NOT NULL,
+  period_start DATE NOT NULL,
+  period_end DATE NOT NULL,
+  payload JSONB NOT NULL,
+  correlation_id TEXT,
+  submitted_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_hmrc_submissions_user ON evolution.hmrc_submissions(user_id, tax_year);

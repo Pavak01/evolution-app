@@ -91,6 +91,17 @@ export async function hmrcRequest<T>(
   path: string,
   options: { method?: "GET" | "POST" | "PUT" | "DELETE"; version: string; body?: unknown; testScenario?: string }
 ): Promise<T> {
+  return (await hmrcCall<T>(req, ctx, path, options)).body;
+}
+
+// As hmrcRequest, plus HMRC's X-CorrelationId — the reference HMRC asks
+// for if a submission ever needs looking into, so it's kept with each one.
+export async function hmrcCall<T>(
+  req: Request,
+  ctx: FraudContext,
+  path: string,
+  options: { method?: "GET" | "POST" | "PUT" | "DELETE"; version: string; body?: unknown; testScenario?: string }
+): Promise<{ body: T; correlationId: string | null }> {
   const token = await accessTokenFor(ctx.userId);
   const headers: Record<string, string> = {
     Accept: `application/vnd.hmrc.${options.version}+json`,
@@ -109,7 +120,7 @@ export async function hmrcRequest<T>(
   const text = await res.text();
   const body = text ? JSON.parse(text) : null;
   if (!res.ok) throw new HmrcApiError(res.status, body);
-  return body as T;
+  return { body: body as T, correlationId: res.headers.get("x-correlationid") };
 }
 
 // HMRC's Test Fraud Prevention Headers API: checks the headers we would

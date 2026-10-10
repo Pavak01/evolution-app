@@ -17,6 +17,7 @@ import { Card, DangerAction, Field, PrimaryButton, StatusBanner } from "../../co
 import { Screen } from "../../components/Screen";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { formatUkDate } from "../../utils/taxYear";
+import { QuarterlyUpdates } from "./QuarterlyUpdates";
 
 // Making Tax Digital: link the user's HMRC account, add their National
 // Insurance number, and show the income sources HMRC has for them. Admin-
@@ -181,6 +182,8 @@ export function HmrcScreen(): React.JSX.Element {
           )}
         </Card>
       )}
+
+      {businesses?.some((b) => b.typeOfBusiness === "self-employment") && <QuarterlyUpdates />}
 
       {status.environment === "sandbox" && (
         <Card>

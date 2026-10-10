@@ -46,3 +46,52 @@ export async function listHmrcBusinesses(): Promise<HmrcBusiness[]> {
 export function checkFraudHeaders(): Promise<{ code?: string; errors?: { code: string; headers: string[] }[]; warnings?: { headers: string[] }[] }> {
   return hmrcJson("/hmrc/fraud-headers/check", { method: "POST" });
 }
+
+export type HmrcObligation = {
+  periodStartDate: string;
+  periodEndDate: string;
+  dueDate: string;
+  receivedDate?: string;
+  status: "open" | "fulfilled";
+};
+
+export type QuarterlyTotals = {
+  tax_year: string;
+  period_start: string;
+  period_end: string;
+  turnover: number;
+  expenses: { carVanTravelExpenses: number; adminCosts: number; professionalFees: number; otherExpenses: number };
+  total_expenses: number;
+  income_count: number;
+  expense_count: number;
+  awaiting_receipt_count: number;
+  awaiting_receipt_amount: number;
+};
+
+export type HmrcSubmission = {
+  id: string;
+  tax_year: string;
+  period_start: string;
+  period_end: string;
+  correlation_id: string | null;
+  submitted_at: string;
+};
+
+export async function getObligations(): Promise<HmrcObligation[]> {
+  return (await hmrcJson<{ obligations: HmrcObligation[] }>("/hmrc/obligations")).obligations;
+}
+
+export function getQuarterlyPreview(periodStart: string, periodEnd: string): Promise<QuarterlyTotals> {
+  return hmrcJson(`/hmrc/quarterly-preview?period_start=${periodStart}&period_end=${periodEnd}`);
+}
+
+export function sendQuarterlyUpdate(
+  periodStart: string,
+  periodEnd: string
+): Promise<{ submitted: true; correlation_id: string | null; submitted_at: string; totals: QuarterlyTotals }> {
+  return hmrcJson("/hmrc/quarterly-update", { method: "POST", body: JSON.stringify({ period_start: periodStart, period_end: periodEnd }) });
+}
+
+export async function listSubmissions(): Promise<HmrcSubmission[]> {
+  return (await hmrcJson<{ submissions: HmrcSubmission[] }>("/hmrc/submissions")).submissions;
+}
