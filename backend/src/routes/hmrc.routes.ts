@@ -240,6 +240,21 @@ hmrcRouter.post("/hmrc/quarterly-update", requireAuth, async (req: Request, res:
     const ctx = await fraudContext(req);
     const target = await quarterlyTarget(ctx.userId);
     if ("error" in target) return res.status(409).json(target);
+    // HMRC won't accept an update ending earlier than one already sent
+    // (cumulative updates can't move backwards); stop it here with a
+    // clear message rather than send something that will be refused.
+    const latest = await db.query<{ latest_end: string | null }>(
+      `SELECT MAX(period_end)::text AS latest_end FROM hmrc_submissions
+       WHERE user_id = $1 AND environment = $2 AND business_id = $3 AND period_start = $4`,
+      [ctx.userId, hmrcEnvironment, target.businessId, period.start]
+    );
+    const latestEnd = latest.rows[0]?.latest_end;
+    if (latestEnd && period.end < latestEnd) {
+      return res.status(409).json({
+        error: `You've already sent an update to ${latestEnd.split("-").reverse().join("/")}. Corrections go in that update or a later one.`,
+        code: "HMRC_PERIOD_BEFORE_LATEST"
+      });
+    }
     const totals = await buildQuarterlyTotals(ctx.userId, period.start, period.end);
     const payload = cumulativeSummaryBody(totals);
     const { correlationId } = await hmrcCall<unknown>(
