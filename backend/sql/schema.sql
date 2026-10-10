@@ -484,3 +484,20 @@ CREATE TABLE IF NOT EXISTS evolution.mfa_events (
   used_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_mfa_events_user ON evolution.mfa_events(user_id, used_at DESC);
+
+-- Year end: each customer's annual tax return through MTD — their
+-- eligibility answers, HMRC's final calculation, the declaration version
+-- they agreed to, and when it was submitted (with HMRC's reference).
+CREATE TABLE IF NOT EXISTS evolution.hmrc_year_ends (
+  user_id UUID NOT NULL REFERENCES public.users(id),
+  environment TEXT NOT NULL,
+  tax_year TEXT NOT NULL,
+  calculation_id TEXT NOT NULL,
+  eligibility JSONB NOT NULL,
+  declaration_version TEXT,
+  submitted_at TIMESTAMP,
+  correlation_id TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, environment, tax_year)
+);

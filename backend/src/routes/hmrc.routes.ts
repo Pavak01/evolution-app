@@ -303,6 +303,35 @@ type HmrcCalculation = {
   messages?: { warnings?: { text: string }[]; errors?: { text: string }[] };
 };
 
+// The parts of an HMRC tax calculation shown to the user.
+function summariseCalculation(calc: HmrcCalculation, taxYear: string) {
+  const tax = calc.calculation?.taxCalculation;
+  const eoy = calc.calculation?.endOfYearEstimate;
+  return {
+    status: "ready" as const,
+    tax_year: taxYear,
+    calculation_id: calc.metadata?.calculationId ?? null,
+    calculated_at: calc.metadata?.calculationTimestamp ?? null,
+    period_to: calc.metadata?.periodTo ?? null,
+    profit: calc.calculation?.incomeSummaryTotals?.totalSelfEmploymentProfit ?? null,
+    income_tax: tax?.incomeTax?.incomeTaxCharged ?? null,
+    class2_nic: tax?.nics?.nic2Amount ?? null,
+    class4_nic: tax?.nics?.nic4Amount ?? null,
+    total_due: tax?.totalIncomeTaxAndNicsDue ?? null,
+    end_of_year: eoy
+      ? {
+          estimated_income: eoy.totalEstimatedIncome ?? null,
+          income_tax: eoy.incomeTaxAmount ?? null,
+          nics: eoy.totalNicAmount ?? null,
+          total: (eoy.incomeTaxAmount ?? 0) + (eoy.totalNicAmount ?? 0)
+        }
+      : null,
+    // Errors stop a tax return being submitted; warnings are for the user to read.
+    errors: (calc.messages?.errors ?? []).map((m) => m.text),
+    messages: [...(calc.messages?.errors ?? []), ...(calc.messages?.warnings ?? [])].map((m) => m.text)
+  };
+}
+
 // HMRC's own tax calculation from the latest update this tax year: what it
 // works out from the figures it holds, to compare with Evolution's estimate.
 hmrcRouter.get("/hmrc/calculation", requireAuth, async (req: Request, res: Response) => {
@@ -329,30 +358,172 @@ hmrcRouter.get("/hmrc/calculation", requireAuth, async (req: Request, res: Respo
       if (error instanceof HmrcApiError && error.status === 404) return res.json({ status: "pending" });
       throw error;
     }
-    const tax = calc.calculation?.taxCalculation;
-    const eoy = calc.calculation?.endOfYearEstimate;
-    return res.json({
-      status: "ready",
-      tax_year: taxYear,
-      calculated_at: calc.metadata?.calculationTimestamp ?? null,
-      period_to: calc.metadata?.periodTo ?? null,
-      profit: calc.calculation?.incomeSummaryTotals?.totalSelfEmploymentProfit ?? null,
-      income_tax: tax?.incomeTax?.incomeTaxCharged ?? null,
-      class2_nic: tax?.nics?.nic2Amount ?? null,
-      class4_nic: tax?.nics?.nic4Amount ?? null,
-      total_due: tax?.totalIncomeTaxAndNicsDue ?? null,
-      end_of_year: eoy
-        ? {
-            estimated_income: eoy.totalEstimatedIncome ?? null,
-            income_tax: eoy.incomeTaxAmount ?? null,
-            nics: eoy.totalNicAmount ?? null,
-            total: (eoy.incomeTaxAmount ?? 0) + (eoy.totalNicAmount ?? 0)
-          }
-        : null,
-      messages: [...(calc.messages?.errors ?? []), ...(calc.messages?.warnings ?? [])].map((m) => m.text)
-    });
+    return res.json(summariseCalculation(calc, taxYear));
   } catch (error) {
     return sendHmrcError(res, error, "provide its tax calculation");
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Year end: the annual tax return ("final declaration") for customers whose
+// only income is this self-employment. Steps: eligibility answers → HMRC's
+// final calculation (intent-to-finalise) → the user reads it and the
+// declaration → submit (final-declaration). Everything is recorded.
+
+// Shown, and stored with what the user agreed to. HMRC's guide says the
+// customer must "review and confirm the declaration text"; vendors receive
+// the exact wording during production approval — CONFIRM WITH HMRC (SDST)
+// and bump the version when it changes.
+export const DECLARATION_VERSION = "2026-10-sa-standard";
+export const DECLARATION_TEXT =
+  "The information I have given in this tax return is correct and complete to the best of my knowledge and belief. " +
+  "I understand that I may have to pay financial penalties and face prosecution if I give false information.";
+
+// Answers that mean Evolution can't file a complete return for them.
+const eligibilitySchema = z.object({
+  only_self_employment_income: z.literal(true),
+  no_student_loan: z.literal(true),
+  no_pension_or_gift_aid_claims: z.literal(true),
+  no_child_benefit_charge: z.literal(true),
+  uk_resident: z.literal(true)
+});
+
+function taxYearHasEnded(taxYear: string): boolean {
+  // The sandbox lets us rehearse a return before the year ends.
+  if (hmrcEnvironment === "sandbox") return true;
+  return new Date().toISOString().slice(0, 10) > getTaxYearBounds(taxYear).end;
+}
+
+const taxYearPattern = /^\d{4}-\d{2}$/;
+
+hmrcRouter.get("/hmrc/year-end", requireAuth, async (req: Request, res: Response) => {
+  const taxYear = String(req.query.tax_year ?? "");
+  if (!taxYearPattern.test(taxYear)) return res.status(400).json({ error: "Invalid tax year" });
+  const result = await db.query(
+    `SELECT tax_year, calculation_id, eligibility, declaration_version, submitted_at::text, correlation_id
+     FROM hmrc_year_ends WHERE user_id = $1 AND tax_year = $2 AND environment = $3`,
+    [(req as AuthenticatedRequest).userId, taxYear, hmrcEnvironment]
+  );
+  return res.json({
+    tax_year: taxYear,
+    year_ended: taxYearHasEnded(taxYear),
+    declaration: { version: DECLARATION_VERSION, text: DECLARATION_TEXT },
+    record: result.rows[0] ?? null
+  });
+});
+
+// Records the eligibility answers and asks HMRC for its final calculation.
+hmrcRouter.post("/hmrc/year-end/calculate", requireAuth, async (req: Request, res: Response) => {
+  const taxYear = String(req.body?.tax_year ?? "");
+  if (!taxYearPattern.test(taxYear)) return res.status(400).json({ error: "Invalid tax year" });
+  const eligibility = eligibilitySchema.safeParse(req.body?.eligibility);
+  if (!eligibility.success) {
+    return res.status(422).json({
+      error: "Evolution can only file a tax return when your only income is this self-employment. Use an accountant or other HMRC-recognised software this year.",
+      code: "YEAR_END_NOT_ELIGIBLE"
+    });
+  }
+  if (!taxYearHasEnded(taxYear)) return res.status(409).json({ error: `You can file your ${taxYear} tax return after the tax year ends on 5 April.` });
+  try {
+    const ctx = await fraudContext(req);
+    const target = await quarterlyTarget(ctx.userId);
+    if ("error" in target) return res.status(409).json(target);
+    const { body } = await hmrcCall<{ calculationId: string }>(
+      req,
+      ctx,
+      `/individuals/calculations/${target.nino}/self-assessment/${taxYear}/trigger/intent-to-finalise`,
+      { method: "POST", version: "9.0" }
+    );
+    await db.query(
+      `INSERT INTO hmrc_year_ends (user_id, environment, tax_year, calculation_id, eligibility)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (user_id, environment, tax_year) DO UPDATE
+         SET calculation_id = EXCLUDED.calculation_id, eligibility = EXCLUDED.eligibility, updated_at = NOW()
+         WHERE hmrc_year_ends.submitted_at IS NULL`,
+      [ctx.userId, hmrcEnvironment, taxYear, body.calculationId, JSON.stringify(eligibility.data)]
+    );
+    return res.json({ calculation_id: body.calculationId });
+  } catch (error) {
+    return sendHmrcError(res, error, "start your final calculation");
+  }
+});
+
+// HMRC's final calculation, once ready (404 from HMRC = still working).
+hmrcRouter.get("/hmrc/year-end/calculation", requireAuth, async (req: Request, res: Response) => {
+  const taxYear = String(req.query.tax_year ?? "");
+  if (!taxYearPattern.test(taxYear)) return res.status(400).json({ error: "Invalid tax year" });
+  try {
+    const ctx = await fraudContext(req);
+    const target = await quarterlyTarget(ctx.userId);
+    if ("error" in target) return res.status(409).json(target);
+    const row = await db.query<{ calculation_id: string }>(
+      "SELECT calculation_id FROM hmrc_year_ends WHERE user_id = $1 AND environment = $2 AND tax_year = $3",
+      [ctx.userId, hmrcEnvironment, taxYear]
+    );
+    const calculationId = row.rows[0]?.calculation_id;
+    if (!calculationId) return res.json({ status: "none" });
+    try {
+      const calc = await hmrcRequest<HmrcCalculation>(req, ctx, `/individuals/calculations/${target.nino}/self-assessment/${taxYear}/${calculationId}`, {
+        version: "9.0"
+      });
+      return res.json(summariseCalculation(calc, taxYear));
+    } catch (error) {
+      if (error instanceof HmrcApiError && error.status === 404) return res.json({ status: "pending" });
+      throw error;
+    }
+  } catch (error) {
+    return sendHmrcError(res, error, "provide your final calculation");
+  }
+});
+
+// Submits the tax return: the user has read the final calculation and the
+// declaration, and confirmed both. Only the calculation they saw is used.
+hmrcRouter.post("/hmrc/year-end/submit", requireAuth, async (req: Request, res: Response) => {
+  const taxYear = String(req.body?.tax_year ?? "");
+  const calculationId = String(req.body?.calculation_id ?? "");
+  if (!taxYearPattern.test(taxYear) || !calculationId) return res.status(400).json({ error: "Invalid request" });
+  if (req.body?.declaration_accepted !== true || req.body?.declaration_version !== DECLARATION_VERSION) {
+    return res.status(422).json({ error: "Please read and agree to the declaration first.", code: "DECLARATION_REQUIRED" });
+  }
+  try {
+    const ctx = await fraudContext(req);
+    const target = await quarterlyTarget(ctx.userId);
+    if ("error" in target) return res.status(409).json(target);
+    const row = await db.query<{ calculation_id: string; submitted_at: string | null }>(
+      "SELECT calculation_id, submitted_at::text FROM hmrc_year_ends WHERE user_id = $1 AND environment = $2 AND tax_year = $3",
+      [ctx.userId, hmrcEnvironment, taxYear]
+    );
+    const record = row.rows[0];
+    if (!record || record.calculation_id !== calculationId) {
+      return res.status(409).json({ error: "Your figures have changed since that calculation. Please check the new one.", code: "CALCULATION_STALE" });
+    }
+    if (record.submitted_at) return res.status(409).json({ error: `Your ${taxYear} tax return has already been submitted.` });
+    // A calculation with errors can't become a tax return (HMRC refuses
+    // it); say why instead. The sandbox's sample calculation always carries
+    // an error, so this only applies against live HMRC.
+    if (hmrcEnvironment === "production") {
+      const calc = await hmrcRequest<HmrcCalculation>(req, ctx, `/individuals/calculations/${target.nino}/self-assessment/${taxYear}/${calculationId}`, {
+        version: "9.0"
+      });
+      const errors = (calc.messages?.errors ?? []).map((m) => m.text);
+      if (errors.length > 0) {
+        return res.status(409).json({ error: `HMRC's calculation has problems to fix first: ${errors.join(" ")}`, code: "CALCULATION_HAS_ERRORS", errors });
+      }
+    }
+    const { correlationId } = await hmrcCall<unknown>(
+      req,
+      ctx,
+      `/individuals/calculations/${target.nino}/self-assessment/${taxYear}/${calculationId}/final-declaration`,
+      { method: "POST", version: "9.0" }
+    );
+    const saved = await db.query<{ submitted_at: string }>(
+      `UPDATE hmrc_year_ends SET submitted_at = NOW(), correlation_id = $4, declaration_version = $5, updated_at = NOW()
+       WHERE user_id = $1 AND environment = $2 AND tax_year = $3 RETURNING submitted_at::text`,
+      [ctx.userId, hmrcEnvironment, taxYear, correlationId, DECLARATION_VERSION]
+    );
+    return res.json({ submitted: true, submitted_at: saved.rows[0].submitted_at, correlation_id: correlationId });
+  } catch (error) {
+    return sendHmrcError(res, error, "accept your tax return");
   }
 });
 

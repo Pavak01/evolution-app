@@ -39,6 +39,7 @@ export async function processEvolutionAccountDeletions(): Promise<void> {
         await client.query("DELETE FROM hmrc_oauth_states WHERE user_id = $1", [user.id]);
         await client.query("DELETE FROM hmrc_submissions WHERE user_id = $1", [user.id]);
         await client.query("DELETE FROM mfa_events WHERE user_id = $1", [user.id]);
+        await client.query("DELETE FROM hmrc_year_ends WHERE user_id = $1", [user.id]);
         await client.query("COMMIT");
         console.log(`[Deletion] Purged Evolution data for ${user.email}`);
       } catch (error) {

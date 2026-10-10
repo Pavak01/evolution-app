@@ -179,8 +179,9 @@ export function QuarterlyUpdates(): React.JSX.Element {
             HMRC's calculation
           </Text>
           <Text style={{ color: colors.textSecondary, marginBottom: spacing.sm }}>
-            Worked out by HMRC from your updates{calculation.period_to ? ` to ${formatUkDate(calculation.period_to)}` : ""}. Compare it with your
-            Summary; if they differ a lot, check your records.
+            This calculation is only based on information HMRC have received about your income and expenses
+            {calculation.period_to ? ` to ${formatUkDate(calculation.period_to)}` : ""}. This may change as HMRC receive further information about
+            you during the tax year. Compare it with your Summary; if they differ a lot, check your records.
           </Text>
           {calculation.profit !== null && <SummaryRow label="Profit so far" value={calculation.profit} />}
           {calculation.income_tax !== null && <SummaryRow label="Income tax" value={calculation.income_tax} />}

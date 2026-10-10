@@ -30,6 +30,11 @@ export function finalErrorHandler(err: unknown, _req: Request, res: Response, _n
     return res.status(400).json({ error: `Upload error: ${err.message}` });
   }
 
+  // A request body that isn't valid JSON is the caller's mistake, not ours.
+  if (typeof err === "object" && err !== null && (err as { type?: string }).type === "entity.parse.failed") {
+    return res.status(400).json({ error: "Request body is not valid JSON." });
+  }
+
   if (err instanceof Error && err.message === "Unsupported receipt file type") {
     return res.status(400).json({
       error: "Unsupported file type. Allowed types: PDF, JPEG, PNG, WEBP, plain text, CSV."
