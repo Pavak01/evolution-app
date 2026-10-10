@@ -1,6 +1,31 @@
 import { db } from "./db.js";
+import { deleteReceiptObjects } from "./receiptStorage.js";
 
 const GRACE_PERIOD_DAYS = 30;
+
+// Every evolution.* table holding a user's data (order matters: receipts
+// before expenses). Keep in step with scripts/smoke-test.ts cleanup. To
+// audit: SELECT table_name FROM information_schema.columns
+//        WHERE table_schema = 'evolution' AND column_name = 'user_id';
+// (admin_users and entitlements are handled separately below.)
+const PURGED_TABLES = [
+  "receipts",
+  "expenses",
+  "income_invoices",
+  "tax_summaries",
+  "filed_tax_years",
+  "export_events",
+  "promo_redemptions",
+  "email_codes",
+  "email_verifications",
+  "terms_acceptances",
+  "two_factor_backup_codes",
+  "hmrc_connections",
+  "hmrc_oauth_states",
+  "hmrc_submissions",
+  "hmrc_year_ends",
+  "mfa_events"
+];
 
 // Qbit's own background job purges Qbit's tables (weekly_entries, its
 // expenses/receipts, tax_summaries) for any user with deletion_status =
@@ -24,24 +49,36 @@ export async function processEvolutionAccountDeletions(): Promise<void> {
     );
 
     for (const user of usersToPurge.rows) {
+      // Stored files first (receipt photos, invoices, locked-year archive
+      // copies): the privacy policy promises they go too, not just the
+      // database rows pointing at them. Done before the rows so a failure
+      // leaves the paths in place for the next daily run to retry.
+      const files = await db.query<{ key: string }>(
+        `SELECT storage_path AS key FROM receipts WHERE user_id = $1
+         UNION SELECT invoice_storage_path FROM income_invoices WHERE user_id = $1 AND invoice_storage_path IS NOT NULL
+         UNION SELECT archive_storage_path FROM filed_tax_years WHERE user_id = $1
+         UNION SELECT archive_pdf_storage_path FROM filed_tax_years WHERE user_id = $1 AND archive_pdf_storage_path IS NOT NULL`,
+        [user.id]
+      );
+      if (files.rows.length > 0) {
+        await deleteReceiptObjects(files.rows.map((row) => row.key));
+      }
+
       const client = await db.connect();
       try {
         await client.query("BEGIN");
-        await client.query("DELETE FROM receipts WHERE user_id = $1", [user.id]);
-        await client.query("DELETE FROM expenses WHERE user_id = $1", [user.id]);
-        await client.query("DELETE FROM income_invoices WHERE user_id = $1", [user.id]);
-        await client.query("DELETE FROM tax_summaries WHERE user_id = $1", [user.id]);
-        await client.query("DELETE FROM promo_redemptions WHERE user_id = $1", [user.id]);
-        await client.query("DELETE FROM email_codes WHERE user_id = $1", [user.id]);
-        await client.query("DELETE FROM email_verifications WHERE user_id = $1", [user.id]);
-        await client.query("DELETE FROM two_factor_backup_codes WHERE user_id = $1", [user.id]);
-        await client.query("DELETE FROM hmrc_connections WHERE user_id = $1", [user.id]);
-        await client.query("DELETE FROM hmrc_oauth_states WHERE user_id = $1", [user.id]);
-        await client.query("DELETE FROM hmrc_submissions WHERE user_id = $1", [user.id]);
-        await client.query("DELETE FROM mfa_events WHERE user_id = $1", [user.id]);
-        await client.query("DELETE FROM hmrc_year_ends WHERE user_id = $1", [user.id]);
+        for (const table of PURGED_TABLES) {
+          await client.query(`DELETE FROM ${table} WHERE user_id = $1`, [user.id]);
+        }
+        // Admin (staff) accounts are managed by hand: their admin role and
+        // any manually granted plan stay until removed deliberately, so a
+        // test deletion of a staff account can be reinstated.
+        const isAdmin = (await client.query("SELECT 1 FROM admin_users WHERE user_id = $1", [user.id])).rows.length > 0;
+        if (!isAdmin) {
+          await client.query("DELETE FROM entitlements WHERE user_id = $1", [user.id]);
+        }
         await client.query("COMMIT");
-        console.log(`[Deletion] Purged Evolution data for ${user.email}`);
+        console.log(`[Deletion] Purged Evolution data for ${user.email} (${files.rows.length} stored files)`);
       } catch (error) {
         await client.query("ROLLBACK");
         console.error(`[Deletion] Failed to purge Evolution data for ${user.email}:`, error);

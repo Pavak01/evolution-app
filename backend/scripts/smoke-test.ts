@@ -176,6 +176,7 @@ async function cleanup(): Promise<void> {
     await pool.query("DELETE FROM hmrc_submissions WHERE user_id = $1", [createdUserId]);
     await pool.query("DELETE FROM mfa_events WHERE user_id = $1", [createdUserId]);
     await pool.query("DELETE FROM hmrc_year_ends WHERE user_id = $1", [createdUserId]);
+    await pool.query("DELETE FROM filed_tax_years WHERE user_id = $1", [createdUserId]);
     await pool.query("DELETE FROM public.users WHERE id = $1", [createdUserId]);
     console.log(`Cleaned up smoke-test account (${email}).`);
   } catch (error) {

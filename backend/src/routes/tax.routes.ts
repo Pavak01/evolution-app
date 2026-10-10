@@ -410,7 +410,15 @@ taxRouter.post("/data-reset", requireAuth, async (req: Request, res: Response) =
       "SELECT tax_year FROM filed_tax_years WHERE user_id = $1 AND unlocked_at IS NULL",
       [authReq.userId]
     );
-    const lockedYears = lockedRows.rows.map((row) => row.tax_year);
+    // Years with figures already sent to HMRC under Making Tax Digital are
+    // protected like locked years: MTD makes keeping those digital records
+    // a legal requirement. (Live HMRC only — sandbox tests don't count.)
+    const mtdRows = await db.query<{ tax_year: string }>(
+      `SELECT tax_year FROM hmrc_submissions WHERE user_id = $1 AND environment = 'production'
+       UNION SELECT tax_year FROM hmrc_year_ends WHERE user_id = $1 AND environment = 'production' AND submitted_at IS NOT NULL`,
+      [authReq.userId]
+    );
+    const lockedYears = Array.from(new Set([...lockedRows.rows.map((row) => row.tax_year), ...mtdRows.rows.map((row) => row.tax_year)]));
 
     const taxYearRows = await db.query<{ tax_year: string }>(
       `SELECT tax_year FROM expenses WHERE user_id = $1
