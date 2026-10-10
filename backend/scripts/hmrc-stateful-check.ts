@@ -17,8 +17,9 @@ import { getTaxYearBounds } from "../src/incomeAggregation.js";
 import { getTaxYearFromDate } from "../src/rulesEngine.js";
 
 const email = process.argv[2];
+const periodType: "standard" | "calendar" = process.argv[3] === "calendar" ? "calendar" : "standard";
 if (!email) {
-  console.error("Usage: npm run -s hmrc-stateful -- <email>");
+  console.error("Usage: npm run -s hmrc-stateful -- <email> [calendar]");
   process.exit(1);
 }
 
@@ -57,7 +58,7 @@ async function main(): Promise<void> {
       tradingName: "Evolution stateful test",
       firstAccountingPeriodStartDate: start,
       firstAccountingPeriodEndDate: end,
-      quarterlyTypeChoice: { quarterlyPeriodType: "standard", taxYearOfChoice: taxYear },
+      quarterlyTypeChoice: { quarterlyPeriodType: periodType, taxYearOfChoice: taxYear },
       accountingType: "CASH",
       commencementDate: start,
       businessAddressLineOne: "1 Test Street",
@@ -89,7 +90,13 @@ async function main(): Promise<void> {
     });
 
   const y = Number(start.slice(0, 4));
-  const cases: { name: string; expect: string; run: () => Promise<unknown> }[] = [
+  const calendarCases: { name: string; expect: string; run: () => Promise<unknown> }[] = [
+    { name: "Calendar Q1 from 6 April (to 30 June)", expect: "?", run: () => update(`${y}-06-30`, 1200) },
+    { name: "Calendar Q1 from 1 April (to 30 June)", expect: "?", run: () => update(`${y}-06-30`, 1200, `${y}-04-01`) },
+    { name: "Calendar Q2 from 6 April (to 30 September)", expect: "?", run: () => update(`${y}-09-30`, 2550.5) },
+    { name: "Standard end date (5 October) on calendar", expect: "refused", run: () => update(`${y}-10-05`, 2550.5) }
+  ];
+  const standardCases: { name: string; expect: string; run: () => Promise<unknown> }[] = [
     { name: "Quarter 1 (to 5 July)", expect: "accepted", run: () => update(`${y}-07-05`, 1200) },
     { name: "Quarter 2 (to 5 October)", expect: "accepted", run: () => update(`${y}-10-05`, 2550.5) },
     { name: "Quarter 2 again, corrected", expect: "accepted (amendment)", run: () => update(`${y}-10-05`, 2560.5) },
@@ -98,6 +105,8 @@ async function main(): Promise<void> {
     { name: "Wrong start date (1 May)", expect: "refused: start date", run: () => update(`${y}-10-05`, 2550.5, `${y}-05-01`) }
   ];
 
+  const cases = periodType === "calendar" ? calendarCases : standardCases;
+  console.log(`Quarter type: ${periodType}`);
   for (const c of cases) {
     // HMRC's sandbox allows only a few requests a second per application.
     await new Promise((resolve) => setTimeout(resolve, 1500));
