@@ -111,4 +111,14 @@ if (previewDir || findRaw("01-capture")) {
   made.push(name);
 }
 
+// Everything Play Console needs in one folder: the feature graphic and the
+// store icon alongside the screenshots.
+if (!previewDir) {
+  const store = path.join(here, "../mobile/assets/store");
+  if (made.includes("feature-graphic-phone-1024x500.png")) {
+    fs.copyFileSync(path.join(store, "feature-graphic-phone-1024x500.png"), path.join(outDir, "feature-graphic-1024x500.png"));
+  }
+  fs.copyFileSync(path.join(store, "play-store-icon-512.png"), path.join(outDir, "app-icon-512.png"));
+}
+
 console.log(made.length ? `Generated in ${outDir}: ${made.join(", ")}` : `No screenshots found in ${rawDir}`);
