@@ -26,6 +26,8 @@ Deleted after a verified deletion request:
 - Receipt files and receipt metadata in active storage
 - Income invoice records and any attached invoice files
 - Tax summary records linked to the account
+- Archived copies of any tax year you locked (the CSV and PDF report)
+- Your plan and free-trial record, export history, Terms acceptance records and two-factor backup codes
 
 May be retained for a limited period:
 - Backup snapshots: retained until backup rotation expires (typically up to 30 days)
