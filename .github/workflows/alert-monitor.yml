@@ -20,9 +20,11 @@ concurrency:
   cancel-in-progress: false
 
 on:
-  schedule:
-    - cron: "*/10 * * * *"
-  workflow_dispatch:
+  # Disabled intentionally to stop alert emails while the production issue is being
+  # investigated. Re-enable by uncommenting the triggers below.
+  # schedule:
+  #   - cron: "*/10 * * * *"
+  # workflow_dispatch:
 
 jobs:
   monitor:
