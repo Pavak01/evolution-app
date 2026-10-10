@@ -95,7 +95,14 @@ export function QuarterlyUpdates(): React.JSX.Element {
   // figures (HMRC's endpoint is "create or amend"; updates are cumulative,
   // so this replaces the year-to-date totals). Earlier quarters can't:
   // HMRC won't let an update's end date move backwards.
-  const lastSent = [...obligations].reverse().find((o) => o.status === "fulfilled");
+  // "Sent" also counts our own record of updates: HMRC's sandbox doesn't
+  // reflect them, and live HMRC can lag. Nothing ending before the latest
+  // update already sent can be sent (or corrected) again.
+  const latestSentEnd = [
+    ...obligations.filter((o) => o.status === "fulfilled").map((o) => o.periodEndDate),
+    ...submissions.filter((s) => s.period_start === obligations[0]?.periodStartDate).map((s) => s.period_end)
+  ].reduce((max, d) => (d > max ? d : max), "");
+  const lastSent = obligations.find((o) => o.periodEndDate === latestSentEnd);
 
   return (
     <>
@@ -110,7 +117,7 @@ export function QuarterlyUpdates(): React.JSX.Element {
           <Text style={{ color: colors.textMuted }}>HMRC has no quarterly updates due for you this tax year.</Text>
         ) : (
           obligations.map((o, i) => {
-            const sent = o.status === "fulfilled";
+            const sent = o.status === "fulfilled" || o.periodEndDate <= latestSentEnd;
             const ready = !sent && canSendYet(o, today);
             const overdue = !sent && today > o.dueDate;
             return (
