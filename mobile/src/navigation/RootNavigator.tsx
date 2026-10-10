@@ -22,6 +22,7 @@ import { PlansScreen } from "../screens/settings/PlansScreen";
 import { AcceptTermsScreen } from "../screens/auth/AcceptTermsScreen";
 import { PromoAdminScreen } from "../screens/settings/PromoAdminScreen";
 import { TwoFactorScreen } from "../screens/settings/TwoFactorScreen";
+import { HmrcScreen } from "../screens/settings/HmrcScreen";
 import { navigationRef } from "./navigationRef";
 import { HeaderBrandTitle } from "../components/HeaderBrandTitle";
 import { consumeLaunchReminderTap, onReminderTapped } from "../reimbursementReminders";
@@ -221,6 +222,7 @@ export function RootNavigator(): React.JSX.Element {
           <RootStack.Screen name="Plans" component={PlansScreen} options={{ title: "Plans", presentation: "modal" }} />
           <RootStack.Screen name="PromoAdmin" component={PromoAdminScreen} options={{ title: "Promo codes" }} />
           <RootStack.Screen name="TwoFactor" component={TwoFactorScreen} options={{ title: "Two-factor authentication" }} />
+          <RootStack.Screen name="Hmrc" component={HmrcScreen} options={{ title: "Making Tax Digital" }} />
         </RootStack.Navigator>
       ) : (
         <AuthStack.Navigator screenOptions={{ headerShown: false }}>

@@ -59,6 +59,7 @@ export type RootStackParamList = {
   Plans: undefined;
   PromoAdmin: undefined;
   TwoFactor: undefined;
+  Hmrc: undefined;
 };
 
 export type MainTabParamList = {

@@ -98,7 +98,8 @@
           "organization": "aplc-commodities-limited-ja",
           "project": "evolution-2"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {

@@ -23,6 +23,10 @@ export function openTwoFactor(): void {
   if (navigationRef.isReady()) navigationRef.navigate("TwoFactor");
 }
 
+export function openHmrc(): void {
+  if (navigationRef.isReady()) navigationRef.navigate("Hmrc");
+}
+
 export function openPromoAdmin(): void {
   if (navigationRef.isReady()) navigationRef.navigate("PromoAdmin");
 }

@@ -8,7 +8,7 @@ import { Screen } from "../../components/Screen";
 import { Brand } from "../../components/Brand";
 import { sendTestReimbursementReminder } from "../../reimbursementReminders";
 import { formatPlanDate, PromoCodeField } from "../../components/PlanBits";
-import { openPlans, openPromoAdmin, openTwoFactor } from "../../navigation/navigationRef";
+import { openHmrc, openPlans, openPromoAdmin, openTwoFactor } from "../../navigation/navigationRef";
 import { openDoc } from "../../utils/docs";
 import { sendTestErrorReport } from "../../sentry";
 import { useAccess, useAuth } from "../../auth/AuthContext";
@@ -112,6 +112,9 @@ export function SettingsScreen(): React.JSX.Element {
             Create free-access codes for testers and promotions, and share them.
           </Text>
           <PrimaryButton label="Promo codes" onPress={openPromoAdmin} />
+          <View style={{ height: spacing.sm }} />
+          {/* Admin-only while MTD runs against HMRC's sandbox. */}
+          <PrimaryButton label="Making Tax Digital (test)" onPress={openHmrc} />
           <View style={{ height: spacing.sm }} />
           <PrimaryButton
             label="Send a test error report"
