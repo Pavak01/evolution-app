@@ -30,7 +30,7 @@ That gives you Pro (everything, including auto-fill) for the whole test.
 - Record income, attach an invoice, or share a PDF to Evolution from Gmail
 - Add the **Evolution widget** to your home screen
 - Mark a travel expense as **expecting reimbursement**, then record what was paid back
-- Look at **Summary** and try **Export**
+- Look at **Summary**, then try **Export → Tax year report (PDF)**
 - Use it offline: log something with no signal and check it uploads later
 
 **5. Tell us what you find**
